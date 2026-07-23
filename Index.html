@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes" />
+    <title>WebSwan · Secure Daily Lead</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+        }
+        body {
+            background: linear-gradient(145deg, #d4edf7 0%, #89c2d9 100%);
+            min-height: 100vh;
+            padding: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        /* ----- LOCK SCREEN OVERLAY ----- */
+        #lockScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(145deg, #023e8a 0%, #0077b6 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        #lockScreen.hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.95);
+        }
+        .lock-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            border-radius: 60px;
+            padding: 3rem 2.5rem;
+            text-align: center;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.3);
+            max-width: 420px;
+            width: 90%;
+        }
+        .lock-emoji {
+            font-size: 5rem;
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.2s;
+            display: inline-block;
+            padding: 10px 20px;
+            border-radius: 30px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .lock-emoji:active {
+            transform: scale(0.9);
+        }
+        .lock-emoji:hover {
+            transform: scale(1.05);
+        }
+        .lock-title {
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 300;
+            margin: 1.5rem 0 0.5rem;
+            letter-spacing: 2px;
+        }
+        .lock-subtitle {
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 0.8rem;
+            margin-bottom: 1.5rem;
+        }
+        .lock-status {
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+            min-height: 1.5rem;
+        }
+        .lock-icon-big {
+            font-size: 4rem;
+            margin-bottom: 0.5rem;
+        }
+        #secondLockContainer {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        #secondLockContainer.show {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .pulse {
+            animation: pulse 1.5s infinite;
+        }
+        /* ----- APP (hidden until unlocked) ----- */
+        #appContent {
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.8s ease;
+            max-width: 1100px;
+            width: 100%;
+        }
+        #appContent.unlocked {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .app-container {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(6px);
+            border-radius: 36px 36px 28px 28px;
+            padding: 1.5rem 1.5rem 2rem;
+            box-shadow: 0 20px 50px rgba(0, 40, 70, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+        /* Header */
+        .header {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            border-bottom: 4px solid #0077b6;
+            padding-bottom: 1rem;
+        }
+        .header h1 {
+            font-size: 1.9rem;
+            font-weight: 700;
+            color: #023e8a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .header h1 i {
+            color: #00b4d8;
+            font-size: 1.8rem;
+        }
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            background: white;
+            border: none;
+            padding: 0.55rem 1.2rem;
+            border-radius: 60px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #023e8a;
+            box-shadow: 0 4px 10px rgba(0, 60, 110, 0.1);
+            transition: 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid #b8dff0;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .btn-primary {
+            background: #0077b6;
+            color: white;
+            border: 1px solid #0077b6;
+        }
+        .btn-primary i {
+            color: white;
+        }
+        .btn-whatsapp {
+            background: #25D366;
+            color: white;
+            border: 1px solid #1da85c;
+        }
+        .btn-whatsapp i {
+            color: white;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #0077b6;
+            color: #0077b6;
+        }
+        .btn-success {
+            background: #28a745;
+            color: white;
+            border: 1px solid #28a745;
+        }
+        .btn-success i {
+            color: white;
+        }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            border: 1px solid #dc3545;
+        }
+        .btn-sms {
+            background: #ff6b35;
+            color: white;
+            border: 1px solid #ff6b35;
+        }
+        .btn-sms i {
+            color: white;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(0, 80, 130, 0.2);
+        }
+        .btn:active {
+            transform: scale(0.95);
+        }
+        /* Lead Card */
+        .lead-card {
+            background: white;
+            border-radius: 28px;
+            padding: 1.5rem 1.5rem 1.2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 6px 16px rgba(0, 60, 100, 0.08);
+            border: 1px solid rgba(0, 119, 182, 0.12);
+            transition: 0.2s;
+        }
+        .lead-card:hover {
+            border-color: #48b5e4;
+        }
+        .lead-card.completed {
+            opacity: 0.7;
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+        .lead-card.completed .lead-actions .btn-complete {
+            background: #28a745;
+            color: white;
+        }
+        .lead-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 1rem 1.2rem;
+            align-items: end;
+        }
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .field-group label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #026aa7;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .field-group input,
+        .field-group select,
+        .field-group textarea {
+            background: #f5faff;
+            border: 1.5px solid #d4eaf5;
+            border-radius: 20px;
+            padding: 0.6rem 1rem;
+            font-size: 0.9rem;
+            transition: 0.15s;
+            width: 100%;
+            color: #034b77;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        .field-group input:focus,
+        .field-group select:focus,
+        .field-group textarea:focus {
+            outline: 3px solid #0077b6;
+            background: white;
+            border-color: transparent;
+        }
+        .field-group textarea {
+            resize: vertical;
+            min-height: 55px;
+            border-radius: 18px;
+        }
+        .comment-box {
+            grid-column: 1 / -1;
+            margin-top: 4px;
+        }
+        .comment-box textarea {
+            min-height: 65px;
+        }
+        .lead-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 1rem;
+            border-top: 1.5px dashed #b8dff0;
+            padding-top: 1rem;
+        }
+        .lead-actions .btn {
+            padding: 0.35rem 1.1rem;
+            font-size: 0.78rem;
+        }
+        /* General Comment */
+        .general-comment {
+            background: white;
+            border-radius: 28px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            border: 1px solid rgba(0, 119, 182, 0.12);
+        }
+        .general-comment label {
+            font-weight: 700;
+            color: #023e8a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .general-comment textarea {
+            width: 100%;
+            border: 1.5px solid #d4eaf5;
+            border-radius: 24px;
+            padding: 1rem;
+            font-size: 0.95rem;
+            background: #f5faff;
+            min-height: 100px;
+            margin-top: 10px;
+        }
+        .general-comment textarea:focus {
+            outline: 3px solid #0077b6;
+            background: white;
+        }
+        .footer-bar {
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .editing {
+            outline: 3px solid #f9a825;
+            outline-offset: 2px;
+            background: #fffdf0;
+        }
+        .word-counter {
+            font-size: 0.7rem;
+            color: #2c7da0;
+            text-align: right;
+            margin-top: 2px;
+            padding-right: 6px;
+        }
+        /* Completed Tasks */
+        .completed-section {
+            background: white;
+            border-radius: 28px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            border: 2px solid #28a745;
+        }
+        .completed-section h3 {
+            color: #28a745;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+        .completed-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 12px;
+            background: #f8fff8;
+            border-radius: 12px;
+            margin-bottom: 6px;
+            border-left: 4px solid #28a745;
+        }
+        .completed-item i {
+            color: #28a745;
+            font-size: 1.1rem;
+        }
+        .completed-item .item-text {
+            flex: 1;
+            font-size: 0.9rem;
+            color: #2d3748;
+        }
+        .completed-item .item-type {
+            font-size: 0.7rem;
+            color: #718096;
+            background: #edf2f7;
+            padding: 2px 10px;
+            border-radius: 20px;
+        }
+        .completed-empty {
+            color: #a0aec0;
+            font-style: italic;
+            text-align: center;
+            padding: 1rem;
+        }
+        /* To-Do Section */
+        .todo-section {
+            background: white;
+            border-radius: 28px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            border: 1px solid rgba(0, 119, 182, 0.12);
+        }
+        .todo-section h3 {
+            color: #023e8a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+        .todo-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 10px 12px;
+            background: #f7fafc;
+            border-radius: 16px;
+            margin-bottom: 10px;
+            border: 1px solid #e2e8f0;
+        }
+        .todo-item.completed-todo {
+            opacity: 0.6;
+            background: #f0fff4;
+            border-color: #28a745;
+        }
+        .todo-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-top: 3px;
+            cursor: pointer;
+            accent-color: #28a745;
+        }
+        .todo-item .todo-text {
+            flex: 1;
+            font-size: 0.95rem;
+            color: #2d3748;
+        }
+        .todo-item .todo-text.done {
+            text-decoration: line-through;
+            color: #a0aec0;
+        }
+        .todo-item .todo-delete {
+            background: none;
+            border: none;
+            color: #fc8181;
+            cursor: pointer;
+            font-size: 1.1rem;
+            padding: 0 5px;
+        }
+        .todo-item .todo-delete:hover {
+            color: #e53e3e;
+        }
+        .todo-input-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .todo-input-group input {
+            flex: 1;
+            padding: 0.6rem 1rem;
+            border: 1.5px solid #d4eaf5;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            background: #f5faff;
+        }
+        .todo-input-group input:focus {
+            outline: 3px solid #0077b6;
+            border-color: transparent;
+        }
+        /* Mobile */
+        @media (max-width: 640px) {
+            .app-container {
+                padding: 1rem;
+                border-radius: 24px;
+            }
+            .header h1 {
+                font-size: 1.4rem;
+            }
+            .lead-grid {
+                grid-template-columns: 1fr;
+                gap: 0.8rem;
+            }
+            .btn {
+                padding: 0.45rem 0.9rem;
+                font-size: 0.8rem;
+            }
+            .header-actions .btn {
+                font-size: 0.7rem;
+                padding: 0.4rem 0.8rem;
+            }
+            .lock-container {
+                padding: 2rem 1.5rem;
+            }
+            .lock-emoji {
+                font-size: 4rem;
+            }
+            .todo-input-group {
+                flex-direction: column;
+            }
+        }
+        @media (max-width: 400px) {
+            .header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+            .header-actions {
+                justify-content: stretch;
+            }
+            .header-actions .btn {
+                flex: 1;
+                justify-content: center;
+                font-size: 0.7rem;
+            }
+        }
+        i.fa-whatsapp {
+            color: #25D366;
+        }
+        .btn-whatsapp i.fa-whatsapp {
+            color: white;
+        }
+        .shake {
+            animation: shake 0.5s ease;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-15px); }
+            40% { transform: translateX(15px); }
+            60% { transform: translateX(-10px); }
+            80% { transform: translateX(10px); }
+        }
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #1a202c;
+            color: white;
+            padding: 14px 28px;
+            border-radius: 60px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 99999;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            max-width: 90%;
+        }
+        .toast.show {
+            opacity: 1;
+        }
+        .toast.success {
+            border-left: 5px solid #28a745;
+        }
+        .toast.error {
+            border-left: 5px solid #dc3545;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <!-- ===== LOCK SCREEN ===== -->
+    <div id="lockScreen">
+        <div class="lock-container">
+            <!-- First Lock: 🔐 -->
+            <div id="firstLockContainer">
+                <div class="lock-icon-big">🔐</div>
+                <div class="lock-emoji" id="firstLockEmoji">🔐</div>
+                <div class="lock-title">Secure Vault</div>
+                <div class="lock-subtitle">🔒</div>
+                <div class="lock-status" id="firstLockStatus">🔒</div>
+            </div>
+
+            <!-- Second Lock: 🗝️ (hidden initially) -->
+            <div id="secondLockContainer">
+                <div class="lock-icon-big">🗝️</div>
+                <div class="lock-emoji" id="secondLockEmoji">🗝️</div>
+                <div class="lock-title">Final Key</div>
+                <div class="lock-subtitle">🗝️</div>
+                <div class="lock-status" id="secondLockStatus">🗝️</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== APP CONTENT (hidden until unlocked) ===== -->
+    <div id="appContent">
+        <div class="app-container">
+            <!-- Header -->
+            <div class="header">
+                <h1><i class="fas fa-feather-alt"></i> WebSwan <span style="font-weight:300;color:#0077b6;">·</span> Daily</h1>
+                <div class="header-actions">
+                    <button class="btn btn-primary" id="addLeadBtn"><i class="fas fa-plus-circle"></i> Add</button>
+                    <button class="btn btn-outline" id="editToggleBtn"><i class="fas fa-pen"></i> Edit</button>
+                    <button class="btn btn-whatsapp" id="whatsappSendBtn"><i class="fab fa-whatsapp"></i> WhatsApp</button>
+                </div>
+            </div>
+
+            <!-- Leads Container -->
+            <div id="leadsContainer"></div>
+
+            <!-- To-Do Section -->
+            <div class="todo-section">
+                <h3><i class="fas fa-tasks" style="color:#0077b6;"></i> Personal To-Do <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(250 words max)</span></h3>
+                <div id="todoContainer"></div>
+                <div class="todo-input-group">
+                    <input type="text" id="todoInput" placeholder="Add a personal task..." maxlength="250" />
+                    <button class="btn btn-primary" id="addTodoBtn"><i class="fas fa-plus"></i> Add</button>
+                </div>
+                <div class="word-counter" id="todoWordCount">0 / 250 words</div>
+            </div>
+
+            <!-- Completed Tasks -->
+            <div class="completed-section">
+                <h3><i class="fas fa-check-circle"></i> Completed Tasks</h3>
+                <div id="completedContainer">
+                    <div class="completed-empty">No completed tasks yet. Complete a lead or a to-do to see them here! ✅</div>
+                </div>
+            </div>
+
+            <!-- General Comment -->
+            <div class="general-comment" id="generalCommentBox">
+                <label><i class="fas fa-sticky-note" style="color:#0077b6;"></i> Daily general comment <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(max 500 words)</span></label>
+                <textarea id="generalComment" placeholder="Write your daily summary, notes, or anything..." maxlength="3000"></textarea>
+                <div class="word-counter" id="generalWordCount">0 / 500 words</div>
+            </div>
+
+            <!-- Bottom Actions -->
+            <div class="footer-bar">
+                <button class="btn btn-primary" id="globalSaveBtn"><i class="fas fa-save"></i> Save all</button>
+                <button class="btn btn-sms" id="smsSendBtn"><i class="fas fa-sms"></i> Send to 415-877-0687</button>
+                <button class="btn btn-outline" id="clearDataBtn" style="border-color:#e74c3c;color:#e74c3c;"><i class="fas fa-trash"></i> Clear</button>
+                <button class="btn btn-outline" id="lockAppBtn" style="border-color:#0077b6;"><i class="fas fa-lock"></i> Lock</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // ===== TOAST SYSTEM =====
+            function showToast(message, type = 'success') {
+                const toast = document.getElementById('toast');
+                toast.textContent = message;
+                toast.className = 'toast ' + type + ' show';
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 3500);
+            }
+
+            // ===== LOCK SYSTEM =====
+            let firstLockClicks = 0;
+            let secondLockClicks = 0;
+            let isUnlocked = false;
+
+            const lockScreen = document.getElementById('lockScreen');
+            const appContent = document.getElementById('appContent');
+            const firstLockContainer = document.getElementById('firstLockContainer');
+            const secondLockContainer = document.getElementById('secondLockContainer');
+            const firstLockEmoji = document.getElementById('firstLockEmoji');
+            const secondLockEmoji = document.getElementById('secondLockEmoji');
+            const firstLockStatus = document.getElementById('firstLockStatus');
+            const secondLockStatus = document.getElementById('secondLockStatus');
+
+            function resetFirstLock() {
+                firstLockClicks = 0;
+                firstLockStatus.textContent = '🔒';
+                firstLockStatus.style.color = 'rgba(255,255,255,0.4)';
+                firstLockEmoji.classList.remove('shake');
+            }
+
+            function resetSecondLock() {
+                secondLockClicks = 0;
+                secondLockStatus.textContent = '🗝️';
+                secondLockStatus.style.color = 'rgba(255,255,255,0.4)';
+                secondLockEmoji.classList.remove('shake');
+            }
+
+            firstLockEmoji.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (isUnlocked) return;
+                if (firstLockClicks >= 7) return;
+
+                firstLockClicks++;
+                
+                if (firstLockClicks < 7) {
+                    firstLockStatus.textContent = `🔐`;
+                    firstLockStatus.style.color = '#ffd700';
+                }
+
+                if (firstLockClicks === 7) {
+                    firstLockStatus.textContent = '✅';
+                    firstLockStatus.style.color = '#00ff88';
+                    firstLockStatus.style.fontWeight = 'bold';
+
+                    setTimeout(() => {
+                        firstLockContainer.style.display = 'none';
+                        secondLockContainer.classList.add('show');
+                        secondLockContainer.style.display = 'block';
+                        secondLockContainer.style.animation = 'fadeIn 0.6s ease';
+                        resetSecondLock();
+                    }, 400);
+                }
+            });
+
+            secondLockEmoji.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (isUnlocked) return;
+                if (secondLockClicks >= 3) return;
+
+                secondLockClicks++;
+                
+                if (secondLockClicks < 3) {
+                    secondLockStatus.textContent = `🗝️`;
+                    secondLockStatus.style.color = '#ffd700';
+                }
+
+                if (secondLockClicks === 3) {
+                    secondLockStatus.textContent = '🔓';
+                    secondLockStatus.style.color = '#00ff88';
+                    secondLockStatus.style.fontWeight = 'bold';
+                    secondLockEmoji.classList.add('pulse');
+
+                    setTimeout(() => {
+                        isUnlocked = true;
+                        lockScreen.classList.add('hidden');
+                        appContent.classList.add('unlocked');
+                        initApp();
+                    }, 600);
+                }
+            });
+
+            // ===== APP LOGIC =====
+            let leads = [];
+            let todos = [];
+            let completedItems = [];
+            let nextId = 1;
+            let nextTodoId = 1;
+            let editMode = false;
+            let appInitialized = false;
+
+            const container = document.getElementById('leadsContainer');
+            const todoContainer = document.getElementById('todoContainer');
+            const completedContainer = document.getElementById('completedContainer');
+            const generalCommentEl = document.getElementById('generalComment');
+            const generalWordCount = document.getElementById('generalWordCount');
+            const todoInput = document.getElementById('todoInput');
+            const todoWordCount = document.getElementById('todoWordCount');
+
+            function countWords(text) {
+                if (!text) return 0;
+                return text.trim().split(/\s+/).filter(w => w.length > 0).length;
+            }
+
+            function updateGeneralWordCounter() {
+                const words = countWords(generalCommentEl.value);
+                generalWordCount.textContent = `${words} / 500 words`;
+                generalWordCount.style.color = words > 500 ? '#b22222' : '#2c7da0';
+            }
+
+            function updateTodoWordCounter() {
+                const words = countWords(todoInput.value);
+                todoWordCount.textContent = `${words} / 250 words`;
+                todoWordCount.style.color = words > 250 ? '#b22222' : '#2c7da0';
+            }
+
+            // ----- STORAGE -----
+            function loadFromStorage() {
+                try {
+                    const storedLeads = localStorage.getItem('webswan_leads');
+                    if (storedLeads) {
+                        leads = JSON.parse(storedLeads);
+                        let maxId = 0;
+                        leads.forEach(l => { if (l.id && l.id > maxId) maxId = l.id; });
+                        nextId = maxId + 1;
+                    } else {
+                        leads = [
+                            { id: nextId++, name: 'Alice Johnson', phone: '+1 555 123 4567', company: 'TechVibe', url: 'https://techvibe.io', dropdown: 'call back', comment: 'Interested in API integration.', customDropdown: '', completed: false },
+                            { id: nextId++, name: 'Bob Chen', phone: '+1 555 987 6543', company: 'GreenLeaf', url: 'https://greenleaf.eco', dropdown: 'verify correct email', comment: 'Sent proposal, waiting for reply.', customDropdown: '', completed: false }
+                        ];
+                    }
+                    leads = leads.map(l => ({ ...l, customDropdown: l.customDropdown || '', completed: l.completed || false }));
+
+                    const storedTodos = localStorage.getItem('webswan_todos');
+                    if (storedTodos) {
+                        todos = JSON.parse(storedTodos);
+                        let maxTodoId = 0;
+                        todos.forEach(t => { if (t.id && t.id > maxTodoId) maxTodoId = t.id; });
+                        nextTodoId = maxTodoId + 1;
+                    } else {
+                        todos = [];
+                        nextTodoId = 1;
+                    }
+
+                    const storedCompleted = localStorage.getItem('webswan_completed');
+                    if (storedCompleted) {
+                        completedItems = JSON.parse(storedCompleted);
+                    } else {
+                        completedItems = [];
+                    }
+                } catch(e) {
+                    leads = [];
+                    todos = [];
+                    completedItems = [];
+                }
+            }
+
+            function saveToStorage() {
+                localStorage.setItem('webswan_leads', JSON.stringify(leads));
+                localStorage.setItem('webswan_todos', JSON.stringify(todos));
+                localStorage.setItem('webswan_completed', JSON.stringify(completedItems));
+                localStorage.setItem('webswan_general', generalCommentEl.value);
+            }
+
+            function loadGeneralComment() {
+                const saved = localStorage.getItem('webswan_general');
+                if (saved !== null) {
+                    generalCommentEl.value = saved;
+                }
+                updateGeneralWordCounter();
+            }
+
+            // ----- RENDER LEADS -----
+            function renderLeads() {
+                if (!container) return;
+                container.innerHTML = '';
+                leads.forEach((lead) => {
+                    const card = document.createElement('div');
+                    card.className = 'lead-card';
+                    if (lead.completed) card.classList.add('completed');
+                    if (editMode) card.classList.add('editing');
+                    card.dataset.leadId = lead.id;
+
+                    const grid = document.createElement('div');
+                    grid.className = 'lead-grid';
+
+                    grid.appendChild(createField('Name', 'text', lead.name, (val) => { lead.name = val; saveToStorage(); }));
+                    grid.appendChild(createField('Phone', 'tel', lead.phone, (val) => { lead.phone = val; saveToStorage(); }));
+                    grid.appendChild(createField('Company', 'text', lead.company, (val) => { lead.company = val; saveToStorage(); }));
+                    grid.appendChild(createField('URL', 'url', lead.url, (val) => { lead.url = val; saveToStorage(); }));
+
+                    const comboWrapper = document.createElement('div');
+                    comboWrapper.className = 'field-group';
+                    const combo = document.createElement('div');
+                    combo.style.display = 'flex';
+                    combo.style.flexDirection = 'column';
+                    combo.style.gap = '6px';
+
+                    const label = document.createElement('label');
+                    label.innerHTML = '<i class="fas fa-caret-down"></i> Action';
+                    const select = document.createElement('select');
+                    const options = ['call back', 're send email', 'verify correct email', 'search phone number', 'other'];
+                    options.forEach(opt => {
+                        const op = document.createElement('option');
+                        op.value = opt;
+                        op.textContent = opt.charAt(0).toUpperCase() + opt.slice(1);
+                        if (lead.dropdown === opt) op.selected = true;
+                        select.appendChild(op);
+                    });
+                    select.addEventListener('change', (e) => {
+                        lead.dropdown = e.target.value;
+                        saveToStorage();
+                    });
+
+                    const customLabel = document.createElement('label');
+                    customLabel.innerHTML = '<i class="fas fa-edit"></i> Custom (50)';
+                    const customInput = document.createElement('input');
+                    customInput.type = 'text';
+                    customInput.maxLength = 50;
+                    customInput.placeholder = 'e.g. follow-up';
+                    customInput.value = lead.customDropdown || '';
+                    customInput.addEventListener('input', (e) => {
+                        lead.customDropdown = e.target.value.slice(0, 50);
+                        saveToStorage();
+                    });
+
+                    combo.appendChild(label);
+                    combo.appendChild(select);
+                    combo.appendChild(customLabel);
+                    combo.appendChild(customInput);
+                    comboWrapper.appendChild(combo);
+                    grid.appendChild(comboWrapper);
+
+                    const commentGroup = document.createElement('div');
+                    commentGroup.className = 'field-group comment-box';
+                    const commentLabel = document.createElement('label');
+                    commentLabel.innerHTML = '<i class="fas fa-comment"></i> Lead comment (200 words)';
+                    const textarea = document.createElement('textarea');
+                    textarea.placeholder = 'Add details...';
+                    textarea.value = lead.comment || '';
+                    textarea.maxLength = 1200;
+                    const wordCounter = document.createElement('div');
+                    wordCounter.className = 'word-counter';
+
+                    function updateLeadWordCounter() {
+                        const words = countWords(textarea.value);
+                        wordCounter.textContent = `${words} / 200 words`;
+                        wordCounter.style.color = words > 200 ? '#b22222' : '#2c7da0';
+                    }
+                    textarea.addEventListener('input', () => {
+                        lead.comment = textarea.value;
+                        saveToStorage();
+                        updateLeadWordCounter();
+                    });
+                    updateLeadWordCounter();
+
+                    commentGroup.appendChild(commentLabel);
+                    commentGroup.appendChild(textarea);
+                    commentGroup.appendChild(wordCounter);
+                    grid.appendChild(commentGroup);
+
+                    card.appendChild(grid);
+
+                    const actions = document.createElement('div');
+                    actions.className = 'lead-actions';
+
+                    const completeBtn = document.createElement('button');
+                    completeBtn.className = 'btn btn-success btn-complete';
+                    completeBtn.innerHTML = lead.completed ? '<i class="fas fa-undo"></i> Undo' : '<i class="fas fa-check"></i> Complete';
+                    completeBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        toggleLeadComplete(lead.id);
+                    });
+
+                    const saveBtn = document.createElement('button');
+                    saveBtn.className = 'btn btn-primary';
+                    saveBtn.innerHTML = '<i class="fas fa-save"></i> Save';
+                    saveBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        saveToStorage();
+                        saveBtn.innerHTML = '<i class="fas fa-check"></i> Saved ✓';
+                        setTimeout(() => { saveBtn.innerHTML = '<i class="fas fa-save"></i> Save'; }, 1200);
+                    });
+
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'btn btn-outline';
+                    editBtn.innerHTML = '<i class="fas fa-pen"></i> Edit';
+                    editBtn.addEventListener('click', () => {
+                        editMode = !editMode;
+                        document.getElementById('editToggleBtn').innerHTML = editMode ? '<i class="fas fa-pen-fancy"></i> ON' : '<i class="fas fa-pen"></i> Edit';
+                        document.querySelectorAll('.lead-card').forEach(c => c.classList.toggle('editing', editMode));
+                    });
+
+                    actions.appendChild(completeBtn);
+                    actions.appendChild(saveBtn);
+                    actions.appendChild(editBtn);
+                    card.appendChild(actions);
+                    container.appendChild(card);
+                });
+            }
+
+            function createField(labelText, type, value, onChange) {
+                const div = document.createElement('div');
+                div.className = 'field-group';
+                const label = document.createElement('label');
+                label.textContent = labelText;
+                const input = document.createElement('input');
+                input.type = type;
+                input.value = value || '';
+                input.addEventListener('input', (e) => {
+                    onChange(e.target.value);
+                });
+                div.appendChild(label);
+                div.appendChild(input);
+                return div;
+            }
+
+            // ----- TOGGLE LEAD COMPLETE -----
+            function toggleLeadComplete(leadId) {
+                const lead = leads.find(l => l.id === leadId);
+                if (!lead) return;
+
+                if (!lead.completed) {
+                    lead.completed = true;
+                    completedItems.push({
+                        id: Date.now(),
+                        type: 'lead',
+                        text: `${lead.name} - ${lead.company || 'No company'} (${lead.phone || 'No phone'})`,
+                        leadId: lead.id,
+                        timestamp: new Date().toLocaleString()
+                    });
+                    showToast('✅ Lead completed!', 'success');
+                } else {
+                    lead.completed = false;
+                    completedItems = completedItems.filter(item => item.leadId !== lead.id);
+                    showToast('↩️ Lead undone', 'success');
+                }
+
+                saveToStorage();
+                renderLeads();
+                renderCompleted();
+                renderTodos();
+            }
+
+            // ----- RENDER TODOS -----
+            function renderTodos() {
+                if (!todoContainer) return;
+                todoContainer.innerHTML = '';
+                if (todos.length === 0) {
+                    todoContainer.innerHTML = '<div style="color:#a0aec0;font-style:italic;padding:0.5rem;">No personal tasks yet. Add one below! 📝</div>';
+                    return;
+                }
+
+                todos.forEach((todo) => {
+                    const div = document.createElement('div');
+                    div.className = 'todo-item';
+                    if (todo.completed) div.classList.add('completed-todo');
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.checked = todo.completed || false;
+                    checkbox.addEventListener('change', () => {
+                        toggleTodoComplete(todo.id);
+                    });
+
+                    const textSpan = document.createElement('span');
+                    textSpan.className = 'todo-text';
+                    if (todo.completed) textSpan.classList.add('done');
+                    textSpan.textContent = todo.text;
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'todo-delete';
+                    deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
+                    deleteBtn.addEventListener('click', () => {
+                        deleteTodo(todo.id);
+                    });
+
+                    div.appendChild(checkbox);
+                    div.appendChild(textSpan);
+                    div.appendChild(deleteBtn);
+                    todoContainer.appendChild(div);
+                });
+            }
+
+            // ----- TOGGLE TODO COMPLETE -----
+            function toggleTodoComplete(todoId) {
+                const todo = todos.find(t => t.id === todoId);
+                if (!todo) return;
+
+                if (!todo.completed) {
+                    todo.completed = true;
+                    completedItems.push({
+                        id: Date.now(),
+                        type: 'todo',
+                        text: todo.text,
+                        todoId: todo.id,
+                        timestamp: new Date().toLocaleString()
+                    });
+                    showToast('✅ Task completed!', 'success');
+                } else {
+                    todo.completed = false;
+                    completedItems = completedItems.filter(item => item.todoId !== todo.id);
+                    showToast('↩️ Task undone', 'success');
+                }
+
+                saveToStorage();
+                renderTodos();
+                renderCompleted();
+            }
+
+            // ----- DELETE TODO -----
+            function deleteTodo(todoId) {
+                const todo = todos.find(t => t.id === todoId);
+                if (todo && todo.completed) {
+                    completedItems = completedItems.filter(item => item.todoId !== todoId);
+                }
+                todos = todos.filter(t => t.id !== todoId);
+                saveToStorage();
+                renderTodos();
+                renderCompleted();
+                showToast('🗑️ Task deleted', 'success');
+            }
+
+            // ----- ADD TODO -----
+            function addTodo() {
+                const text = todoInput.value.trim();
+                if (!text) {
+                    showToast('Please enter a task.', 'error');
+                    return;
+                }
+                if (countWords(text) > 250) {
+                    showToast('Task exceeds 250 words limit!', 'error');
+                    return;
+                }
+
+                todos.push({
+                    id: nextTodoId++,
+                    text: text,
+                    completed: false
+                });
+
+                todoInput.value = '';
+                updateTodoWordCounter();
+                saveToStorage();
+                renderTodos();
+                renderCompleted();
+                showToast('✅ Task added!', 'success');
+            }
+
+            // ----- RENDER COMPLETED -----
+            function renderCompleted() {
+                if (!completedContainer) return;
+                if (completedItems.length === 0) {
+                    completedContainer.innerHTML = '<div class="completed-empty">No completed tasks yet. Complete a lead or a to-do to see them here! ✅</div>';
+                    return;
+                }
+
+                completedContainer.innerHTML = '';
+                const sorted = [...completedItems].reverse();
+                sorted.forEach((item) => {
+                    const div = document.createElement('div');
+                    div.className = 'completed-item';
+                    div.innerHTML = `
+                        <i class="fas fa-check-circle"></i>
+                        <span class="item-text">${item.text}</span>
+                        <span class="item-type">${item.type === 'lead' ? '📋 Lead' : '📝 To-Do'}</span>
+                        <span style="font-size:0.7rem;color:#a0aec0;">${item.timestamp || ''}</span>
+                    `;
+                    completedContainer.appendChild(div);
+                });
+            }
+
+            // ----- SMS SEND (to 415-877-0687) -----
+            function sendSMS() {
+                // Collect all data
+                let message = '📋 *WebSwan Daily Report* 📋\n\n';
+                message += '━━━━━━━━━━━━━━━━━━\n';
+                message += '📌 *LEADS*\n';
+                message += '━━━━━━━━━━━━━━━━━━\n';
+                
+                if (leads.length === 0) {
+                    message += 'No leads yet.\n';
+                } else {
+                    leads.forEach((lead, index) => {
+                        const status = lead.completed ? '✅ COMPLETED' : '⏳ PENDING';
+                        message += `\n${index + 1}. ${lead.name || 'No name'}\n`;
+                        message += `   📞 ${lead.phone || 'No phone'}\n`;
+                        message += `   🏢 ${lead.company || 'No company'}\n`;
+                        message += `   🔗 ${lead.url || 'No URL'}\n`;
+                        message += `   🎯 ${lead.dropdown || 'No action'}\n`;
+                        if (lead.customDropdown) message += `   ✏️ ${lead.customDropdown}\n`;
+                        if (lead.comment) message += `   💬 ${lead.comment}\n`;
+                        message += `   📊 ${status}\n`;
+                    });
+                }
+
+                message += '\n━━━━━━━━━━━━━━━━━━\n';
+                message += '📝 *PERSONAL TO-DOS*\n';
+                message += '━━━━━━━━━━━━━━━━━━\n';
+                
+                if (todos.length === 0) {
+                    message += 'No personal tasks.\n';
+                } else {
+                    todos.forEach((todo, index) => {
+                        const status = todo.completed ? '✅' : '⬜';
+                        message += `   ${status} ${todo.text}\n`;
+                    });
+                }
+
+                message += '\n━━━━━━━━━━━━━━━━━━\n';
+                message += '✅ *COMPLETED TASKS*\n';
+                message += '━━━━━━━━━━━━━━━━━━\n';
+                
+                if (completedItems.length === 0) {
+                    message += 'No completed tasks yet.\n';
+                } else {
+                    completedItems.forEach((item) => {
+                        message += `   ✅ ${item.text} (${item.type})\n`;
+                    });
+                }
+
+                if (generalCommentEl.value.trim()) {
+                    message += '\n━━━━━━━━━━━━━━━━━━\n';
+                    message += '📖 *DAILY COMMENT*\n';
+                    message += '━━━━━━━━━━━━━━━━━━\n';
+                    message += generalCommentEl.value;
+                }
+
+                message += '\n\n━━━━━━━━━━━━━━━━━━\n';
+                message += '📅 ' + new Date().toLocaleString();
+                message += '\n📱 Sent via WebSwan';
+
+                // Encode for SMS
+                const encoded = encodeURIComponent(message);
+                const phoneNumber = '4158770687';
+                const smsUrl = `sms:${phoneNumber}?body=${encoded}`;
+
+                // Try to open SMS app
+                try {
+                    window.location.href = smsUrl;
+                    showToast(`📱 Opening SMS to ${phoneNumber}...`, 'success');
+                } catch(e) {
+                    // Fallback: copy to clipboard
+                    const textarea = document.createElement('textarea');
+                    textarea.value = message;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                    showToast('📋 Report copied to clipboard!', 'success');
+                }
+            }
+
+            // ----- OTHER FUNCTIONS -----
+            function addLead() {
+                const newLead = {
+                    id: nextId++,
+                    name: '',
+                    phone: '',
+                    company: '',
+                    url: '',
+                    dropdown: 'call back',
+                    comment: '',
+                    customDropdown: '',
+                    completed: false
+                };
+                leads.push(newLead);
+                saveToStorage();
+                renderLeads();
+                const cards = container.querySelectorAll('.lead-card');
+                if (cards.length) cards[cards.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                showToast('✅ New lead added!', 'success');
+            }
+
+            function sendWhatsApp() {
+                const phones = leads.map(l => l.phone).filter(p => p && p.trim().length > 0);
+                if (phones.length === 0) {
+                    showToast('💬 No phone numbers found!', 'error');
+                    return;
+                }
+                const number = phones[0].replace(/\s/g, '').replace(/^\+/, '');
+                const message = '📋 WebSwan Daily Lead Task - check your leads!';
+                const url = `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
+                window.open(url, '_blank');
+            }
+
+            function toggleEditMode() {
+                editMode = !editMode;
+                document.getElementById('editToggleBtn').innerHTML = editMode ? '<i class="fas fa-pen-fancy"></i> ON' : '<i class="fas fa-pen"></i> Edit';
+                document.querySelectorAll('.lead-card').forEach(c => c.classList.toggle('editing', editMode));
+            }
+
+            function clearAllData() {
+                if (confirm('⚠️ Delete ALL data? This cannot be undone!')) {
+                    localStorage.removeItem('webswan_leads');
+                    localStorage.removeItem('webswan_todos');
+                    localStorage.removeItem('webswan_completed');
+                    localStorage.removeItem('webswan_general');
+                    leads = [];
+                    todos = [];
+                    completedItems = [];
+                    nextId = 1;
+                    nextTodoId = 1;
+                    generalCommentEl.value = '';
+                    saveToStorage();
+                    renderLeads();
+                    renderTodos();
+                    renderCompleted();
+                    updateGeneralWordCounter();
+                    showToast('🗑️ All data cleared.', 'success');
+                }
+            }
+
+            function lockApp() {
+                if (confirm('🔒 Lock the app? You\'ll need to unlock again.')) {
+                    isUnlocked = false;
+                    appContent.classList.remove('unlocked');
+                    lockScreen.classList.remove('hidden');
+                    resetFirstLock();
+                    resetSecondLock();
+                    firstLockContainer.style.display = 'block';
+                    secondLockContainer.classList.remove('show');
+                    secondLockContainer.style.display = 'none';
+                    firstLockClicks = 0;
+                    secondLockClicks = 0;
+                    firstLockStatus.textContent = '🔒';
+                    firstLockStatus.style.color = 'rgba(255,255,255,0.4)';
+                    secondLockStatus.textContent = '🗝️';
+                    secondLockStatus.style.color = 'rgba(255,255,255,0.4)';
+                    secondLockEmoji.classList.remove('pulse');
+                }
+            }
+
+            // ===== INIT APP =====
+            function initApp() {
+                if (appInitialized) return;
+                appInitialized = true;
+
+                loadFromStorage();
+                loadGeneralComment();
+                renderLeads();
+                renderTodos();
+                renderCompleted();
+
+                document.getElementById('addLeadBtn').addEventListener('click', addLead);
+                document.getElementById('editToggleBtn').addEventListener('click', toggleEditMode);
+                document.getElementById('whatsappSendBtn').addEventListener('click', sendWhatsApp);
+                document.getElementById('globalSaveBtn').addEventListener('click', () => {
+                    saveToStorage();
+                    showToast('✅ All data saved locally!', 'success');
+                });
+                document.getElementById('clearDataBtn').addEventListener('click', clearAllData);
+                document.getElementById('lockAppBtn').addEventListener('click', lockApp);
+                document.getElementById('addTodoBtn').addEventListener('click', addTodo);
+                document.getElementById('smsSendBtn').addEventListener('click', sendSMS);
+                
+                todoInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') addTodo();
+                });
+                todoInput.addEventListener('input', updateTodoWordCounter);
+
+                generalCommentEl.addEventListener('input', () => {
+                    const words = countWords(generalCommentEl.value);
+                    if (words > 500) {
+                        const truncated = generalCommentEl.value.split(/\s+/).slice(0, 500).join(' ');
+                        generalCommentEl.value = truncated;
+                    }
+                    updateGeneralWordCounter();
+                    localStorage.setItem('webswan_general', generalCommentEl.value);
+                });
+
+                updateTodoWordCounter();
+                showToast('🔓 Welcome back, love! 💙', 'success');
+            }
+        })();
+    </script>
+</body>
+</html>
