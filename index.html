@@ -673,6 +673,56 @@
             background: #28a745;
             border-color: #28a745;
         }
+        /* ===== PHONE NUMBER MODAL ===== */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(2, 20, 40, 0.55);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100000;
+            padding: 1rem;
+        }
+        .modal-overlay.open {
+            display: flex;
+        }
+        .modal-box {
+            background: white;
+            border-radius: 28px;
+            padding: 1.8rem;
+            max-width: 380px;
+            width: 100%;
+            box-shadow: 0 20px 50px rgba(0, 40, 70, 0.35);
+        }
+        .modal-box h3 {
+            color: #023e8a;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .modal-box input {
+            width: 100%;
+            padding: 0.7rem 1rem;
+            border: 1.5px solid #d4eaf5;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            background: #f5faff;
+            margin-bottom: 1.2rem;
+        }
+        .modal-box input:focus {
+            outline: 3px solid #0077b6;
+            background: white;
+        }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
     </style>
 </head>
 <body>
@@ -799,12 +849,35 @@
                 <div class="word-counter" id="generalWordCount">0 / 500 words</div>
             </div>
 
+            <!-- Briefing -->
+            <div class="general-comment" id="briefingBox">
+                <label><i class="fas fa-file-alt" style="color:#0077b6;"></i> Briefing <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(max 5000 words)</span></label>
+                <textarea id="briefingComment" style="min-height:160px;"></textarea>
+                <div class="word-counter" id="briefingWordCount">0 / 5000 words</div>
+                <div class="general-send-row">
+                    <button class="btn btn-whatsapp" id="briefingWhatsappBtn"><i class="fab fa-whatsapp"></i> WhatsApp</button>
+                    <button class="btn btn-sms" id="briefingSmsBtn"><i class="fas fa-sms"></i> SMS</button>
+                </div>
+            </div>
+
             <!-- Bottom Actions -->
             <div class="footer-bar">
                 <button class="btn btn-primary" id="globalSaveBtn"><i class="fas fa-save"></i> Save all</button>
                 <button class="btn btn-sms" id="smsSendBtn"><i class="fas fa-sms"></i> Send to 415-877-0687</button>
                 <button class="btn btn-outline" id="clearDataBtn" style="border-color:#e74c3c;color:#e74c3c;"><i class="fas fa-trash"></i> Clear</button>
                 <button class="btn btn-outline" id="lockAppBtn" style="border-color:#0077b6;"><i class="fas fa-lock"></i> Lock</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phone Number Entry Modal (used for manual SMS number entry) -->
+    <div id="phoneModalOverlay" class="modal-overlay">
+        <div class="modal-box">
+            <h3><i class="fas fa-phone"></i> Enter phone number</h3>
+            <input type="tel" id="phoneModalInput" />
+            <div class="modal-actions">
+                <button class="btn btn-outline" id="phoneModalCancel">Cancel</button>
+                <button class="btn btn-sms" id="phoneModalConfirm"><i class="fas fa-sms"></i> Send SMS</button>
             </div>
         </div>
     </div>
@@ -918,6 +991,8 @@
             const completedContainer = document.getElementById('completedContainer');
             const generalCommentEl = document.getElementById('generalComment');
             const generalWordCount = document.getElementById('generalWordCount');
+            const briefingCommentEl = document.getElementById('briefingComment');
+            const briefingWordCount = document.getElementById('briefingWordCount');
             const todoInput = document.getElementById('todoInput');
             const todoWordCount = document.getElementById('todoWordCount');
             const editToggleBtn = document.getElementById('editToggleBtn');
@@ -942,6 +1017,12 @@
                 const words = countWords(generalCommentEl.value);
                 generalWordCount.textContent = `${words} / 500 words`;
                 generalWordCount.style.color = words > 500 ? '#b22222' : '#2c7da0';
+            }
+
+            function updateBriefingWordCounter() {
+                const words = countWords(briefingCommentEl.value);
+                briefingWordCount.textContent = `${words} / 5000 words`;
+                briefingWordCount.style.color = words > 5000 ? '#b22222' : '#2c7da0';
             }
 
             function updateTodoWordCounter() {
@@ -1018,6 +1099,7 @@
                 localStorage.setItem('webswan_todos', JSON.stringify(todos));
                 localStorage.setItem('webswan_completed', JSON.stringify(completedItems));
                 localStorage.setItem('webswan_general', generalCommentEl.value);
+                localStorage.setItem('webswan_briefing', briefingCommentEl.value);
                 localStorage.setItem('webswan_language', JSON.stringify(languageData));
                 localStorage.setItem('webswan_aidata', JSON.stringify(aiData));
                 localStorage.setItem('webswan_aitool_selected', currentAiTool);
@@ -1029,6 +1111,12 @@
                     generalCommentEl.value = saved;
                 }
                 updateGeneralWordCounter();
+
+                const savedBriefing = localStorage.getItem('webswan_briefing');
+                if (savedBriefing !== null) {
+                    briefingCommentEl.value = savedBriefing;
+                }
+                updateBriefingWordCounter();
             }
 
             // ----- EDIT MODE HELPERS -----
@@ -1158,7 +1246,6 @@
                     const label = document.createElement('label');
                     label.innerHTML = '<i class="fas fa-caret-down"></i> Action';
                     const select = document.createElement('select');
-                    select.disabled = !unlocked;
                     ACTION_OPTIONS.forEach(opt => {
                         const op = document.createElement('option');
                         op.value = opt;
@@ -1175,7 +1262,6 @@
                     customLabel.innerHTML = '<i class="fas fa-edit"></i> Custom note';
                     const customInput = document.createElement('textarea');
                     customInput.style.minHeight = '46px';
-                    customInput.readOnly = !unlocked;
                     customInput.value = lead.customDropdown || '';
                     const customCounter = document.createElement('div');
                     customCounter.className = 'word-counter';
@@ -1209,7 +1295,6 @@
                     const commentLabel = document.createElement('label');
                     commentLabel.innerHTML = '<i class="fas fa-comment"></i> Lead comment (200 words)';
                     const textarea = document.createElement('textarea');
-                    textarea.readOnly = !unlocked;
                     textarea.value = lead.comment || '';
                     const wordCounter = document.createElement('div');
                     wordCounter.className = 'word-counter';
@@ -1297,7 +1382,6 @@
                 const input = document.createElement('input');
                 input.type = type;
                 input.value = value || '';
-                input.readOnly = !unlocked;
                 input.addEventListener('input', (e) => {
                     onChange(e.target.value);
                     saveToStorage();
@@ -1364,24 +1448,19 @@
                     textSpan.className = 'todo-text';
                     if (todo.completed) textSpan.classList.add('done');
 
-                    if (unlocked) {
-                        const editInput = document.createElement('input');
-                        editInput.type = 'text';
-                        editInput.value = todo.text;
-                        editInput.maxLength = 250;
-                        editInput.style.width = '100%';
-                        editInput.style.padding = '0.4rem 0.8rem';
-                        editInput.style.border = '1.5px solid #d4eaf5';
-                        editInput.style.borderRadius = '14px';
-                        editInput.addEventListener('input', (e) => {
-                            todo.text = e.target.value;
-                            saveToStorage();
-                        });
-                        textSpan.innerHTML = '';
-                        textSpan.appendChild(editInput);
-                    } else {
-                        textSpan.textContent = todo.text;
-                    }
+                    const editInput = document.createElement('input');
+                    editInput.type = 'text';
+                    editInput.value = todo.text;
+                    editInput.maxLength = 250;
+                    editInput.style.width = '100%';
+                    editInput.style.padding = '0.4rem 0.8rem';
+                    editInput.style.border = '1.5px solid #d4eaf5';
+                    editInput.style.borderRadius = '14px';
+                    editInput.addEventListener('input', (e) => {
+                        todo.text = e.target.value;
+                        saveToStorage();
+                    });
+                    textSpan.appendChild(editInput);
 
                     const sendActions = document.createElement('div');
                     sendActions.className = 'todo-send-actions';
@@ -1631,6 +1710,41 @@
 
             function sendGeneralSMS() {
                 openSMS(OWNER_PHONE, buildGeneralMessage());
+            }
+
+            // ----- BRIEFING (5000 words, own WhatsApp + manual-number SMS) -----
+            function buildBriefingMessage() {
+                let msg = '📄 *Briefing*\n━━━━━━━━━━━━━━━━━━\n';
+                msg += briefingCommentEl.value.trim() ? briefingCommentEl.value : 'No briefing written yet.';
+                msg += '\n\n📅 ' + new Date().toLocaleString();
+                return msg;
+            }
+
+            function sendBriefingWhatsApp() {
+                openWhatsApp(OWNER_PHONE, buildBriefingMessage());
+            }
+
+            // ----- PHONE NUMBER MODAL (manual SMS number entry) -----
+            const phoneModalOverlay = document.getElementById('phoneModalOverlay');
+            const phoneModalInput = document.getElementById('phoneModalInput');
+            const phoneModalCancel = document.getElementById('phoneModalCancel');
+            const phoneModalConfirm = document.getElementById('phoneModalConfirm');
+            let pendingModalMessage = null;
+
+            function openPhoneModal(message) {
+                pendingModalMessage = message;
+                phoneModalInput.value = '';
+                phoneModalOverlay.classList.add('open');
+                setTimeout(() => phoneModalInput.focus(), 50);
+            }
+
+            function closePhoneModal() {
+                phoneModalOverlay.classList.remove('open');
+                pendingModalMessage = null;
+            }
+
+            function sendBriefingSMS() {
+                openPhoneModal(buildBriefingMessage());
             }
 
             // ----- FULL DAILY REPORT SMS (to 415-877-0687) -----
@@ -1891,6 +2005,21 @@
                 saveEditBtn.addEventListener('click', saveEdit);
                 document.getElementById('generalWhatsappBtn').addEventListener('click', sendGeneralWhatsApp);
                 document.getElementById('generalSmsBtn').addEventListener('click', sendGeneralSMS);
+                document.getElementById('briefingWhatsappBtn').addEventListener('click', sendBriefingWhatsApp);
+                document.getElementById('briefingSmsBtn').addEventListener('click', sendBriefingSMS);
+                phoneModalCancel.addEventListener('click', closePhoneModal);
+                phoneModalConfirm.addEventListener('click', () => {
+                    const num = phoneModalInput.value.trim();
+                    if (!num) {
+                        showToast('Please enter a phone number.', 'error');
+                        return;
+                    }
+                    openSMS(num, pendingModalMessage);
+                    closePhoneModal();
+                });
+                phoneModalInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') phoneModalConfirm.click();
+                });
                 document.getElementById('globalSaveBtn').addEventListener('click', () => {
                     saveToStorage();
                     showToast('✅ All data saved locally!', 'success');
@@ -1915,6 +2044,16 @@
                     localStorage.setItem('webswan_general', generalCommentEl.value);
                 });
 
+                briefingCommentEl.addEventListener('input', () => {
+                    const words = countWords(briefingCommentEl.value);
+                    if (words > 5000) {
+                        const truncated = briefingCommentEl.value.split(/\s+/).slice(0, 5000).join(' ');
+                        briefingCommentEl.value = truncated;
+                    }
+                    updateBriefingWordCounter();
+                    localStorage.setItem('webswan_briefing', briefingCommentEl.value);
+                });
+
                 updateTodoWordCounter();
                 showToast('🔓 Welcome back, love! 💙', 'success');
             }
@@ -1922,3 +2061,4 @@
     </script>
 </body>
 </html>
+                
