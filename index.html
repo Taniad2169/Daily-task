@@ -424,6 +424,20 @@
             padding: 2px 10px;
             border-radius: 20px;
         }
+        .completed-item .delete-completed {
+            background: none;
+            border: none;
+            color: #fc8181;
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 0 8px;
+            transition: 0.2s;
+            border-radius: 20px;
+        }
+        .completed-item .delete-completed:hover {
+            color: #dc3545;
+            background: #fff5f5;
+        }
         .completed-empty {
             color: #a0aec0;
             font-style: italic;
@@ -1039,8 +1053,9 @@
                         leads.forEach(l => { if (l.id && l.id > maxId) maxId = l.id; });
                         nextId = maxId + 1;
                     } else {
+                        // REMOVED fake Bob Chen lead - only real lead
                         leads = [
-                            { id: nextId++, name: 'Sarah Williams', phone: '+1 123 456 7890', company: 'Digital Solutions', url: 'https://digitalsolutions.com', dropdown: 'call back', comment: 'Need to follow up on proposal.', customDropdown: '', completed: false }
+                            { id: nextId++, name: 'Solene - Base44', phone: '', company: '', url: 'taniad2169.github.io/Daily-task', dropdown: 'call back', comment: '', customDropdown: '', completed: false }
                         ];
                     }
                     leads = leads.map(l => ({ ...l, customDropdown: l.customDropdown || '', completed: l.completed || false }));
@@ -1059,6 +1074,11 @@
                     const storedCompleted = localStorage.getItem('webswan_completed');
                     if (storedCompleted) {
                         completedItems = JSON.parse(storedCompleted);
+                        // Remove any fake Bob Chen entries from completed
+                        completedItems = completedItems.filter(item => 
+                            !item.text.includes('Bob Chen') && 
+                            !item.text.includes('555 987 6543')
+                        );
                     } else {
                         completedItems = [];
                     }
@@ -1193,7 +1213,6 @@
                         toggleLeadComplete(lead.id);
                     });
 
-                    // Edit Dropdown
                     const dropdownContainer = document.createElement('div');
                     dropdownContainer.className = 'edit-dropdown';
                     
@@ -1214,7 +1233,6 @@
                     editOption.innerHTML = '<i class="fas fa-pen"></i> Edit Field';
                     editOption.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        // Enable editing on all fields
                         const card = dropdownContainer.closest('.lead-card');
                         card.classList.toggle('editing');
                         dropdownContent.classList.remove('show');
@@ -1260,7 +1278,10 @@
             }
 
             function deleteLead(leadId) {
+                // Remove from leads
                 leads = leads.filter(l => l.id !== leadId);
+                // Also remove from completed items if it's there
+                completedItems = completedItems.filter(item => item.leadId !== leadId);
                 saveToStorage();
                 renderLeads();
                 renderCompleted();
@@ -1293,7 +1314,7 @@
                     completedItems.push({
                         id: Date.now(),
                         type: 'lead',
-                        text: `${lead.name} - ${lead.company || 'No company'} (${lead.phone || 'No phone'})`,
+                        text: `${lead.name} - ${lead.company || 'No address'} (${lead.phone || 'No phone'})`,
                         leadId: lead.id,
                         timestamp: new Date().toLocaleString()
                     });
@@ -1415,7 +1436,7 @@
                 showToast('✅ Task added!', 'success');
             }
 
-            // ----- RENDER COMPLETED -----
+            // ----- RENDER COMPLETED with Delete Button -----
             function renderCompleted() {
                 if (!completedContainer) return;
                 if (completedItems.length === 0) {
@@ -1425,7 +1446,7 @@
 
                 completedContainer.innerHTML = '';
                 const sorted = [...completedItems].reverse();
-                sorted.forEach((item) => {
+                sorted.forEach((item, index) => {
                     const div = document.createElement('div');
                     div.className = 'completed-item';
                     div.innerHTML = `
@@ -1433,17 +1454,40 @@
                         <span class="item-text">${item.text}</span>
                         <span class="item-type">${item.type === 'lead' ? '📋 Lead' : '📝 To-Do'}</span>
                         <span style="font-size:0.7rem;color:#a0aec0;">${item.timestamp || ''}</span>
+                        <button class="delete-completed" data-index="${index}" title="Delete from completed list"><i class="fas fa-times-circle"></i></button>
                     `;
                     completedContainer.appendChild(div);
+                });
+
+                // Add delete functionality to each completed item
+                document.querySelectorAll('.delete-completed').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const index = parseInt(this.dataset.index);
+                        const actualIndex = completedItems.length - 1 - index;
+                        if (confirm('Remove this item from completed tasks?')) {
+                            const item = completedItems[actualIndex];
+                            // If it's a lead, also un-complete it
+                            if (item.type === 'lead' && item.leadId) {
+                                const lead = leads.find(l => l.id === item.leadId);
+                                if (lead) {
+                                    lead.completed = false;
+                                }
+                            }
+                            completedItems.splice(actualIndex, 1);
+                            saveToStorage();
+                            renderLeads();
+                            renderCompleted();
+                            renderTodos();
+                            showToast('🗑️ Removed from completed tasks', 'success');
+                        }
+                    });
                 });
             }
 
             // ===== WHATSAPP - MANUAL CONTACT SELECTION =====
             function sendWhatsApp() {
-                // Build message with ALL filled data
                 let message = '📋 *WebSwan Complete Report* 📋\n\n';
                 
-                // LEADS
                 message += '━━━━━━━━━━━━━━━━━━\n';
                 message += '📌 *LEADS*\n';
                 message += '━━━━━━━━━━━━━━━━━━\n';
@@ -1464,7 +1508,6 @@
                     });
                 }
 
-                // PERSONAL TO-DOS
                 message += '\n━━━━━━━━━━━━━━━━━━\n';
                 message += '📝 *PERSONAL TO-DOS*\n';
                 message += '━━━━━━━━━━━━━━━━━━\n';
@@ -1478,7 +1521,6 @@
                     });
                 }
 
-                // COMPLETED TASKS
                 message += '\n━━━━━━━━━━━━━━━━━━\n';
                 message += '✅ *COMPLETED TASKS*\n';
                 message += '━━━━━━━━━━━━━━━━━━\n';
@@ -1491,7 +1533,6 @@
                     });
                 }
 
-                // DAILY COMMENT
                 if (generalCommentEl.value.trim()) {
                     message += '\n━━━━━━━━━━━━━━━━━━\n';
                     message += '📖 *DAILY COMMENT*\n';
@@ -1503,7 +1544,6 @@
                 message += '📅 ' + new Date().toLocaleString();
                 message += '\n📱 Sent via WebSwan Suite';
 
-                // Open WhatsApp with message - user selects contact manually
                 const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
                 window.open(url, '_blank');
                 showToast('📱 WhatsApp opened! Select your contact manually.', 'success');
