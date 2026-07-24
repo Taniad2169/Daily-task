@@ -20,7 +20,6 @@
             justify-content: center;
             align-items: center;
         }
-        /* ----- LOCK SCREEN OVERLAY ----- */
         #lockScreen {
             position: fixed;
             top: 0;
@@ -108,7 +107,6 @@
         .pulse {
             animation: pulse 1.5s infinite;
         }
-        /* ----- APP (hidden until unlocked) ----- */
         #appContent {
             opacity: 0;
             pointer-events: none;
@@ -129,7 +127,6 @@
             box-shadow: 0 20px 50px rgba(0, 40, 70, 0.3);
             border: 1px solid rgba(255, 255, 255, 0.6);
         }
-        /* Header */
         .header {
             display: flex;
             flex-wrap: wrap;
@@ -218,6 +215,14 @@
         .btn-purple i {
             color: white;
         }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            border: 1px solid #dc3545;
+        }
+        .btn-danger i {
+            color: white;
+        }
         .btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 18px rgba(0, 80, 130, 0.2);
@@ -225,7 +230,6 @@
         .btn:active {
             transform: scale(0.95);
         }
-        /* Page Navigation */
         .page-nav {
             display: flex;
             gap: 12px;
@@ -249,7 +253,6 @@
             from { opacity: 0; transform: translateX(30px); }
             to { opacity: 1; transform: translateX(0); }
         }
-        /* Lead Card */
         .lead-card {
             background: white;
             border-radius: 28px;
@@ -334,7 +337,6 @@
             padding: 0.35rem 1.1rem;
             font-size: 0.78rem;
         }
-        /* General Comment */
         .general-comment {
             background: white;
             border-radius: 28px;
@@ -382,7 +384,6 @@
             margin-top: 2px;
             padding-right: 6px;
         }
-        /* Completed Tasks */
         .completed-section {
             background: white;
             border-radius: 28px;
@@ -429,7 +430,6 @@
             text-align: center;
             padding: 1rem;
         }
-        /* To-Do Section */
         .todo-section {
             background: white;
             border-radius: 28px;
@@ -503,7 +503,6 @@
             outline: 3px solid #0077b6;
             border-color: transparent;
         }
-        /* Lessons Page */
         .lessons-container {
             padding: 1rem 0;
         }
@@ -545,7 +544,53 @@
             margin-top: 1.5rem;
             justify-content: flex-end;
         }
-        /* Mobile */
+        .edit-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+        .edit-dropdown-content {
+            display: none;
+            position: absolute;
+            background: white;
+            min-width: 160px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+            border-radius: 16px;
+            z-index: 100;
+            right: 0;
+            top: 100%;
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+        }
+        .edit-dropdown-content.show {
+            display: block;
+        }
+        .edit-dropdown-content button {
+            display: block;
+            width: 100%;
+            padding: 10px 16px;
+            border: none;
+            background: white;
+            text-align: left;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: 0.15s;
+            color: #2d3748;
+        }
+        .edit-dropdown-content button:hover {
+            background: #f7fafc;
+        }
+        .edit-dropdown-content .edit-option:hover {
+            background: #ebf8ff;
+            color: #0077b6;
+        }
+        .edit-dropdown-content .delete-option:hover {
+            background: #fff5f5;
+            color: #dc3545;
+        }
+        .edit-dropdown-content .save-option:hover {
+            background: #f0fff4;
+            color: #28a745;
+        }
         @media (max-width: 640px) {
             .app-container {
                 padding: 1rem;
@@ -611,7 +656,6 @@
             60% { transform: translateX(-10px); }
             80% { transform: translateX(10px); }
         }
-        /* Toast notification */
         .toast {
             position: fixed;
             bottom: 30px;
@@ -649,7 +693,6 @@
 </head>
 <body>
 
-    <!-- Toast Notification -->
     <div id="toast" class="toast"></div>
 
     <!-- ===== LOCK SCREEN ===== -->
@@ -693,10 +736,8 @@
 
             <!-- ===== PAGE 1: TASKS ===== -->
             <div id="page-tasks" class="page active">
-                <!-- Leads Container -->
                 <div id="leadsContainer"></div>
 
-                <!-- To-Do Section -->
                 <div class="todo-section">
                     <h3><i class="fas fa-tasks" style="color:#0077b6;"></i> Personal To-Do <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(250 words max)</span></h3>
                     <div id="todoContainer"></div>
@@ -707,7 +748,6 @@
                     <div class="word-counter" id="todoWordCount">0 / 250 words</div>
                 </div>
 
-                <!-- Completed Tasks -->
                 <div class="completed-section">
                     <h3><i class="fas fa-check-circle"></i> Completed Tasks</h3>
                     <div id="completedContainer">
@@ -715,14 +755,12 @@
                     </div>
                 </div>
 
-                <!-- General Comment -->
                 <div class="general-comment" id="generalCommentBox">
                     <label><i class="fas fa-sticky-note" style="color:#0077b6;"></i> Daily general comment <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(max 500 words)</span></label>
                     <textarea id="generalComment" placeholder="Write your daily summary, notes, or anything..." maxlength="3000"></textarea>
                     <div class="word-counter" id="generalWordCount">0 / 500 words</div>
                 </div>
 
-                <!-- Bottom Actions -->
                 <div class="footer-bar">
                     <button class="btn btn-primary" id="globalSaveBtn"><i class="fas fa-save"></i> Save all</button>
                     <button class="btn btn-sms" id="smsSendBtn"><i class="fas fa-sms"></i> Send to 415-877-0687</button>
@@ -735,7 +773,6 @@
                 <div class="lessons-container">
                     <h2><i class="fas fa-graduation-cap" style="color:#6f42c1;"></i> WebSwan Lessons</h2>
 
-                    <!-- Coding Lessons -->
                     <div class="lesson-card">
                         <h4><i class="fas fa-code" style="color:#0077b6;"></i> Coding Lessons</h4>
                         <div class="lesson-grid">
@@ -780,7 +817,6 @@
                         </div>
                     </div>
 
-                    <!-- AI Prompts -->
                     <div class="lesson-card">
                         <h4><i class="fas fa-brain" style="color:#6f42c1;"></i> AI Prompts & Instructions</h4>
                         <div class="field-group" style="margin-bottom: 1rem;">
@@ -803,7 +839,6 @@
                         </div>
                     </div>
 
-                    <!-- Lesson Notes -->
                     <div class="lesson-card">
                         <h4><i class="fas fa-sticky-note" style="color:#6f42c1;"></i> Lesson Notes</h4>
                         <div class="field-group">
@@ -859,7 +894,7 @@
             const lastPage = localStorage.getItem('webswan_page') || 'tasks';
             document.querySelector(`.page-btn[data-page="${lastPage}"]`)?.click();
 
-            // ===== LOCK SYSTEM - SIMPLIFIED & FIXED! =====
+            // ===== LOCK SYSTEM =====
             let firstLockCount = 0;
             let secondLockCount = 0;
             let firstLockDone = false;
@@ -874,7 +909,6 @@
             const firstLockStatus = document.getElementById('firstLockStatus');
             const secondLockStatus = document.getElementById('secondLockStatus');
 
-            // Reset functions
             function resetLocks() {
                 firstLockCount = 0;
                 secondLockCount = 0;
@@ -889,14 +923,12 @@
                 secondLockContainer.style.display = 'none';
             }
 
-            // FIRST LOCK - 7 clicks
             firstLockEmoji.addEventListener('click', function(e) {
                 e.stopPropagation();
                 if (isUnlocked) return;
                 if (firstLockDone) return;
                 
                 firstLockCount++;
-                console.log('First lock clicks:', firstLockCount); // Debug log
                 
                 if (firstLockCount < 7) {
                     firstLockStatus.textContent = '🔐';
@@ -909,7 +941,6 @@
                     firstLockStatus.style.color = '#00ff88';
                     firstLockStatus.style.fontWeight = 'bold';
                     
-                    // Show second lock
                     setTimeout(function() {
                         firstLockContainer.style.display = 'none';
                         secondLockContainer.classList.add('show');
@@ -917,19 +948,16 @@
                         secondLockContainer.style.animation = 'fadeIn 0.6s ease';
                         secondLockStatus.textContent = '🗝️';
                         secondLockStatus.style.color = '#ffd700';
-                        showToast('🔑 Second lock activated!', 'success');
                     }, 400);
                 }
             });
 
-            // SECOND LOCK - 3 clicks
             secondLockEmoji.addEventListener('click', function(e) {
                 e.stopPropagation();
                 if (isUnlocked) return;
                 if (!firstLockDone) return;
                 
                 secondLockCount++;
-                console.log('Second lock clicks:', secondLockCount); // Debug log
                 
                 if (secondLockCount < 3) {
                     secondLockStatus.textContent = '🗝️';
@@ -942,7 +970,6 @@
                     secondLockStatus.style.fontWeight = 'bold';
                     secondLockEmoji.classList.add('pulse');
                     
-                    // UNLOCK THE APP!
                     setTimeout(function() {
                         isUnlocked = true;
                         lockScreen.classList.add('hidden');
@@ -1003,7 +1030,6 @@
                 notesWordCount.style.color = words > 500 ? '#b22222' : '#2c7da0';
             }
 
-            // ----- STORAGE -----
             function loadFromStorage() {
                 try {
                     const storedLeads = localStorage.getItem('webswan_leads');
@@ -1014,8 +1040,7 @@
                         nextId = maxId + 1;
                     } else {
                         leads = [
-                            { id: nextId++, name: 'Alice Johnson', phone: '+1 555 123 4567', company: 'TechVibe', url: 'https://techvibe.io', dropdown: 'call back', comment: 'Interested in API integration.', customDropdown: '', completed: false },
-                            { id: nextId++, name: 'Bob Chen', phone: '+1 555 987 6543', company: 'GreenLeaf', url: 'https://greenleaf.eco', dropdown: 'verify correct email', comment: 'Sent proposal, waiting for reply.', customDropdown: '', completed: false }
+                            { id: nextId++, name: 'Sarah Williams', phone: '+1 123 456 7890', company: 'Digital Solutions', url: 'https://digitalsolutions.com', dropdown: 'call back', comment: 'Need to follow up on proposal.', customDropdown: '', completed: false }
                         ];
                     }
                     leads = leads.map(l => ({ ...l, customDropdown: l.customDropdown || '', completed: l.completed || false }));
@@ -1168,21 +1193,78 @@
                         toggleLeadComplete(lead.id);
                     });
 
-                    const saveBtn = document.createElement('button');
-                    saveBtn.className = 'btn btn-primary';
-                    saveBtn.innerHTML = '<i class="fas fa-save"></i> Save';
-                    saveBtn.addEventListener('click', (e) => {
+                    // Edit Dropdown
+                    const dropdownContainer = document.createElement('div');
+                    dropdownContainer.className = 'edit-dropdown';
+                    
+                    const dropdownBtn = document.createElement('button');
+                    dropdownBtn.className = 'btn btn-outline';
+                    dropdownBtn.innerHTML = '<i class="fas fa-ellipsis-v"></i> Edit';
+                    dropdownBtn.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        saveToStorage();
-                        saveBtn.innerHTML = '<i class="fas fa-check"></i> Saved ✓';
-                        setTimeout(() => { saveBtn.innerHTML = '<i class="fas fa-save"></i> Save'; }, 1200);
+                        const content = dropdownContainer.querySelector('.edit-dropdown-content');
+                        content.classList.toggle('show');
                     });
 
+                    const dropdownContent = document.createElement('div');
+                    dropdownContent.className = 'edit-dropdown-content';
+                    
+                    const editOption = document.createElement('button');
+                    editOption.className = 'edit-option';
+                    editOption.innerHTML = '<i class="fas fa-pen"></i> Edit Field';
+                    editOption.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        // Enable editing on all fields
+                        const card = dropdownContainer.closest('.lead-card');
+                        card.classList.toggle('editing');
+                        dropdownContent.classList.remove('show');
+                        showToast('✏️ Click any field to edit', 'success');
+                    });
+
+                    const deleteOption = document.createElement('button');
+                    deleteOption.className = 'delete-option';
+                    deleteOption.innerHTML = '<i class="fas fa-trash"></i> Delete Lead';
+                    deleteOption.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (confirm('Delete this lead?')) {
+                            const card = dropdownContainer.closest('.lead-card');
+                            const leadId = parseInt(card.dataset.leadId);
+                            deleteLead(leadId);
+                        }
+                        dropdownContent.classList.remove('show');
+                    });
+
+                    const saveOption = document.createElement('button');
+                    saveOption.className = 'save-option';
+                    saveOption.innerHTML = '<i class="fas fa-save"></i> Save Changes';
+                    saveOption.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const card = dropdownContainer.closest('.lead-card');
+                        card.classList.remove('editing');
+                        saveToStorage();
+                        dropdownContent.classList.remove('show');
+                        showToast('✅ Changes saved!', 'success');
+                    });
+
+                    dropdownContent.appendChild(editOption);
+                    dropdownContent.appendChild(deleteOption);
+                    dropdownContent.appendChild(saveOption);
+                    dropdownContainer.appendChild(dropdownBtn);
+                    dropdownContainer.appendChild(dropdownContent);
+                    
                     actions.appendChild(completeBtn);
-                    actions.appendChild(saveBtn);
+                    actions.appendChild(dropdownContainer);
                     card.appendChild(actions);
                     container.appendChild(card);
                 });
+            }
+
+            function deleteLead(leadId) {
+                leads = leads.filter(l => l.id !== leadId);
+                saveToStorage();
+                renderLeads();
+                renderCompleted();
+                showToast('🗑️ Lead deleted!', 'success');
             }
 
             function createField(labelText, type, value, onChange) {
@@ -1356,6 +1438,77 @@
                 });
             }
 
+            // ===== WHATSAPP - MANUAL CONTACT SELECTION =====
+            function sendWhatsApp() {
+                // Build message with ALL filled data
+                let message = '📋 *WebSwan Complete Report* 📋\n\n';
+                
+                // LEADS
+                message += '━━━━━━━━━━━━━━━━━━\n';
+                message += '📌 *LEADS*\n';
+                message += '━━━━━━━━━━━━━━━━━━\n';
+                
+                if (leads.length === 0) {
+                    message += 'No leads yet.\n';
+                } else {
+                    leads.forEach((lead, index) => {
+                        const status = lead.completed ? '✅ COMPLETED' : '⏳ PENDING';
+                        message += `\n${index + 1}. ${lead.name || 'No name'}\n`;
+                        message += `   📞 ${lead.phone || 'No phone'}\n`;
+                        message += `   🏢 ${lead.company || 'No company'}\n`;
+                        message += `   🔗 ${lead.url || 'No URL'}\n`;
+                        message += `   🎯 ${lead.dropdown || 'No action'}\n`;
+                        if (lead.customDropdown) message += `   ✏️ ${lead.customDropdown}\n`;
+                        if (lead.comment) message += `   💬 ${lead.comment}\n`;
+                        message += `   📊 ${status}\n`;
+                    });
+                }
+
+                // PERSONAL TO-DOS
+                message += '\n━━━━━━━━━━━━━━━━━━\n';
+                message += '📝 *PERSONAL TO-DOS*\n';
+                message += '━━━━━━━━━━━━━━━━━━\n';
+                
+                if (todos.length === 0) {
+                    message += 'No personal tasks.\n';
+                } else {
+                    todos.forEach((todo) => {
+                        const status = todo.completed ? '✅' : '⬜';
+                        message += `   ${status} ${todo.text}\n`;
+                    });
+                }
+
+                // COMPLETED TASKS
+                message += '\n━━━━━━━━━━━━━━━━━━\n';
+                message += '✅ *COMPLETED TASKS*\n';
+                message += '━━━━━━━━━━━━━━━━━━\n';
+                
+                if (completedItems.length === 0) {
+                    message += 'No completed tasks yet.\n';
+                } else {
+                    completedItems.forEach((item) => {
+                        message += `   ✅ ${item.text} (${item.type})\n`;
+                    });
+                }
+
+                // DAILY COMMENT
+                if (generalCommentEl.value.trim()) {
+                    message += '\n━━━━━━━━━━━━━━━━━━\n';
+                    message += '📖 *DAILY COMMENT*\n';
+                    message += '━━━━━━━━━━━━━━━━━━\n';
+                    message += generalCommentEl.value;
+                }
+
+                message += '\n\n━━━━━━━━━━━━━━━━━━\n';
+                message += '📅 ' + new Date().toLocaleString();
+                message += '\n📱 Sent via WebSwan Suite';
+
+                // Open WhatsApp with message - user selects contact manually
+                const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
+                window.open(url, '_blank');
+                showToast('📱 WhatsApp opened! Select your contact manually.', 'success');
+            }
+
             // ===== LESSONS FUNCTIONS =====
             function submitCodingLesson() {
                 const topic = document.getElementById('codingTopic').value;
@@ -1496,27 +1649,6 @@
                 const cards = container.querySelectorAll('.lead-card');
                 if (cards.length) cards[cards.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
                 showToast('✅ New lead added!', 'success');
-            }
-
-            function sendWhatsApp() {
-                const phones = leads.map(l => l.phone).filter(p => p && p.trim().length > 0);
-                if (phones.length === 0) {
-                    showToast('💬 No phone numbers found!', 'error');
-                    return;
-                }
-                const number = phones[0].replace(/\s/g, '').replace(/^\+/, '');
-                
-                let message = '📋 *WebSwan Daily Report* 📋\n\n';
-                message += '📌 *LEADS*\n';
-                leads.forEach((lead, index) => {
-                    const status = lead.completed ? '✅' : '⏳';
-                    message += `${index + 1}. ${lead.name || 'No name'} ${status}\n`;
-                    message += `   📞 ${lead.phone || 'No phone'}\n`;
-                    message += `   🏢 ${lead.company || 'No company'}\n`;
-                });
-                
-                const url = `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
-                window.open(url, '_blank');
             }
 
             function lockApp() {
@@ -1671,6 +1803,15 @@
 
                 updateTodoWordCounter();
             }
+
+            // Close dropdowns when clicking outside
+            document.addEventListener('click', function(e) {
+                document.querySelectorAll('.edit-dropdown-content').forEach(dropdown => {
+                    if (!dropdown.closest('.edit-dropdown')) {
+                        dropdown.classList.remove('show');
+                    }
+                });
+            });
         })();
     </script>
 </body>
