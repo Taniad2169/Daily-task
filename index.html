@@ -261,6 +261,40 @@
             from { opacity: 0; transform: translateX(30px); }
             to { opacity: 1; transform: translateX(0); }
         }
+        /* Lead Form */
+        .lead-form {
+            background: white;
+            border-radius: 28px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            border: 2px solid #0077b6;
+            box-shadow: 0 6px 16px rgba(0, 60, 100, 0.08);
+        }
+        .lead-form h3 {
+            color: #023e8a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+        .lead-form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        .lead-form-grid .field-group {
+            gap: 6px;
+        }
+        .lead-form-grid .field-group label {
+            font-size: 0.75rem;
+        }
+        .lead-form-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 1rem;
+            justify-content: flex-end;
+        }
         .lead-card {
             background: white;
             border-radius: 28px;
@@ -332,18 +366,6 @@
         }
         .comment-box textarea {
             min-height: 65px;
-        }
-        .stretch-textarea {
-            width: 100%;
-            min-height: 80px;
-            resize: vertical;
-            transition: height 0.2s ease;
-        }
-        .stretch-textarea.large {
-            min-height: 150px;
-        }
-        .stretch-textarea.xlarge {
-            min-height: 200px;
         }
         .lead-actions {
             display: flex;
@@ -698,7 +720,7 @@
             .header h1 {
                 font-size: 1.4rem;
             }
-            .lead-grid, .lesson-grid, .ai-chat-grid {
+            .lead-grid, .lesson-grid, .ai-chat-grid, .lead-form-grid {
                 grid-template-columns: 1fr;
                 gap: 0.8rem;
             }
@@ -824,6 +846,9 @@
             color: white;
             border-color: #7c3aed;
         }
+        .lead-form .field-group textarea {
+            min-height: 60px;
+        }
     </style>
 </head>
 <body>
@@ -857,7 +882,6 @@
             <div class="header">
                 <h1><i class="fas fa-feather-alt"></i> WebSwan <span style="font-weight:300;color:#0077b6;">·</span> Suite</h1>
                 <div class="header-actions">
-                    <button class="btn btn-primary" id="addLeadBtn"><i class="fas fa-plus-circle"></i> Add</button>
                     <button class="btn btn-whatsapp" id="whatsappSendBtn"><i class="fab fa-whatsapp"></i> WhatsApp</button>
                     <button class="btn btn-outline" id="lockAppBtn" style="border-color:#0077b6;"><i class="fas fa-lock"></i> Lock</button>
                 </div>
@@ -871,6 +895,40 @@
 
             <!-- ===== PAGE 1: TASKS ===== -->
             <div id="page-tasks" class="page active">
+                
+                <!-- ===== LEAD FORM ===== -->
+                <div class="lead-form">
+                    <h3><i class="fas fa-leaf" style="color:#0077b6;"></i> Lead Form</h3>
+                    <div class="lead-form-grid">
+                        <div class="field-group">
+                            <label><i class="fas fa-user"></i> Name</label>
+                            <input type="text" id="leadFormName" placeholder="Enter full name..." />
+                        </div>
+                        <div class="field-group">
+                            <label><i class="fas fa-phone"></i> Phone</label>
+                            <input type="tel" id="leadFormPhone" placeholder="Enter phone number..." />
+                        </div>
+                        <div class="field-group">
+                            <label><i class="fas fa-envelope"></i> Email</label>
+                            <input type="email" id="leadFormEmail" placeholder="Enter email address..." />
+                        </div>
+                        <div class="field-group">
+                            <label><i class="fas fa-link"></i> URL</label>
+                            <input type="url" id="leadFormUrl" placeholder="Enter website URL..." />
+                        </div>
+                        <div class="field-group" style="grid-column: 1 / -1;">
+                            <label><i class="fas fa-comment"></i> Notes / Comments</label>
+                            <textarea id="leadFormComment" placeholder="Add any additional notes..." maxlength="1200" style="min-height:60px;"></textarea>
+                            <div class="word-counter" id="leadFormWordCount">0 / 200 words</div>
+                        </div>
+                    </div>
+                    <div class="lead-form-actions">
+                        <button class="btn btn-success" id="submitLeadBtn"><i class="fas fa-check-circle"></i> Submit Lead</button>
+                        <button class="btn btn-outline" id="clearFormBtn"><i class="fas fa-undo"></i> Clear Form</button>
+                    </div>
+                </div>
+
+                <!-- ===== LEADS CONTAINER (saved leads) ===== -->
                 <div id="leadsContainer"></div>
 
                 <div class="todo-section">
@@ -919,7 +977,7 @@
                 <div class="completed-section">
                     <h3><i class="fas fa-check-circle"></i> Completed Tasks</h3>
                     <div id="completedContainer">
-                        <div class="completed-empty">No completed tasks yet. Complete a lead or a to-do to see them here! ✅</div>
+                        <div class="completed-empty">No completed tasks yet. Submit a lead or complete a to-do to see them here! ✅</div>
                     </div>
                 </div>
 
@@ -1172,6 +1230,14 @@
             const todoInput = document.getElementById('todoInput');
             const todoWordCount = document.getElementById('todoWordCount');
 
+            // Lead Form elements
+            const leadFormName = document.getElementById('leadFormName');
+            const leadFormPhone = document.getElementById('leadFormPhone');
+            const leadFormEmail = document.getElementById('leadFormEmail');
+            const leadFormUrl = document.getElementById('leadFormUrl');
+            const leadFormComment = document.getElementById('leadFormComment');
+            const leadFormWordCount = document.getElementById('leadFormWordCount');
+
             // New elements
             const briefingText = document.getElementById('briefingText');
             const briefingWordCount = document.getElementById('briefingWordCount');
@@ -1201,6 +1267,12 @@
                 const words = countWords(todoInput.value);
                 todoWordCount.textContent = `${words} / 250 words`;
                 todoWordCount.style.color = words > 250 ? '#b22222' : '#2c7da0';
+            }
+
+            function updateLeadFormWordCounter() {
+                const words = countWords(leadFormComment.value);
+                leadFormWordCount.textContent = `${words} / 200 words`;
+                leadFormWordCount.style.color = words > 200 ? '#b22222' : '#2c7da0';
             }
 
             function updateBriefingWordCounter() {
@@ -1291,9 +1363,8 @@
                         leads.forEach(l => { if (l.id && l.id > maxId) maxId = l.id; });
                         nextId = maxId + 1;
                     } else {
-                        leads = [
-                            { id: nextId++, name: 'Solene - Base44', phone: '', company: '', url: 'taniad2169.github.io/Daily-task', dropdown: 'call back', comment: '', customDropdown: '', completed: false }
-                        ];
+                        leads = [];
+                        nextId = 1;
                     }
                     leads = leads.map(l => ({ ...l, customDropdown: l.customDropdown || '', completed: l.completed || false }));
 
@@ -1361,10 +1432,78 @@
                 updateGeneralWordCounter();
             }
 
+            // ===== SUBMIT LEAD FORM =====
+            function submitLeadForm() {
+                const name = leadFormName.value.trim();
+                const phone = leadFormPhone.value.trim();
+                const email = leadFormEmail.value.trim();
+                const url = leadFormUrl.value.trim();
+                const comment = leadFormComment.value.trim();
+
+                if (!name && !phone && !email && !url && !comment) {
+                    showToast('Please fill in at least one field.', 'error');
+                    return;
+                }
+
+                // Create new lead
+                const newLead = {
+                    id: nextId++,
+                    name: name || 'No name',
+                    phone: phone || 'No phone',
+                    email: email || 'No email',
+                    url: url || 'No URL',
+                    comment: comment || '',
+                    dropdown: 'call back',
+                    customDropdown: '',
+                    completed: true // Auto-complete
+                };
+
+                leads.push(newLead);
+
+                // Add to completed tasks
+                const displayText = `${name || 'No name'} - ${phone || 'No phone'} (${email || 'No email'})`;
+                completedItems.push({
+                    id: Date.now(),
+                    type: 'lead',
+                    text: displayText,
+                    leadId: newLead.id,
+                    timestamp: new Date().toLocaleString()
+                });
+
+                saveToStorage();
+                renderLeads();
+                renderCompleted();
+                renderTodos();
+
+                // Reset form
+                leadFormName.value = '';
+                leadFormPhone.value = '';
+                leadFormEmail.value = '';
+                leadFormUrl.value = '';
+                leadFormComment.value = '';
+                updateLeadFormWordCounter();
+
+                showToast('✅ Lead submitted and completed!', 'success');
+            }
+
+            function clearLeadForm() {
+                leadFormName.value = '';
+                leadFormPhone.value = '';
+                leadFormEmail.value = '';
+                leadFormUrl.value = '';
+                leadFormComment.value = '';
+                updateLeadFormWordCounter();
+                showToast('🧹 Form cleared!', 'success');
+            }
+
             // ----- RENDER LEADS -----
             function renderLeads() {
                 if (!container) return;
                 container.innerHTML = '';
+                if (leads.length === 0) {
+                    container.innerHTML = '<div style="color:#a0aec0;font-style:italic;padding:1rem;text-align:center;">No leads yet. Submit a lead using the form above! 📋</div>';
+                    return;
+                }
                 leads.forEach((lead) => {
                     const card = document.createElement('div');
                     card.className = 'lead-card';
@@ -1376,7 +1515,7 @@
 
                     grid.appendChild(createField('Name', 'text', lead.name, (val) => { lead.name = val; saveToStorage(); }));
                     grid.appendChild(createField('Phone', 'tel', lead.phone, (val) => { lead.phone = val; saveToStorage(); }));
-                    grid.appendChild(createField('Company', 'text', lead.company, (val) => { lead.company = val; saveToStorage(); }));
+                    grid.appendChild(createField('Email', 'email', lead.email, (val) => { lead.email = val; saveToStorage(); }));
                     grid.appendChild(createField('URL', 'url', lead.url, (val) => { lead.url = val; saveToStorage(); }));
 
                     const comboWrapper = document.createElement('div');
@@ -1561,7 +1700,7 @@
                     completedItems.push({
                         id: Date.now(),
                         type: 'lead',
-                        text: `${lead.name} - ${lead.company || 'No address'} (${lead.phone || 'No phone'})`,
+                        text: `${lead.name} - ${lead.phone || 'No phone'} (${lead.email || 'No email'})`,
                         leadId: lead.id,
                         timestamp: new Date().toLocaleString()
                     });
@@ -1687,7 +1826,7 @@
             function renderCompleted() {
                 if (!completedContainer) return;
                 if (completedItems.length === 0) {
-                    completedContainer.innerHTML = '<div class="completed-empty">No completed tasks yet. Complete a lead or a to-do to see them here! ✅</div>';
+                    completedContainer.innerHTML = '<div class="completed-empty">No completed tasks yet. Submit a lead or complete a to-do to see them here! ✅</div>';
                     return;
                 }
 
@@ -1729,10 +1868,11 @@
                 });
             }
 
-            // ===== WHATSAPP - MANUAL CONTACT SELECTION =====
+            // ===== WHATSAPP - MANUAL CONTACT SELECTION WITH FULL DATA =====
             function sendWhatsApp() {
                 let message = '📋 *WebSwan Complete Report* 📋\n\n';
                 
+                // LEADS
                 message += '━━━━━━━━━━━━━━━━━━\n';
                 message += '📌 *LEADS*\n';
                 message += '━━━━━━━━━━━━━━━━━━\n';
@@ -1744,7 +1884,7 @@
                         const status = lead.completed ? '✅ COMPLETED' : '⏳ PENDING';
                         message += `\n${index + 1}. ${lead.name || 'No name'}\n`;
                         message += `   📞 ${lead.phone || 'No phone'}\n`;
-                        message += `   🏢 ${lead.company || 'No company'}\n`;
+                        message += `   ✉️ ${lead.email || 'No email'}\n`;
                         message += `   🔗 ${lead.url || 'No URL'}\n`;
                         message += `   🎯 ${lead.dropdown || 'No action'}\n`;
                         if (lead.customDropdown) message += `   ✏️ ${lead.customDropdown}\n`;
@@ -1753,6 +1893,7 @@
                     });
                 }
 
+                // PERSONAL TO-DOS
                 message += '\n━━━━━━━━━━━━━━━━━━\n';
                 message += '📝 *PERSONAL TO-DOS*\n';
                 message += '━━━━━━━━━━━━━━━━━━\n';
@@ -1766,6 +1907,7 @@
                     });
                 }
 
+                // BRIEFING
                 if (briefingText.value.trim()) {
                     message += '\n━━━━━━━━━━━━━━━━━━\n';
                     message += '📋 *BRIEFING*\n';
@@ -1773,6 +1915,7 @@
                     message += briefingText.value;
                 }
 
+                // AI CHAT
                 if (aiChatMessage.value.trim()) {
                     message += '\n━━━━━━━━━━━━━━━━━━\n';
                     message += '🤖 *AI CHAT MESSAGE*\n';
@@ -1781,6 +1924,7 @@
                     message += `Message: ${aiChatMessage.value}`;
                 }
 
+                // COMPLETED TASKS
                 message += '\n━━━━━━━━━━━━━━━━━━\n';
                 message += '✅ *COMPLETED TASKS*\n';
                 message += '━━━━━━━━━━━━━━━━━━\n';
@@ -1793,6 +1937,7 @@
                     });
                 }
 
+                // DAILY COMMENT
                 if (generalCommentEl.value.trim()) {
                     message += '\n━━━━━━━━━━━━━━━━━━\n';
                     message += '📖 *DAILY COMMENT*\n';
@@ -1803,6 +1948,12 @@
                 message += '\n\n━━━━━━━━━━━━━━━━━━\n';
                 message += '📅 ' + new Date().toLocaleString();
                 message += '\n📱 Sent via WebSwan Suite';
+
+                // Make sure message is not empty
+                if (!message.trim() || message === '📋 *WebSwan Complete Report* 📋\n\n\n\n━━━━━━━━━━━━━━━━━━\n📌 *LEADS*\n━━━━━━━━━━━━━━━━━━\nNo leads yet.\n\n━━━━━━━━━━━━━━━━━━\n📝 *PERSONAL TO-DOS*\n━━━━━━━━━━━━━━━━━━\nNo personal tasks.\n\n━━━━━━━━━━━━━━━━━━\n✅ *COMPLETED TASKS*\n━━━━━━━━━━━━━━━━━━\nNo completed tasks yet.\n\n\n━━━━━━━━━━━━━━━━━━\n📅 ' + new Date().toLocaleString() + '\n📱 Sent via WebSwan Suite') {
+                    showToast('Please add some data before sending to WhatsApp.', 'error');
+                    return;
+                }
 
                 const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
                 window.open(url, '_blank');
@@ -1945,26 +2096,6 @@
             }
 
             // ===== OTHER FUNCTIONS =====
-            function addLead() {
-                const newLead = {
-                    id: nextId++,
-                    name: '',
-                    phone: '',
-                    company: '',
-                    url: '',
-                    dropdown: 'call back',
-                    comment: '',
-                    customDropdown: '',
-                    completed: false
-                };
-                leads.push(newLead);
-                saveToStorage();
-                renderLeads();
-                const cards = container.querySelectorAll('.lead-card');
-                if (cards.length) cards[cards.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
-                showToast('✅ New lead added!', 'success');
-            }
-
             function lockApp() {
                 if (confirm('🔒 Lock the app? You\'ll need to unlock again.')) {
                     isUnlocked = false;
@@ -1997,6 +2128,11 @@
                     lessonContent.value = '';
                     customPrompt.value = '';
                     lessonNotes.value = '';
+                    leadFormName.value = '';
+                    leadFormPhone.value = '';
+                    leadFormEmail.value = '';
+                    leadFormUrl.value = '';
+                    leadFormComment.value = '';
                     saveToStorage();
                     renderLeads();
                     renderTodos();
@@ -2007,6 +2143,7 @@
                     updateLessonContentWordCounter();
                     updatePromptWordCounter();
                     updateNotesWordCounter();
+                    updateLeadFormWordCounter();
                     showToast('🗑️ All data cleared.', 'success');
                 }
             }
@@ -2021,7 +2158,7 @@
                         const status = lead.completed ? '✅ COMPLETED' : '⏳ PENDING';
                         message += `\n${index + 1}. ${lead.name || 'No name'}\n`;
                         message += `   📞 ${lead.phone || 'No phone'}\n`;
-                        message += `   🏢 ${lead.company || 'No company'}\n`;
+                        message += `   ✉️ ${lead.email || 'No email'}\n`;
                         message += `   📊 ${status}\n`;
                     });
                 }
@@ -2080,9 +2217,9 @@
                 updateLessonContentWordCounter();
                 updatePromptWordCounter();
                 updateNotesWordCounter();
+                updateLeadFormWordCounter();
                 updateAILink();
 
-                document.getElementById('addLeadBtn').addEventListener('click', addLead);
                 document.getElementById('whatsappSendBtn').addEventListener('click', sendWhatsApp);
                 document.getElementById('globalSaveBtn').addEventListener('click', () => {
                     saveToStorage();
@@ -2093,6 +2230,8 @@
                 document.getElementById('addTodoBtn').addEventListener('click', addTodo);
                 document.getElementById('smsSendBtn').addEventListener('click', sendSMS);
                 document.getElementById('aiChatSendBtn').addEventListener('click', sendAIChat);
+                document.getElementById('submitLeadBtn').addEventListener('click', submitLeadForm);
+                document.getElementById('clearFormBtn').addEventListener('click', clearLeadForm);
 
                 document.getElementById('codingSubmitBtn').addEventListener('click', submitCodingLesson);
                 document.getElementById('promptSubmitBtn').addEventListener('click', submitPrompt);
@@ -2103,6 +2242,8 @@
                     if (e.key === 'Enter') addTodo();
                 });
                 todoInput.addEventListener('input', updateTodoWordCounter);
+
+                leadFormComment.addEventListener('input', updateLeadFormWordCounter);
 
                 briefingText.addEventListener('input', () => {
                     const words = countWords(briefingText.value);
