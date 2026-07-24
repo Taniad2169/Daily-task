@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes" />
-    <title>WebSwan · Secure Daily Lead</title>
+    <title>WebSwan · Secure Suite</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
     <style>
         * {
@@ -84,6 +84,7 @@
             font-size: 0.85rem;
             margin-top: 0.5rem;
             min-height: 1.5rem;
+            transition: all 0.3s;
         }
         .lock-icon-big {
             font-size: 4rem;
@@ -201,11 +202,6 @@
         .btn-success i {
             color: white;
         }
-        .btn-danger {
-            background: #dc3545;
-            color: white;
-            border: 1px solid #dc3545;
-        }
         .btn-sms {
             background: #ff6b35;
             color: white;
@@ -214,12 +210,12 @@
         .btn-sms i {
             color: white;
         }
-        .btn-select {
-            background: #f9a825;
+        .btn-purple {
+            background: #6f42c1;
             color: white;
-            border: 1px solid #f9a825;
+            border: 1px solid #6f42c1;
         }
-        .btn-select i {
+        .btn-purple i {
             color: white;
         }
         .btn:hover {
@@ -229,14 +225,29 @@
         .btn:active {
             transform: scale(0.95);
         }
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
+        /* Page Navigation */
+        .page-nav {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
         }
-        .btn-icon-sm {
-            padding: 0.35rem 0.8rem;
-            font-size: 0.75rem;
+        .page-nav .btn {
+            flex: 1;
+            justify-content: center;
+            min-width: 120px;
+        }
+        .page {
+            display: none;
+            animation: slideIn 0.5s ease;
+        }
+        .page.active {
+            display: block;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(30px); }
+            to { opacity: 1; transform: translateX(0); }
         }
         /* Lead Card */
         .lead-card {
@@ -255,13 +266,6 @@
             opacity: 0.7;
             border-color: #28a745;
             background: #f0fff4;
-        }
-        .lead-card.completed .lead-actions .btn-complete {
-            background: #28a745;
-            color: white;
-        }
-        .lead-card.selectable {
-            border: 2px dashed #f9a825;
         }
         .lead-grid {
             display: grid;
@@ -309,13 +313,6 @@
             resize: vertical;
             min-height: 55px;
             border-radius: 18px;
-        }
-        .field-group input:read-only,
-        .field-group textarea:read-only,
-        .field-group select:disabled {
-            opacity: 0.55;
-            background: #eef3f7;
-            cursor: not-allowed;
         }
         .comment-box {
             grid-column: 1 / -1;
@@ -432,15 +429,6 @@
             text-align: center;
             padding: 1rem;
         }
-        .general-send-row {
-            display: flex;
-            justify-content: center;
-            gap: 12px;
-            margin-top: 1.2rem;
-            padding-top: 1rem;
-            border-top: 1.5px dashed #cdeee0;
-            flex-wrap: wrap;
-        }
         /* To-Do Section */
         .todo-section {
             background: white;
@@ -459,26 +447,17 @@
         .todo-item {
             display: flex;
             align-items: flex-start;
-            gap: 10px;
+            gap: 12px;
             padding: 10px 12px;
             background: #f7fafc;
             border-radius: 16px;
             margin-bottom: 10px;
             border: 1px solid #e2e8f0;
-            flex-wrap: wrap;
         }
         .todo-item.completed-todo {
             opacity: 0.6;
             background: #f0fff4;
             border-color: #28a745;
-        }
-        .todo-item.selectable {
-            border: 2px dashed #f9a825;
-        }
-        .todo-item.editing {
-            outline: 3px solid #f9a825;
-            outline-offset: 1px;
-            background: #fffdf0;
         }
         .todo-item input[type="checkbox"] {
             width: 20px;
@@ -491,7 +470,6 @@
             flex: 1;
             font-size: 0.95rem;
             color: #2d3748;
-            min-width: 140px;
         }
         .todo-item .todo-text.done {
             text-decoration: line-through;
@@ -507,11 +485,6 @@
         }
         .todo-item .todo-delete:hover {
             color: #e53e3e;
-        }
-        .todo-item .todo-send-actions {
-            display: flex;
-            gap: 6px;
-            flex-wrap: wrap;
         }
         .todo-input-group {
             display: flex;
@@ -530,6 +503,48 @@
             outline: 3px solid #0077b6;
             border-color: transparent;
         }
+        /* Lessons Page */
+        .lessons-container {
+            padding: 1rem 0;
+        }
+        .lessons-container h2 {
+            color: #023e8a;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .lesson-card {
+            background: white;
+            border-radius: 28px;
+            padding: 1.8rem;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(0, 119, 182, 0.12);
+            box-shadow: 0 6px 16px rgba(0, 60, 100, 0.06);
+        }
+        .lesson-card h4 {
+            color: #023e8a;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+        .lesson-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 1rem;
+        }
+        .lesson-grid .field-group {
+            gap: 6px;
+        }
+        .lesson-grid .field-group label {
+            font-size: 0.75rem;
+        }
+        .lesson-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 1.5rem;
+            justify-content: flex-end;
+        }
         /* Mobile */
         @media (max-width: 640px) {
             .app-container {
@@ -539,7 +554,7 @@
             .header h1 {
                 font-size: 1.4rem;
             }
-            .lead-grid {
+            .lead-grid, .lesson-grid {
                 grid-template-columns: 1fr;
                 gap: 0.8rem;
             }
@@ -559,6 +574,10 @@
             }
             .todo-input-group {
                 flex-direction: column;
+            }
+            .page-nav .btn {
+                min-width: 80px;
+                font-size: 0.7rem;
             }
         }
         @media (max-width: 400px) {
@@ -623,105 +642,8 @@
         .toast.error {
             border-left: 5px solid #dc3545;
         }
-        /* ===== LESSONS TOGGLE ===== */
-        .lessons-wrapper {
-            margin-top: 1.5rem;
-            border-top: 2px solid #eef2f7;
-            padding-top: 1.5rem;
-        }
-        .lessons-content {
-            display: none;
-            background: #f8faff;
-            border-radius: 16px;
-            padding: 1.5rem;
-            border: 1px solid #e0e4ea;
-            margin-top: 1rem;
-        }
-        .lessons-content.open {
-            display: block;
-        }
-        .lessons-back-row {
-            display: flex;
-            justify-content: flex-start;
-            margin-bottom: 1rem;
-        }
-        .lesson-item {
-            padding: 12px 0;
-            border-bottom: 1px solid #eef2f7;
-        }
-        .lesson-item:last-child {
-            border-bottom: none;
-        }
-        .lesson-item h3 {
-            font-size: 16px;
-            color: #1a1a2e;
-            margin-bottom: 4px;
-        }
-        .lesson-item p {
-            font-size: 14px;
-            color: #555;
-        }
-        .btn-lessons {
-            background: #023e8a;
-            color: white;
-            border: 1px solid #023e8a;
-        }
-        .btn-lessons i {
-            color: white;
-        }
-        .btn-lessons.active {
-            background: #28a745;
-            border-color: #28a745;
-        }
-        /* ===== PHONE NUMBER MODAL ===== */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(2, 20, 40, 0.55);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 100000;
-            padding: 1rem;
-        }
-        .modal-overlay.open {
-            display: flex;
-        }
-        .modal-box {
-            background: white;
-            border-radius: 28px;
-            padding: 1.8rem;
-            max-width: 380px;
-            width: 100%;
-            box-shadow: 0 20px 50px rgba(0, 40, 70, 0.35);
-        }
-        .modal-box h3 {
-            color: #023e8a;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .modal-box input {
-            width: 100%;
-            padding: 0.7rem 1rem;
-            border: 1.5px solid #d4eaf5;
-            border-radius: 20px;
-            font-size: 0.95rem;
-            background: #f5faff;
-            margin-bottom: 1.2rem;
-        }
-        .modal-box input:focus {
-            outline: 3px solid #0077b6;
-            background: white;
-        }
-        .modal-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
+        .smooth-slide {
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
     </style>
 </head>
@@ -733,7 +655,6 @@
     <!-- ===== LOCK SCREEN ===== -->
     <div id="lockScreen">
         <div class="lock-container">
-            <!-- First Lock: 🔐 -->
             <div id="firstLockContainer">
                 <div class="lock-icon-big">🔐</div>
                 <div class="lock-emoji" id="firstLockEmoji">🔐</div>
@@ -741,8 +662,6 @@
                 <div class="lock-subtitle">🔒</div>
                 <div class="lock-status" id="firstLockStatus">🔒</div>
             </div>
-
-            <!-- Second Lock: 🗝️ (hidden initially) -->
             <div id="secondLockContainer">
                 <div class="lock-icon-big">🗝️</div>
                 <div class="lock-emoji" id="secondLockEmoji">🗝️</div>
@@ -753,131 +672,154 @@
         </div>
     </div>
 
-    <!-- ===== APP CONTENT (hidden until unlocked) ===== -->
+    <!-- ===== APP CONTENT ===== -->
     <div id="appContent">
         <div class="app-container">
             <!-- Header -->
             <div class="header">
-                <h1><i class="fas fa-feather-alt"></i> WebSwan <span style="font-weight:300;color:#0077b6;">·</span> Daily</h1>
+                <h1><i class="fas fa-feather-alt"></i> WebSwan <span style="font-weight:300;color:#0077b6;">·</span> Suite</h1>
                 <div class="header-actions">
                     <button class="btn btn-primary" id="addLeadBtn"><i class="fas fa-plus-circle"></i> Add</button>
-                    <button class="btn btn-outline" id="editToggleBtn"><i class="fas fa-pen"></i> Edit</button>
-                    <button class="btn btn-success" id="saveEditBtn" disabled><i class="fas fa-save"></i> Save Edit</button>
-                    <button class="btn btn-lessons" id="toggleLessonsBtn"><i class="fas fa-book"></i> Lessons</button>
+                    <button class="btn btn-whatsapp" id="whatsappSendBtn"><i class="fab fa-whatsapp"></i> WhatsApp</button>
+                    <button class="btn btn-outline" id="lockAppBtn" style="border-color:#0077b6;"><i class="fas fa-lock"></i> Lock</button>
                 </div>
             </div>
 
-            <!-- Lessons Content (hidden by default) -->
-            <div class="lessons-wrapper">
-                <div id="lessonsContent" class="lessons-content">
-                    <div class="lessons-back-row">
-                        <button class="btn btn-outline" id="lessonsBackBtn"><i class="fas fa-arrow-left"></i> Back to Tasks</button>
-                    </div>
-                    <div class="field-group" style="margin-bottom:1.5rem;">
-                        <label><i class="fas fa-language"></i> Language</label>
-                        <select id="languageSelect">
-                            <option value="Brazilian">Brazilian</option>
-                            <option value="Italian">Italian</option>
-                            <option value="French">French</option>
-                            <option value="Spanish">Spanish</option>
-                            <option value="English">English</option>
-                        </select>
-                        <label style="margin-top:10px;"><i class="fas fa-comment"></i> Language notes</label>
-                        <textarea id="languageComment" style="min-height:80px;"></textarea>
-                        <div class="word-counter" id="languageWordCount">0 / 1000 words</div>
-                    </div>
+            <!-- Page Navigation -->
+            <div class="page-nav">
+                <button class="btn btn-primary page-btn active" data-page="tasks"><i class="fas fa-tasks"></i> Tasks</button>
+                <button class="btn btn-purple page-btn" data-page="lessons"><i class="fas fa-graduation-cap"></i> Lessons</button>
+            </div>
 
-                    <div class="field-group">
-                        <label><i class="fas fa-robot"></i> AI File</label>
-                        <select id="aiToolSelect">
-                            <option>Claude AI</option>
-                            <option>DeepSeek</option>
-                            <option>ChatGPT</option>
-                            <option>Gemini</option>
-                            <option>OpenClaws</option>
-                            <option>Lovable</option>
-                            <option>Microsoft Copilot</option>
-                            <option>GitHub Copilot</option>
-                            <option>HeyGen</option>
-                        </select>
-                        <label style="margin-top:10px;"><i class="fas fa-sliders-h"></i> Type</label>
-                        <select id="aiCategorySelect">
-                            <option>Prompts</option>
-                            <option>Settings</option>
-                            <option>Instructions</option>
-                        </select>
-                        <label style="margin-top:10px;"><i class="fas fa-comment"></i> Notes</label>
-                        <textarea id="aiComment" style="min-height:100px;"></textarea>
-                        <div class="word-counter" id="aiWordCount">0 / 1500 words</div>
-                        <div style="margin-top:10px;">
-                            <button class="btn btn-whatsapp" id="aiWhatsappBtn"><i class="fab fa-whatsapp"></i> WhatsApp</button>
+            <!-- ===== PAGE 1: TASKS ===== -->
+            <div id="page-tasks" class="page active">
+                <!-- Leads Container -->
+                <div id="leadsContainer"></div>
+
+                <!-- To-Do Section -->
+                <div class="todo-section">
+                    <h3><i class="fas fa-tasks" style="color:#0077b6;"></i> Personal To-Do <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(250 words max)</span></h3>
+                    <div id="todoContainer"></div>
+                    <div class="todo-input-group">
+                        <input type="text" id="todoInput" placeholder="Add a personal task..." maxlength="250" />
+                        <button class="btn btn-primary" id="addTodoBtn"><i class="fas fa-plus"></i> Add</button>
+                    </div>
+                    <div class="word-counter" id="todoWordCount">0 / 250 words</div>
+                </div>
+
+                <!-- Completed Tasks -->
+                <div class="completed-section">
+                    <h3><i class="fas fa-check-circle"></i> Completed Tasks</h3>
+                    <div id="completedContainer">
+                        <div class="completed-empty">No completed tasks yet. Complete a lead or a to-do to see them here! ✅</div>
+                    </div>
+                </div>
+
+                <!-- General Comment -->
+                <div class="general-comment" id="generalCommentBox">
+                    <label><i class="fas fa-sticky-note" style="color:#0077b6;"></i> Daily general comment <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(max 500 words)</span></label>
+                    <textarea id="generalComment" placeholder="Write your daily summary, notes, or anything..." maxlength="3000"></textarea>
+                    <div class="word-counter" id="generalWordCount">0 / 500 words</div>
+                </div>
+
+                <!-- Bottom Actions -->
+                <div class="footer-bar">
+                    <button class="btn btn-primary" id="globalSaveBtn"><i class="fas fa-save"></i> Save all</button>
+                    <button class="btn btn-sms" id="smsSendBtn"><i class="fas fa-sms"></i> Send to 415-877-0687</button>
+                    <button class="btn btn-outline" id="clearDataBtn" style="border-color:#e74c3c;color:#e74c3c;"><i class="fas fa-trash"></i> Clear</button>
+                </div>
+            </div>
+
+            <!-- ===== PAGE 2: LESSONS ===== -->
+            <div id="page-lessons" class="page">
+                <div class="lessons-container">
+                    <h2><i class="fas fa-graduation-cap" style="color:#6f42c1;"></i> WebSwan Lessons</h2>
+
+                    <!-- Coding Lessons -->
+                    <div class="lesson-card">
+                        <h4><i class="fas fa-code" style="color:#0077b6;"></i> Coding Lessons</h4>
+                        <div class="lesson-grid">
+                            <div class="field-group">
+                                <label><i class="fas fa-code"></i> Select Topic</label>
+                                <select id="codingTopic">
+                                    <option value="HTML">HTML</option>
+                                    <option value="CSS">CSS</option>
+                                    <option value="JavaScript">JavaScript</option>
+                                    <option value="Terminal">Terminal</option>
+                                    <option value="Manifest">Manifest</option>
+                                    <option value="Service Worker">Service Worker</option>
+                                </select>
+                            </div>
+                            <div class="field-group">
+                                <label><i class="fas fa-language"></i> Language</label>
+                                <select id="lessonLanguage">
+                                    <option value="Brazilian">Brazilian Portuguese</option>
+                                    <option value="Spanish">Spanish</option>
+                                    <option value="French">French</option>
+                                    <option value="Italian">Italian</option>
+                                    <option value="English">English</option>
+                                </select>
+                            </div>
+                            <div class="field-group" style="grid-column: 1 / -1;">
+                                <label><i class="fas fa-robot"></i> AI Assistant</label>
+                                <select id="aiAssistant">
+                                    <option value="DeepSeek">DeepSeek</option>
+                                    <option value="Gemini">Gemini</option>
+                                    <option value="GPT">GPT</option>
+                                    <option value="Codex">Codex</option>
+                                    <option value="Claude">Claude</option>
+                                    <option value="Claws">Claws</option>
+                                    <option value="Lovable">Lovable</option>
+                                    <option value="GitHub Copilot">GitHub Copilot</option>
+                                    <option value="Microsoft Pilot">Microsoft Pilot</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="lesson-actions">
+                            <button class="btn btn-purple" id="codingSubmitBtn"><i class="fas fa-paper-plane"></i> Submit Lesson</button>
                         </div>
                     </div>
+
+                    <!-- AI Prompts -->
+                    <div class="lesson-card">
+                        <h4><i class="fas fa-brain" style="color:#6f42c1;"></i> AI Prompts & Instructions</h4>
+                        <div class="field-group" style="margin-bottom: 1rem;">
+                            <label><i class="fas fa-list-dropdown"></i> Prompt Type</label>
+                            <select id="promptType">
+                                <option value="step-by-step">Step by Step Instructions</option>
+                                <option value="settings">Settings/Configuration</option>
+                                <option value="troubleshoot">Troubleshooting</option>
+                                <option value="explain">Explain Concept</option>
+                                <option value="example">Code Example</option>
+                            </select>
+                        </div>
+                        <div class="field-group">
+                            <label><i class="fas fa-comment"></i> Custom Prompt (250 words max)</label>
+                            <textarea id="customPrompt" placeholder="Enter your specific prompt or instructions here..." maxlength="1500" style="min-height:100px;"></textarea>
+                            <div class="word-counter" id="promptWordCount">0 / 250 words</div>
+                        </div>
+                        <div class="lesson-actions">
+                            <button class="btn btn-purple" id="promptSubmitBtn"><i class="fas fa-paper-plane"></i> Submit Prompt</button>
+                        </div>
+                    </div>
+
+                    <!-- Lesson Notes -->
+                    <div class="lesson-card">
+                        <h4><i class="fas fa-sticky-note" style="color:#6f42c1;"></i> Lesson Notes</h4>
+                        <div class="field-group">
+                            <label><i class="fas fa-pen"></i> Your Notes (500 words max)</label>
+                            <textarea id="lessonNotes" placeholder="Write your lesson notes, key takeaways, or code snippets here..." maxlength="3000" style="min-height:120px;"></textarea>
+                            <div class="word-counter" id="notesWordCount">0 / 500 words</div>
+                        </div>
+                        <div class="lesson-actions">
+                            <button class="btn btn-purple" id="notesSubmitBtn"><i class="fas fa-save"></i> Save Notes</button>
+                        </div>
+                    </div>
+
+                    <div class="footer-bar" style="margin-top:1.5rem;">
+                        <button class="btn btn-sms" id="lessonsSmsBtn"><i class="fas fa-sms"></i> Send Lessons to 415-877-0687</button>
+                    </div>
                 </div>
-            </div>
-
-            <!-- Leads Container (Clients / Prospects) -->
-            <div id="leadsContainer"></div>
-
-            <!-- To-Do Section -->
-            <div class="todo-section">
-                <h3><i class="fas fa-tasks" style="color:#0077b6;"></i> Personal To-Do <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(250 words max)</span></h3>
-                <div id="todoContainer"></div>
-                <div class="todo-input-group">
-                    <input type="text" id="todoInput" maxlength="250" />
-                    <button class="btn btn-primary" id="addTodoBtn"><i class="fas fa-plus"></i> Add</button>
-                </div>
-                <div class="word-counter" id="todoWordCount">0 / 250 words</div>
-            </div>
-
-            <!-- Completed Tasks -->
-            <div class="completed-section">
-                <h3><i class="fas fa-check-circle"></i> Completed Tasks</h3>
-                <div id="completedContainer">
-                    <div class="completed-empty">No completed tasks yet. Complete a lead or a to-do to see them here! ✅</div>
-                </div>
-                <div class="general-send-row">
-                    <button class="btn btn-whatsapp" id="generalWhatsappBtn"><i class="fab fa-whatsapp"></i> General WhatsApp</button>
-                    <button class="btn btn-sms" id="generalSmsBtn"><i class="fas fa-sms"></i> General SMS</button>
-                </div>
-            </div>
-
-            <!-- General Comment -->
-            <div class="general-comment" id="generalCommentBox">
-                <label><i class="fas fa-sticky-note" style="color:#0077b6;"></i> Daily general comment <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(max 500 words)</span></label>
-                <textarea id="generalComment" maxlength="3000"></textarea>
-                <div class="word-counter" id="generalWordCount">0 / 500 words</div>
-            </div>
-
-            <!-- Briefing -->
-            <div class="general-comment" id="briefingBox">
-                <label><i class="fas fa-file-alt" style="color:#0077b6;"></i> Briefing <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(max 5000 words)</span></label>
-                <textarea id="briefingComment" style="min-height:160px;"></textarea>
-                <div class="word-counter" id="briefingWordCount">0 / 5000 words</div>
-                <div class="general-send-row">
-                    <button class="btn btn-whatsapp" id="briefingWhatsappBtn"><i class="fab fa-whatsapp"></i> WhatsApp</button>
-                    <button class="btn btn-sms" id="briefingSmsBtn"><i class="fas fa-sms"></i> SMS</button>
-                </div>
-            </div>
-
-            <!-- Bottom Actions -->
-            <div class="footer-bar">
-                <button class="btn btn-primary" id="globalSaveBtn"><i class="fas fa-save"></i> Save all</button>
-                <button class="btn btn-sms" id="smsSendBtn"><i class="fas fa-sms"></i> Send to 415-877-0687</button>
-                <button class="btn btn-outline" id="clearDataBtn" style="border-color:#e74c3c;color:#e74c3c;"><i class="fas fa-trash"></i> Clear</button>
-                <button class="btn btn-outline" id="lockAppBtn" style="border-color:#0077b6;"><i class="fas fa-lock"></i> Lock</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Phone Number Entry Modal (used for manual SMS number entry) -->
-    <div id="phoneModalOverlay" class="modal-overlay">
-        <div class="modal-box">
-            <h3><i class="fas fa-phone"></i> Enter phone number</h3>
-            <input type="tel" id="phoneModalInput" />
-            <div class="modal-actions">
-                <button class="btn btn-outline" id="phoneModalCancel">Cancel</button>
-                <button class="btn btn-sms" id="phoneModalConfirm"><i class="fas fa-sms"></i> Send SMS</button>
             </div>
         </div>
     </div>
@@ -894,9 +836,33 @@
                 }, 3500);
             }
 
-            // ===== LOCK SYSTEM =====
-            let firstLockClicks = 0;
-            let secondLockClicks = 0;
+            // ===== PAGE NAVIGATION =====
+            const pageBtns = document.querySelectorAll('.page-btn');
+            const pages = {
+                tasks: document.getElementById('page-tasks'),
+                lessons: document.getElementById('page-lessons')
+            };
+
+            pageBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const page = this.dataset.page;
+                    pageBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    Object.keys(pages).forEach(key => {
+                        pages[key].classList.remove('active');
+                    });
+                    pages[page].classList.add('active');
+                    localStorage.setItem('webswan_page', page);
+                });
+            });
+
+            const lastPage = localStorage.getItem('webswan_page') || 'tasks';
+            document.querySelector(`.page-btn[data-page="${lastPage}"]`)?.click();
+
+            // ===== LOCK SYSTEM - SIMPLIFIED & FIXED! =====
+            let firstLockCount = 0;
+            let secondLockCount = 0;
+            let firstLockDone = false;
             let isUnlocked = false;
 
             const lockScreen = document.getElementById('lockScreen');
@@ -908,71 +874,82 @@
             const firstLockStatus = document.getElementById('firstLockStatus');
             const secondLockStatus = document.getElementById('secondLockStatus');
 
-            function resetFirstLock() {
-                firstLockClicks = 0;
+            // Reset functions
+            function resetLocks() {
+                firstLockCount = 0;
+                secondLockCount = 0;
+                firstLockDone = false;
                 firstLockStatus.textContent = '🔒';
                 firstLockStatus.style.color = 'rgba(255,255,255,0.4)';
-                firstLockEmoji.classList.remove('shake');
-            }
-
-            function resetSecondLock() {
-                secondLockClicks = 0;
                 secondLockStatus.textContent = '🗝️';
                 secondLockStatus.style.color = 'rgba(255,255,255,0.4)';
-                secondLockEmoji.classList.remove('shake');
+                secondLockEmoji.classList.remove('pulse');
+                firstLockContainer.style.display = 'block';
+                secondLockContainer.classList.remove('show');
+                secondLockContainer.style.display = 'none';
             }
 
+            // FIRST LOCK - 7 clicks
             firstLockEmoji.addEventListener('click', function(e) {
                 e.stopPropagation();
                 if (isUnlocked) return;
-                if (firstLockClicks >= 7) return;
-
-                firstLockClicks++;
+                if (firstLockDone) return;
                 
-                if (firstLockClicks < 7) {
-                    firstLockStatus.textContent = `🔐`;
+                firstLockCount++;
+                console.log('First lock clicks:', firstLockCount); // Debug log
+                
+                if (firstLockCount < 7) {
+                    firstLockStatus.textContent = '🔐';
                     firstLockStatus.style.color = '#ffd700';
                 }
-
-                if (firstLockClicks === 7) {
+                
+                if (firstLockCount >= 7) {
+                    firstLockDone = true;
                     firstLockStatus.textContent = '✅';
                     firstLockStatus.style.color = '#00ff88';
                     firstLockStatus.style.fontWeight = 'bold';
-
-                    setTimeout(() => {
+                    
+                    // Show second lock
+                    setTimeout(function() {
                         firstLockContainer.style.display = 'none';
                         secondLockContainer.classList.add('show');
                         secondLockContainer.style.display = 'block';
                         secondLockContainer.style.animation = 'fadeIn 0.6s ease';
-                        resetSecondLock();
+                        secondLockStatus.textContent = '🗝️';
+                        secondLockStatus.style.color = '#ffd700';
+                        showToast('🔑 Second lock activated!', 'success');
                     }, 400);
                 }
             });
 
+            // SECOND LOCK - 3 clicks
             secondLockEmoji.addEventListener('click', function(e) {
                 e.stopPropagation();
                 if (isUnlocked) return;
-                if (secondLockClicks >= 3) return;
-
-                secondLockClicks++;
+                if (!firstLockDone) return;
                 
-                if (secondLockClicks < 3) {
-                    secondLockStatus.textContent = `🗝️`;
+                secondLockCount++;
+                console.log('Second lock clicks:', secondLockCount); // Debug log
+                
+                if (secondLockCount < 3) {
+                    secondLockStatus.textContent = '🗝️';
                     secondLockStatus.style.color = '#ffd700';
                 }
-
-                if (secondLockClicks === 3) {
+                
+                if (secondLockCount >= 3) {
                     secondLockStatus.textContent = '🔓';
                     secondLockStatus.style.color = '#00ff88';
                     secondLockStatus.style.fontWeight = 'bold';
                     secondLockEmoji.classList.add('pulse');
-
-                    setTimeout(() => {
+                    
+                    // UNLOCK THE APP!
+                    setTimeout(function() {
                         isUnlocked = true;
                         lockScreen.classList.add('hidden');
                         appContent.classList.add('unlocked');
+                        showToast('🔓 Welcome to WebSwan Suite, love! 💙', 'success');
                         initApp();
-                    }, 600);
+                    }, 500);
                 }
             });
 
@@ -982,8 +959,6 @@
             let completedItems = [];
             let nextId = 1;
             let nextTodoId = 1;
-            let editMode = false;              // true = user clicked "Edit", waiting to pick an item
-            let selectedKey = null;             // e.g. "lead-3" or "todo-5" — the one unlocked item
             let appInitialized = false;
 
             const container = document.getElementById('leadsContainer');
@@ -991,22 +966,13 @@
             const completedContainer = document.getElementById('completedContainer');
             const generalCommentEl = document.getElementById('generalComment');
             const generalWordCount = document.getElementById('generalWordCount');
-            const briefingCommentEl = document.getElementById('briefingComment');
-            const briefingWordCount = document.getElementById('briefingWordCount');
             const todoInput = document.getElementById('todoInput');
             const todoWordCount = document.getElementById('todoWordCount');
-            const editToggleBtn = document.getElementById('editToggleBtn');
-            const saveEditBtn = document.getElementById('saveEditBtn');
 
-            const OWNER_PHONE = '4158770687';
-            const ACTION_OPTIONS = ['re send email', 'call back', 'call', 'send report', 'send demo', 'other'];
-            const AI_TOOLS = ['Claude AI', 'DeepSeek', 'ChatGPT', 'Gemini', 'OpenClaws', 'Lovable', 'Microsoft Copilot', 'GitHub Copilot', 'HeyGen'];
-            const AI_CATEGORIES = ['Prompts', 'Settings', 'Instructions'];
-
-            // ----- LANGUAGE + AI FILE STATE (Lessons panel) -----
-            let languageData = { lang: 'English', comment: '' };
-            let aiData = {};            // { 'Claude AI': { category: 'Prompts', comment: '' }, ... }
-            let currentAiTool = AI_TOOLS[0];
+            const customPrompt = document.getElementById('customPrompt');
+            const promptWordCount = document.getElementById('promptWordCount');
+            const lessonNotes = document.getElementById('lessonNotes');
+            const notesWordCount = document.getElementById('notesWordCount');
 
             function countWords(text) {
                 if (!text) return 0;
@@ -1019,16 +985,22 @@
                 generalWordCount.style.color = words > 500 ? '#b22222' : '#2c7da0';
             }
 
-            function updateBriefingWordCounter() {
-                const words = countWords(briefingCommentEl.value);
-                briefingWordCount.textContent = `${words} / 5000 words`;
-                briefingWordCount.style.color = words > 5000 ? '#b22222' : '#2c7da0';
-            }
-
             function updateTodoWordCounter() {
                 const words = countWords(todoInput.value);
                 todoWordCount.textContent = `${words} / 250 words`;
                 todoWordCount.style.color = words > 250 ? '#b22222' : '#2c7da0';
+            }
+
+            function updatePromptWordCounter() {
+                const words = countWords(customPrompt.value);
+                promptWordCount.textContent = `${words} / 250 words`;
+                promptWordCount.style.color = words > 250 ? '#b22222' : '#2c7da0';
+            }
+
+            function updateNotesWordCounter() {
+                const words = countWords(lessonNotes.value);
+                notesWordCount.textContent = `${words} / 500 words`;
+                notesWordCount.style.color = words > 500 ? '#b22222' : '#2c7da0';
             }
 
             // ----- STORAGE -----
@@ -1042,17 +1014,11 @@
                         nextId = maxId + 1;
                     } else {
                         leads = [
-                            { id: nextId++, name: 'Alice Johnson', email: 'alice@techvibe.io', phone: '+1 555 123 4567', address: '', url: 'https://techvibe.io', dropdown: 'call back', comment: 'Interested in API integration.', customDropdown: '', completed: false },
-                            { id: nextId++, name: 'Bob Chen', email: 'bob@greenleaf.eco', phone: '+1 555 987 6543', address: '', url: 'https://greenleaf.eco', dropdown: 'send report', comment: 'Sent proposal, waiting for reply.', customDropdown: '', completed: false }
+                            { id: nextId++, name: 'Alice Johnson', phone: '+1 555 123 4567', company: 'TechVibe', url: 'https://techvibe.io', dropdown: 'call back', comment: 'Interested in API integration.', customDropdown: '', completed: false },
+                            { id: nextId++, name: 'Bob Chen', phone: '+1 555 987 6543', company: 'GreenLeaf', url: 'https://greenleaf.eco', dropdown: 'verify correct email', comment: 'Sent proposal, waiting for reply.', customDropdown: '', completed: false }
                         ];
                     }
-                    // Backfill new fields for leads saved under the old schema (company -> address)
-                    leads = leads.map(l => ({
-                        ...l,
-                        address: l.address !== undefined ? l.address : (l.company || ''),
-                        customDropdown: l.customDropdown || '',
-                        completed: l.completed || false
-                    }));
+                    leads = leads.map(l => ({ ...l, customDropdown: l.customDropdown || '', completed: l.completed || false }));
 
                     const storedTodos = localStorage.getItem('webswan_todos');
                     if (storedTodos) {
@@ -1072,25 +1038,15 @@
                         completedItems = [];
                     }
 
-                    const storedLanguage = localStorage.getItem('webswan_language');
-                    languageData = storedLanguage ? JSON.parse(storedLanguage) : { lang: 'English', comment: '' };
-
-                    const storedAiData = localStorage.getItem('webswan_aidata');
-                    aiData = storedAiData ? JSON.parse(storedAiData) : {};
-                    AI_TOOLS.forEach(tool => {
-                        if (!aiData[tool]) aiData[tool] = { category: 'Prompts', comment: '' };
-                    });
-
-                    const storedAiTool = localStorage.getItem('webswan_aitool_selected');
-                    currentAiTool = (storedAiTool && AI_TOOLS.includes(storedAiTool)) ? storedAiTool : AI_TOOLS[0];
+                    const savedPrompt = localStorage.getItem('webswan_prompt');
+                    if (savedPrompt) customPrompt.value = savedPrompt;
+                    const savedNotes = localStorage.getItem('webswan_notes');
+                    if (savedNotes) lessonNotes.value = savedNotes;
+                    
                 } catch(e) {
                     leads = [];
                     todos = [];
                     completedItems = [];
-                    languageData = { lang: 'English', comment: '' };
-                    aiData = {};
-                    AI_TOOLS.forEach(tool => { aiData[tool] = { category: 'Prompts', comment: '' }; });
-                    currentAiTool = AI_TOOLS[0];
                 }
             }
 
@@ -1099,10 +1055,8 @@
                 localStorage.setItem('webswan_todos', JSON.stringify(todos));
                 localStorage.setItem('webswan_completed', JSON.stringify(completedItems));
                 localStorage.setItem('webswan_general', generalCommentEl.value);
-                localStorage.setItem('webswan_briefing', briefingCommentEl.value);
-                localStorage.setItem('webswan_language', JSON.stringify(languageData));
-                localStorage.setItem('webswan_aidata', JSON.stringify(aiData));
-                localStorage.setItem('webswan_aitool_selected', currentAiTool);
+                localStorage.setItem('webswan_prompt', customPrompt.value);
+                localStorage.setItem('webswan_notes', lessonNotes.value);
             }
 
             function loadGeneralComment() {
@@ -1111,105 +1065,6 @@
                     generalCommentEl.value = saved;
                 }
                 updateGeneralWordCounter();
-
-                const savedBriefing = localStorage.getItem('webswan_briefing');
-                if (savedBriefing !== null) {
-                    briefingCommentEl.value = savedBriefing;
-                }
-                updateBriefingWordCounter();
-            }
-
-            // ----- EDIT MODE HELPERS -----
-            // A field is unlocked only when editMode is on AND this exact item is the selectedKey.
-            function isUnlockedFor(key) {
-                return editMode && selectedKey === key;
-            }
-
-            function selectForEdit(key) {
-                selectedKey = key;
-                saveEditBtn.disabled = false;
-                renderLeads();
-                renderTodos();
-                showToast('✏️ Selected — edit it, then hit Save Edit', 'success');
-            }
-
-            function exitEditMode(didSave) {
-                editMode = false;
-                selectedKey = null;
-                editToggleBtn.innerHTML = '<i class="fas fa-pen"></i> Edit';
-                saveEditBtn.disabled = true;
-                renderLeads();
-                renderTodos();
-                if (didSave) showToast('✅ Changes saved!', 'success');
-            }
-
-            function toggleEditMode() {
-                if (editMode) {
-                    // cancel out of edit mode without forcing a save
-                    exitEditMode(false);
-                } else {
-                    editMode = true;
-                    selectedKey = null;
-                    editToggleBtn.innerHTML = '<i class="fas fa-pen-fancy"></i> Choose one…';
-                    saveEditBtn.disabled = true;
-                    renderLeads();
-                    renderTodos();
-                    showToast('👉 Tap a lead or task to edit it', 'success');
-                }
-            }
-
-            // Logs the finished lead into Completed Tasks, then wipes its fields
-            // back to blank so the same card is ready for the next lead's data.
-            function commitAndResetLead(lead) {
-                completedItems.push({
-                    id: Date.now(),
-                    type: 'lead',
-                    text: `${lead.name || 'Unnamed lead'} - ${lead.address || 'No address'} (${lead.phone || 'No phone'})`,
-                    leadId: lead.id,
-                    timestamp: new Date().toLocaleString()
-                });
-                lead.name = '';
-                lead.phone = '';
-                lead.email = '';
-                lead.address = '';
-                lead.url = '';
-                lead.dropdown = 're send email';
-                lead.customDropdown = '';
-                lead.comment = '';
-                lead.completed = false;
-            }
-
-            // Logs the finished personal task into Completed Tasks, then clears
-            // its text field so it's ready for the next task.
-            function commitAndResetTodo(todo) {
-                completedItems.push({
-                    id: Date.now(),
-                    type: 'todo',
-                    text: todo.text,
-                    todoId: todo.id,
-                    timestamp: new Date().toLocaleString()
-                });
-                todo.text = '';
-                todo.completed = false;
-            }
-
-            function saveEdit() {
-                if (selectedKey && selectedKey.startsWith('lead-')) {
-                    const id = parseInt(selectedKey.slice(5), 10);
-                    const lead = leads.find(l => l.id === id);
-                    if (lead) commitAndResetLead(lead);
-                } else if (selectedKey && selectedKey.startsWith('todo-')) {
-                    const id = parseInt(selectedKey.slice(5), 10);
-                    const todo = todos.find(t => t.id === id);
-                    if (todo) commitAndResetTodo(todo);
-                }
-                saveToStorage();
-                renderLeads();
-                renderTodos();
-                renderCompleted();
-                showToast('✅ Logged to Completed — fields cleared for the next one!', 'success');
-                // Edit mode + selection stay active so you can keep entering data
-                // straight into the same (now blank) card without re-selecting it.
             }
 
             // ----- RENDER LEADS -----
@@ -1217,24 +1072,18 @@
                 if (!container) return;
                 container.innerHTML = '';
                 leads.forEach((lead) => {
-                    const key = 'lead-' + lead.id;
-                    const unlocked = isUnlockedFor(key);
-
                     const card = document.createElement('div');
                     card.className = 'lead-card';
                     if (lead.completed) card.classList.add('completed');
-                    if (unlocked) card.classList.add('editing');
-                    if (editMode && !unlocked) card.classList.add('selectable');
                     card.dataset.leadId = lead.id;
 
                     const grid = document.createElement('div');
                     grid.className = 'lead-grid';
 
-                    grid.appendChild(createField('Name', 'text', lead.name, unlocked, (val) => { lead.name = val; }));
-                    grid.appendChild(createField('Phone', 'tel', lead.phone, unlocked, (val) => { lead.phone = val; }));
-                    grid.appendChild(createField('Email', 'email', lead.email, unlocked, (val) => { lead.email = val; }));
-                    grid.appendChild(createField('Address', 'text', lead.address, unlocked, (val) => { lead.address = val; }));
-                    grid.appendChild(createField('URL', 'url', lead.url, unlocked, (val) => { lead.url = val; }));
+                    grid.appendChild(createField('Name', 'text', lead.name, (val) => { lead.name = val; saveToStorage(); }));
+                    grid.appendChild(createField('Phone', 'tel', lead.phone, (val) => { lead.phone = val; saveToStorage(); }));
+                    grid.appendChild(createField('Company', 'text', lead.company, (val) => { lead.company = val; saveToStorage(); }));
+                    grid.appendChild(createField('URL', 'url', lead.url, (val) => { lead.url = val; saveToStorage(); }));
 
                     const comboWrapper = document.createElement('div');
                     comboWrapper.className = 'field-group';
@@ -1246,7 +1095,8 @@
                     const label = document.createElement('label');
                     label.innerHTML = '<i class="fas fa-caret-down"></i> Action';
                     const select = document.createElement('select');
-                    ACTION_OPTIONS.forEach(opt => {
+                    const options = ['call back', 're send email', 'verify correct email', 'search phone number', 'other'];
+                    options.forEach(opt => {
                         const op = document.createElement('option');
                         op.value = opt;
                         op.textContent = opt.charAt(0).toUpperCase() + opt.slice(1);
@@ -1259,34 +1109,21 @@
                     });
 
                     const customLabel = document.createElement('label');
-                    customLabel.innerHTML = '<i class="fas fa-edit"></i> Custom note';
-                    const customInput = document.createElement('textarea');
-                    customInput.style.minHeight = '46px';
+                    customLabel.innerHTML = '<i class="fas fa-edit"></i> Custom (50)';
+                    const customInput = document.createElement('input');
+                    customInput.type = 'text';
+                    customInput.maxLength = 50;
+                    customInput.placeholder = 'e.g. follow-up';
                     customInput.value = lead.customDropdown || '';
-                    const customCounter = document.createElement('div');
-                    customCounter.className = 'word-counter';
-
-                    function updateCustomCounter() {
-                        const words = countWords(customInput.value);
-                        customCounter.textContent = `${words} / 50 words`;
-                        customCounter.style.color = words > 50 ? '#b22222' : '#2c7da0';
-                    }
                     customInput.addEventListener('input', (e) => {
-                        let words = e.target.value.trim().split(/\s+/).filter(w => w.length > 0);
-                        if (words.length > 50) {
-                            e.target.value = words.slice(0, 50).join(' ');
-                        }
-                        lead.customDropdown = e.target.value;
+                        lead.customDropdown = e.target.value.slice(0, 50);
                         saveToStorage();
-                        updateCustomCounter();
                     });
-                    updateCustomCounter();
 
                     combo.appendChild(label);
                     combo.appendChild(select);
                     combo.appendChild(customLabel);
                     combo.appendChild(customInput);
-                    combo.appendChild(customCounter);
                     comboWrapper.appendChild(combo);
                     grid.appendChild(comboWrapper);
 
@@ -1295,7 +1132,9 @@
                     const commentLabel = document.createElement('label');
                     commentLabel.innerHTML = '<i class="fas fa-comment"></i> Lead comment (200 words)';
                     const textarea = document.createElement('textarea');
+                    textarea.placeholder = 'Add details...';
                     textarea.value = lead.comment || '';
+                    textarea.maxLength = 1200;
                     const wordCounter = document.createElement('div');
                     wordCounter.className = 'word-counter';
 
@@ -1305,10 +1144,6 @@
                         wordCounter.style.color = words > 200 ? '#b22222' : '#2c7da0';
                     }
                     textarea.addEventListener('input', () => {
-                        let words = textarea.value.trim().split(/\s+/).filter(w => w.length > 0);
-                        if (words.length > 200) {
-                            textarea.value = words.slice(0, 200).join(' ');
-                        }
                         lead.comment = textarea.value;
                         saveToStorage();
                         updateLeadWordCounter();
@@ -1333,48 +1168,24 @@
                         toggleLeadComplete(lead.id);
                     });
 
-                    const waBtn = document.createElement('button');
-                    waBtn.className = 'btn btn-whatsapp btn-icon-sm';
-                    waBtn.innerHTML = '<i class="fab fa-whatsapp"></i> WhatsApp';
-                    waBtn.addEventListener('click', (e) => {
+                    const saveBtn = document.createElement('button');
+                    saveBtn.className = 'btn btn-primary';
+                    saveBtn.innerHTML = '<i class="fas fa-save"></i> Save';
+                    saveBtn.addEventListener('click', (e) => {
                         e.stopPropagation();
-                        sendLeadWhatsApp(lead.id);
-                    });
-
-                    const smsBtn = document.createElement('button');
-                    smsBtn.className = 'btn btn-sms btn-icon-sm';
-                    smsBtn.innerHTML = '<i class="fas fa-sms"></i> SMS';
-                    smsBtn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        sendLeadSMS(lead.id);
+                        saveToStorage();
+                        saveBtn.innerHTML = '<i class="fas fa-check"></i> Saved ✓';
+                        setTimeout(() => { saveBtn.innerHTML = '<i class="fas fa-save"></i> Save'; }, 1200);
                     });
 
                     actions.appendChild(completeBtn);
-                    actions.appendChild(waBtn);
-                    actions.appendChild(smsBtn);
-
-                    if (editMode) {
-                        const selectBtn = document.createElement('button');
-                        selectBtn.className = 'btn btn-select';
-                        if (unlocked) {
-                            selectBtn.innerHTML = '<i class="fas fa-pen-fancy"></i> Editing…';
-                            selectBtn.disabled = true;
-                        } else {
-                            selectBtn.innerHTML = '<i class="fas fa-hand-pointer"></i> Select to Edit';
-                        }
-                        selectBtn.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            selectForEdit(key);
-                        });
-                        actions.appendChild(selectBtn);
-                    }
-
+                    actions.appendChild(saveBtn);
                     card.appendChild(actions);
                     container.appendChild(card);
                 });
             }
 
-            function createField(labelText, type, value, unlocked, onChange) {
+            function createField(labelText, type, value, onChange) {
                 const div = document.createElement('div');
                 div.className = 'field-group';
                 const label = document.createElement('label');
@@ -1384,7 +1195,6 @@
                 input.value = value || '';
                 input.addEventListener('input', (e) => {
                     onChange(e.target.value);
-                    saveToStorage();
                 });
                 div.appendChild(label);
                 div.appendChild(input);
@@ -1401,7 +1211,7 @@
                     completedItems.push({
                         id: Date.now(),
                         type: 'lead',
-                        text: `${lead.name || 'Unnamed lead'} - ${lead.address || 'No address'} (${lead.phone || 'No phone'})`,
+                        text: `${lead.name} - ${lead.company || 'No company'} (${lead.phone || 'No phone'})`,
                         leadId: lead.id,
                         timestamp: new Date().toLocaleString()
                     });
@@ -1428,14 +1238,9 @@
                 }
 
                 todos.forEach((todo) => {
-                    const key = 'todo-' + todo.id;
-                    const unlocked = isUnlockedFor(key);
-
                     const div = document.createElement('div');
                     div.className = 'todo-item';
                     if (todo.completed) div.classList.add('completed-todo');
-                    if (unlocked) div.classList.add('editing');
-                    if (editMode && !unlocked) div.classList.add('selectable');
 
                     const checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
@@ -1447,44 +1252,7 @@
                     const textSpan = document.createElement('span');
                     textSpan.className = 'todo-text';
                     if (todo.completed) textSpan.classList.add('done');
-
-                    const editInput = document.createElement('input');
-                    editInput.type = 'text';
-                    editInput.value = todo.text;
-                    editInput.maxLength = 250;
-                    editInput.style.width = '100%';
-                    editInput.style.padding = '0.4rem 0.8rem';
-                    editInput.style.border = '1.5px solid #d4eaf5';
-                    editInput.style.borderRadius = '14px';
-                    editInput.addEventListener('input', (e) => {
-                        todo.text = e.target.value;
-                        saveToStorage();
-                    });
-                    textSpan.appendChild(editInput);
-
-                    const sendActions = document.createElement('div');
-                    sendActions.className = 'todo-send-actions';
-
-                    const waBtn = document.createElement('button');
-                    waBtn.className = 'btn btn-whatsapp btn-icon-sm';
-                    waBtn.innerHTML = '<i class="fab fa-whatsapp"></i>';
-                    waBtn.title = 'Send this task via WhatsApp';
-                    waBtn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        sendTodoWhatsApp(todo.id);
-                    });
-
-                    const smsBtn = document.createElement('button');
-                    smsBtn.className = 'btn btn-sms btn-icon-sm';
-                    smsBtn.innerHTML = '<i class="fas fa-sms"></i>';
-                    smsBtn.title = 'Send this task via SMS';
-                    smsBtn.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        sendTodoSMS(todo.id);
-                    });
-
-                    sendActions.appendChild(waBtn);
-                    sendActions.appendChild(smsBtn);
+                    textSpan.textContent = todo.text;
 
                     const deleteBtn = document.createElement('button');
                     deleteBtn.className = 'todo-delete';
@@ -1495,24 +1263,6 @@
 
                     div.appendChild(checkbox);
                     div.appendChild(textSpan);
-                    div.appendChild(sendActions);
-
-                    if (editMode) {
-                        const selectBtn = document.createElement('button');
-                        selectBtn.className = 'btn btn-select btn-icon-sm';
-                        if (unlocked) {
-                            selectBtn.innerHTML = '<i class="fas fa-pen-fancy"></i> Editing…';
-                            selectBtn.disabled = true;
-                        } else {
-                            selectBtn.innerHTML = '<i class="fas fa-hand-pointer"></i> Select';
-                        }
-                        selectBtn.addEventListener('click', (e) => {
-                            e.stopPropagation();
-                            selectForEdit(key);
-                        });
-                        div.appendChild(selectBtn);
-                    }
-
                     div.appendChild(deleteBtn);
                     todoContainer.appendChild(div);
                 });
@@ -1606,220 +1356,136 @@
                 });
             }
 
-            // ----- MESSAGE BUILDERS -----
-            function buildLeadMessage(lead) {
-                const status = lead.completed ? '✅ COMPLETED' : '⏳ PENDING';
-                let msg = `📋 *Lead: ${lead.name || 'No name'}*\n`;
-                msg += `📞 ${lead.phone || 'No phone'}\n`;
-                msg += `📧 ${lead.email || 'No email'}\n`;
-                msg += `📍 ${lead.address || 'No address'}\n`;
-                msg += `🔗 ${lead.url || 'No URL'}\n`;
-                msg += `🎯 ${lead.dropdown || 'No action'}\n`;
-                if (lead.customDropdown) msg += `✏️ ${lead.customDropdown}\n`;
-                if (lead.comment) msg += `💬 ${lead.comment}\n`;
-                msg += `📊 ${status}`;
-                return msg;
+            // ===== LESSONS FUNCTIONS =====
+            function submitCodingLesson() {
+                const topic = document.getElementById('codingTopic').value;
+                const language = document.getElementById('lessonLanguage').value;
+                const ai = document.getElementById('aiAssistant').value;
+                
+                const message = `📚 *WebSwan Lesson Request*\n\n` +
+                    `📌 Topic: ${topic}\n` +
+                    `🌍 Language: ${language}\n` +
+                    `🤖 AI Assistant: ${ai}\n` +
+                    `📅 ${new Date().toLocaleString()}`;
+                
+                completedItems.push({
+                    id: Date.now(),
+                    type: 'lesson',
+                    text: `Lesson: ${topic} (${language}) - AI: ${ai}`,
+                    timestamp: new Date().toLocaleString()
+                });
+                
+                saveToStorage();
+                renderCompleted();
+                showToast(`✅ Lesson submitted: ${topic} with ${ai}!`, 'success');
+                
+                navigator.clipboard.writeText(message).then(() => {
+                    showToast('📋 Lesson details copied to clipboard!', 'success');
+                }).catch(() => {});
             }
 
-            function buildTodoMessage(todo) {
-                const status = todo.completed ? '✅ Completed' : '⬜ Pending';
-                return `📝 *Personal Task*\n${todo.text}\n📊 ${status}`;
-            }
-
-            function buildGeneralMessage() {
-                let message = '📝 *PERSONAL TO-DOS*\n━━━━━━━━━━━━━━━━━━\n';
-                if (todos.length === 0) {
-                    message += 'No personal tasks.\n';
-                } else {
-                    todos.forEach((todo) => {
-                        const status = todo.completed ? '✅' : '⬜';
-                        message += `   ${status} ${todo.text}\n`;
-                    });
-                }
-                message += '\n✅ *COMPLETED TASKS*\n━━━━━━━━━━━━━━━━━━\n';
-                if (completedItems.length === 0) {
-                    message += 'No completed tasks yet.\n';
-                } else {
-                    completedItems.forEach((item) => {
-                        message += `   ✅ ${item.text} (${item.type})\n`;
-                    });
-                }
-                message += '\n📅 ' + new Date().toLocaleString();
-                message += '\n📱 Sent via WebSwan';
-                return message;
-            }
-
-            function openWhatsApp(rawNumber, message) {
-                if (!rawNumber || !rawNumber.trim()) {
-                    showToast('💬 No phone number on file!', 'error');
+            function submitPrompt() {
+                const promptType = document.getElementById('promptType').value;
+                const promptText = customPrompt.value.trim();
+                
+                if (!promptText) {
+                    showToast('Please enter a prompt.', 'error');
                     return;
                 }
-                const number = rawNumber.replace(/\s/g, '').replace(/^\+/, '');
-                const url = `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
-                window.open(url, '_blank');
+                
+                if (countWords(promptText) > 250) {
+                    showToast('Prompt exceeds 250 words limit!', 'error');
+                    return;
+                }
+                
+                const message = `🤖 *AI Prompt Request*\n\n` +
+                    `📋 Type: ${promptType}\n` +
+                    `💬 Prompt: ${promptText}\n` +
+                    `📅 ${new Date().toLocaleString()}`;
+                
+                completedItems.push({
+                    id: Date.now(),
+                    type: 'prompt',
+                    text: `Prompt: ${promptType} - ${promptText.substring(0, 50)}...`,
+                    timestamp: new Date().toLocaleString()
+                });
+                
+                saveToStorage();
+                renderCompleted();
+                showToast('✅ Prompt submitted!', 'success');
+                
+                navigator.clipboard.writeText(message).then(() => {
+                    showToast('📋 Prompt copied to clipboard!', 'success');
+                }).catch(() => {});
             }
 
-            function openSMS(rawNumber, message) {
-                const number = (rawNumber || '').replace(/\D/g, '') || OWNER_PHONE;
+            function saveLessonNotes() {
+                const notes = lessonNotes.value.trim();
+                if (countWords(notes) > 500) {
+                    showToast('Notes exceed 500 words limit!', 'error');
+                    return;
+                }
+                
+                saveToStorage();
+                showToast('✅ Notes saved!', 'success');
+            }
+
+            function sendLessonsSMS() {
+                const topic = document.getElementById('codingTopic').value;
+                const language = document.getElementById('lessonLanguage').value;
+                const ai = document.getElementById('aiAssistant').value;
+                const promptType = document.getElementById('promptType').value;
+                const promptText = customPrompt.value.trim() || 'No prompt entered';
+                const notes = lessonNotes.value.trim() || 'No notes saved';
+                
+                let message = '📚 *WebSwan Lessons Report* 📚\n\n';
+                message += '━━━━━━━━━━━━━━━━━━\n';
+                message += '📌 *CODING LESSON*\n';
+                message += '━━━━━━━━━━━━━━━━━━\n';
+                message += `Topic: ${topic}\n`;
+                message += `Language: ${language}\n`;
+                message += `AI Assistant: ${ai}\n\n`;
+                
+                message += '━━━━━━━━━━━━━━━━━━\n';
+                message += '🤖 *AI PROMPT*\n';
+                message += '━━━━━━━━━━━━━━━━━━\n';
+                message += `Type: ${promptType}\n`;
+                message += `Prompt: ${promptText}\n\n`;
+                
+                message += '━━━━━━━━━━━━━━━━━━\n';
+                message += '📝 *LESSON NOTES*\n';
+                message += '━━━━━━━━━━━━━━━━━━\n';
+                message += `${notes}\n\n`;
+                
+                message += '━━━━━━━━━━━━━━━━━━\n';
+                message += '📅 ' + new Date().toLocaleString();
+                message += '\n📱 Sent via WebSwan Suite';
+                
                 const encoded = encodeURIComponent(message);
-                const smsUrl = `sms:${number}?body=${encoded}`;
+                const phoneNumber = '4158770687';
+                const smsUrl = `sms:${phoneNumber}?body=${encoded}`;
+                
                 try {
                     window.location.href = smsUrl;
-                    showToast(`📱 Opening SMS to ${number}...`, 'success');
+                    showToast(`📱 Opening SMS to ${phoneNumber}...`, 'success');
                 } catch(e) {
-                    const textarea = document.createElement('textarea');
-                    textarea.value = message;
-                    document.body.appendChild(textarea);
-                    textarea.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(textarea);
-                    showToast('📋 Message copied to clipboard!', 'success');
-                }
-            }
-
-            // ----- INDIVIDUAL LEAD SEND -----
-            function sendLeadWhatsApp(leadId) {
-                const lead = leads.find(l => l.id === leadId);
-                if (!lead) return;
-                openWhatsApp(lead.phone, buildLeadMessage(lead));
-            }
-
-            function sendLeadSMS(leadId) {
-                const lead = leads.find(l => l.id === leadId);
-                if (!lead) return;
-                openSMS(lead.phone, buildLeadMessage(lead));
-            }
-
-            // ----- INDIVIDUAL TODO SEND (personal tasks go to your own number) -----
-            function sendTodoWhatsApp(todoId) {
-                const todo = todos.find(t => t.id === todoId);
-                if (!todo) return;
-                openWhatsApp(OWNER_PHONE, buildTodoMessage(todo));
-            }
-
-            function sendTodoSMS(todoId) {
-                const todo = todos.find(t => t.id === todoId);
-                if (!todo) return;
-                openSMS(OWNER_PHONE, buildTodoMessage(todo));
-            }
-
-            // ----- GENERAL SEND (Personal To-Dos + Completed, together) -----
-            function sendGeneralWhatsApp() {
-                openWhatsApp(OWNER_PHONE, buildGeneralMessage());
-            }
-
-            function sendGeneralSMS() {
-                openSMS(OWNER_PHONE, buildGeneralMessage());
-            }
-
-            // ----- BRIEFING (5000 words, own WhatsApp + manual-number SMS) -----
-            function buildBriefingMessage() {
-                let msg = '📄 *Briefing*\n━━━━━━━━━━━━━━━━━━\n';
-                msg += briefingCommentEl.value.trim() ? briefingCommentEl.value : 'No briefing written yet.';
-                msg += '\n\n📅 ' + new Date().toLocaleString();
-                return msg;
-            }
-
-            function sendBriefingWhatsApp() {
-                openWhatsApp(OWNER_PHONE, buildBriefingMessage());
-            }
-
-            // ----- PHONE NUMBER MODAL (manual SMS number entry) -----
-            const phoneModalOverlay = document.getElementById('phoneModalOverlay');
-            const phoneModalInput = document.getElementById('phoneModalInput');
-            const phoneModalCancel = document.getElementById('phoneModalCancel');
-            const phoneModalConfirm = document.getElementById('phoneModalConfirm');
-            let pendingModalMessage = null;
-
-            function openPhoneModal(message) {
-                pendingModalMessage = message;
-                phoneModalInput.value = '';
-                phoneModalOverlay.classList.add('open');
-                setTimeout(() => phoneModalInput.focus(), 50);
-            }
-
-            function closePhoneModal() {
-                phoneModalOverlay.classList.remove('open');
-                pendingModalMessage = null;
-            }
-
-            function sendBriefingSMS() {
-                openPhoneModal(buildBriefingMessage());
-            }
-
-            // ----- FULL DAILY REPORT SMS (to 415-877-0687) -----
-            function sendSMS() {
-                let message = '📋 *WebSwan Daily Report* 📋\n\n';
-                message += '━━━━━━━━━━━━━━━━━━\n';
-                message += '📌 *LEADS*\n';
-                message += '━━━━━━━━━━━━━━━━━━\n';
-                
-                if (leads.length === 0) {
-                    message += 'No leads yet.\n';
-                } else {
-                    leads.forEach((lead, index) => {
-                        const status = lead.completed ? '✅ COMPLETED' : '⏳ PENDING';
-                        message += `\n${index + 1}. ${lead.name || 'No name'}\n`;
-                        message += `   📞 ${lead.phone || 'No phone'}\n`;
-                        message += `   📧 ${lead.email || 'No email'}\n`;
-                        message += `   📍 ${lead.address || 'No address'}\n`;
-                        message += `   🔗 ${lead.url || 'No URL'}\n`;
-                        message += `   🎯 ${lead.dropdown || 'No action'}\n`;
-                        if (lead.customDropdown) message += `   ✏️ ${lead.customDropdown}\n`;
-                        if (lead.comment) message += `   💬 ${lead.comment}\n`;
-                        message += `   📊 ${status}\n`;
+                    navigator.clipboard.writeText(message).then(() => {
+                        showToast('📋 Lessons report copied to clipboard!', 'success');
+                    }).catch(() => {
+                        showToast('📋 Could not open SMS - report copied to clipboard', 'error');
                     });
                 }
-
-                message += '\n━━━━━━━━━━━━━━━━━━\n';
-                message += '📝 *PERSONAL TO-DOS*\n';
-                message += '━━━━━━━━━━━━━━━━━━\n';
-                
-                if (todos.length === 0) {
-                    message += 'No personal tasks.\n';
-                } else {
-                    todos.forEach((todo, index) => {
-                        const status = todo.completed ? '✅' : '⬜';
-                        message += `   ${status} ${todo.text}\n`;
-                    });
-                }
-
-                message += '\n━━━━━━━━━━━━━━━━━━\n';
-                message += '✅ *COMPLETED TASKS*\n';
-                message += '━━━━━━━━━━━━━━━━━━\n';
-                
-                if (completedItems.length === 0) {
-                    message += 'No completed tasks yet.\n';
-                } else {
-                    completedItems.forEach((item) => {
-                        message += `   ✅ ${item.text} (${item.type})\n`;
-                    });
-                }
-
-                if (generalCommentEl.value.trim()) {
-                    message += '\n━━━━━━━━━━━━━━━━━━\n';
-                    message += '📖 *DAILY COMMENT*\n';
-                    message += '━━━━━━━━━━━━━━━━━━\n';
-                    message += generalCommentEl.value;
-                }
-
-                message += '\n\n━━━━━━━━━━━━━━━━━━\n';
-                message += '📅 ' + new Date().toLocaleString();
-                message += '\n📱 Sent via WebSwan';
-
-                openSMS(OWNER_PHONE, message);
             }
 
-            // ----- OTHER FUNCTIONS -----
+            // ===== OTHER FUNCTIONS =====
             function addLead() {
                 const newLead = {
                     id: nextId++,
                     name: '',
                     phone: '',
-                    email: '',
-                    address: '',
+                    company: '',
                     url: '',
-                    dropdown: 're send email',
+                    dropdown: 'call back',
                     comment: '',
                     customDropdown: '',
                     completed: false
@@ -1832,26 +1498,25 @@
                 showToast('✅ New lead added!', 'success');
             }
 
-            function clearAllData() {
-                if (confirm('⚠️ Delete ALL data? This cannot be undone!')) {
-                    localStorage.removeItem('webswan_leads');
-                    localStorage.removeItem('webswan_todos');
-                    localStorage.removeItem('webswan_completed');
-                    localStorage.removeItem('webswan_general');
-                    leads = [];
-                    todos = [];
-                    completedItems = [];
-                    nextId = 1;
-                    nextTodoId = 1;
-                    generalCommentEl.value = '';
-                    exitEditMode(false);
-                    saveToStorage();
-                    renderLeads();
-                    renderTodos();
-                    renderCompleted();
-                    updateGeneralWordCounter();
-                    showToast('🗑️ All data cleared.', 'success');
+            function sendWhatsApp() {
+                const phones = leads.map(l => l.phone).filter(p => p && p.trim().length > 0);
+                if (phones.length === 0) {
+                    showToast('💬 No phone numbers found!', 'error');
+                    return;
                 }
+                const number = phones[0].replace(/\s/g, '').replace(/^\+/, '');
+                
+                let message = '📋 *WebSwan Daily Report* 📋\n\n';
+                message += '📌 *LEADS*\n';
+                leads.forEach((lead, index) => {
+                    const status = lead.completed ? '✅' : '⏳';
+                    message += `${index + 1}. ${lead.name || 'No name'} ${status}\n`;
+                    message += `   📞 ${lead.phone || 'No phone'}\n`;
+                    message += `   🏢 ${lead.company || 'No company'}\n`;
+                });
+                
+                const url = `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
+                window.open(url, '_blank');
             }
 
             function lockApp() {
@@ -1859,132 +1524,86 @@
                     isUnlocked = false;
                     appContent.classList.remove('unlocked');
                     lockScreen.classList.remove('hidden');
-                    resetFirstLock();
-                    resetSecondLock();
-                    firstLockContainer.style.display = 'block';
-                    secondLockContainer.classList.remove('show');
-                    secondLockContainer.style.display = 'none';
-                    firstLockClicks = 0;
-                    secondLockClicks = 0;
-                    firstLockStatus.textContent = '🔒';
-                    firstLockStatus.style.color = 'rgba(255,255,255,0.4)';
-                    secondLockStatus.textContent = '🗝️';
-                    secondLockStatus.style.color = 'rgba(255,255,255,0.4)';
-                    secondLockEmoji.classList.remove('pulse');
+                    resetLocks();
+                    showToast('🔒 App locked!', 'success');
                 }
             }
 
-            // ===== LANGUAGE + AI FILE (Lessons panel) =====
-            const languageSelect = document.getElementById('languageSelect');
-            const languageComment = document.getElementById('languageComment');
-            const languageWordCount = document.getElementById('languageWordCount');
-            const aiToolSelect = document.getElementById('aiToolSelect');
-            const aiCategorySelect = document.getElementById('aiCategorySelect');
-            const aiComment = document.getElementById('aiComment');
-            const aiWordCount = document.getElementById('aiWordCount');
-            const aiWhatsappBtn = document.getElementById('aiWhatsappBtn');
-
-            function updateLanguageWordCounter() {
-                const words = countWords(languageComment.value);
-                languageWordCount.textContent = `${words} / 1000 words`;
-                languageWordCount.style.color = words > 1000 ? '#b22222' : '#2c7da0';
-            }
-
-            function renderLanguage() {
-                languageSelect.value = languageData.lang || 'English';
-                languageComment.value = languageData.comment || '';
-                updateLanguageWordCounter();
-            }
-
-            function updateAiWordCounter() {
-                const words = countWords(aiComment.value);
-                aiWordCount.textContent = `${words} / 1500 words`;
-                aiWordCount.style.color = words > 1500 ? '#b22222' : '#2c7da0';
-            }
-
-            function renderAiTool() {
-                if (!aiData[currentAiTool]) aiData[currentAiTool] = { category: 'Prompts', comment: '' };
-                aiToolSelect.value = currentAiTool;
-                aiCategorySelect.value = aiData[currentAiTool].category || 'Prompts';
-                aiComment.value = aiData[currentAiTool].comment || '';
-                updateAiWordCounter();
-            }
-
-            function wireLanguageAndAiFields() {
-                languageSelect.addEventListener('change', (e) => {
-                    languageData.lang = e.target.value;
+            function clearAllData() {
+                if (confirm('⚠️ Delete ALL data? This cannot be undone!')) {
+                    localStorage.removeItem('webswan_leads');
+                    localStorage.removeItem('webswan_todos');
+                    localStorage.removeItem('webswan_completed');
+                    localStorage.removeItem('webswan_general');
+                    localStorage.removeItem('webswan_prompt');
+                    localStorage.removeItem('webswan_notes');
+                    leads = [];
+                    todos = [];
+                    completedItems = [];
+                    nextId = 1;
+                    nextTodoId = 1;
+                    generalCommentEl.value = '';
+                    customPrompt.value = '';
+                    lessonNotes.value = '';
                     saveToStorage();
-                });
-
-                languageComment.addEventListener('input', (e) => {
-                    let words = e.target.value.trim().split(/\s+/).filter(w => w.length > 0);
-                    if (words.length > 1000) {
-                        e.target.value = words.slice(0, 1000).join(' ');
-                    }
-                    languageData.comment = e.target.value;
-                    saveToStorage();
-                    updateLanguageWordCounter();
-                });
-
-                aiToolSelect.addEventListener('change', (e) => {
-                    currentAiTool = e.target.value;
-                    saveToStorage();
-                    renderAiTool();
-                });
-
-                aiCategorySelect.addEventListener('change', (e) => {
-                    aiData[currentAiTool].category = e.target.value;
-                    saveToStorage();
-                });
-
-                aiComment.addEventListener('input', (e) => {
-                    let words = e.target.value.trim().split(/\s+/).filter(w => w.length > 0);
-                    if (words.length > 1500) {
-                        e.target.value = words.slice(0, 1500).join(' ');
-                    }
-                    aiData[currentAiTool].comment = e.target.value;
-                    saveToStorage();
-                    updateAiWordCounter();
-                });
-
-                aiWhatsappBtn.addEventListener('click', () => {
-                    const entry = aiData[currentAiTool];
-                    const message = `🤖 *AI File: ${currentAiTool}*\n📂 Type: ${entry.category}\n💬 ${entry.comment || 'No notes yet'}`;
-                    openWhatsApp(OWNER_PHONE, message);
-                });
+                    renderLeads();
+                    renderTodos();
+                    renderCompleted();
+                    updateGeneralWordCounter();
+                    updatePromptWordCounter();
+                    updateNotesWordCounter();
+                    showToast('🗑️ All data cleared.', 'success');
+                }
             }
 
-            // ===== TOGGLE LESSONS =====
-            const toggleLessonsBtn = document.getElementById('toggleLessonsBtn');
-            const lessonsContent = document.getElementById('lessonsContent');
-            const lessonsBackBtn = document.getElementById('lessonsBackBtn');
-
-            function openLessons() {
-                lessonsContent.classList.add('open');
-                toggleLessonsBtn.innerHTML = '<i class="fas fa-book-open"></i> Lessons';
-                toggleLessonsBtn.classList.add('active');
-            }
-
-            function closeLessons() {
-                lessonsContent.classList.remove('open');
-                toggleLessonsBtn.innerHTML = '<i class="fas fa-book"></i> Lessons';
-                toggleLessonsBtn.classList.remove('active');
-            }
-
-            toggleLessonsBtn.addEventListener('click', function() {
-                if (lessonsContent.classList.contains('open')) {
-                    closeLessons();
+            function sendSMS() {
+                let message = '📋 *WebSwan Daily Report* 📋\n\n';
+                message += '📌 *LEADS*\n';
+                if (leads.length === 0) {
+                    message += 'No leads yet.\n';
                 } else {
-                    openLessons();
+                    leads.forEach((lead, index) => {
+                        const status = lead.completed ? '✅ COMPLETED' : '⏳ PENDING';
+                        message += `\n${index + 1}. ${lead.name || 'No name'}\n`;
+                        message += `   📞 ${lead.phone || 'No phone'}\n`;
+                        message += `   🏢 ${lead.company || 'No company'}\n`;
+                        message += `   📊 ${status}\n`;
+                    });
                 }
-            });
 
-            // "Back to Tasks" button inside the Lessons panel — closes Lessons and
-            // scrolls back up to the leads/tasks view.
-            lessonsBackBtn.addEventListener('click', function() {
-                closeLessons();
-                if (container) container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            });
+                message += '\n📝 *PERSONAL TO-DOS*\n';
+                if (todos.length === 0) {
+                    message += 'No personal tasks.\n';
+                } else {
+                    todos.forEach((todo) => {
+                        const status = todo.completed ? '✅' : '⬜';
+                        message += `   ${status} ${todo.text}\n`;
+                    });
+                }
+
+                if (generalCommentEl.value.trim()) {
+                    message += '\n📖 *DAILY COMMENT*\n';
+                    message += generalCommentEl.value;
+                }
+
+                message += '\n\n📅 ' + new Date().toLocaleString();
+                message += '\n📱 Sent via WebSwan Suite';
+
+                const encoded = encodeURIComponent(message);
+                const phoneNumber = '4158770687';
+                const smsUrl = `sms:${phoneNumber}?body=${encoded}`;
+
+                try {
+                    window.location.href = smsUrl;
+                    showToast(`📱 Opening SMS to ${phoneNumber}...`, 'success');
+                } catch(e) {
+                    navigator.clipboard.writeText(message).then(() => {
+                        showToast('📋 Report copied to clipboard!', 'success');
+                    }).catch(() => {
+                        showToast('📋 Could not open SMS - report copied', 'error');
+                    });
+                }
+            }
 
             // ===== INIT APP =====
             function initApp() {
@@ -1996,30 +1615,11 @@
                 renderLeads();
                 renderTodos();
                 renderCompleted();
-                renderLanguage();
-                renderAiTool();
-                wireLanguageAndAiFields();
+                updatePromptWordCounter();
+                updateNotesWordCounter();
 
                 document.getElementById('addLeadBtn').addEventListener('click', addLead);
-                editToggleBtn.addEventListener('click', toggleEditMode);
-                saveEditBtn.addEventListener('click', saveEdit);
-                document.getElementById('generalWhatsappBtn').addEventListener('click', sendGeneralWhatsApp);
-                document.getElementById('generalSmsBtn').addEventListener('click', sendGeneralSMS);
-                document.getElementById('briefingWhatsappBtn').addEventListener('click', sendBriefingWhatsApp);
-                document.getElementById('briefingSmsBtn').addEventListener('click', sendBriefingSMS);
-                phoneModalCancel.addEventListener('click', closePhoneModal);
-                phoneModalConfirm.addEventListener('click', () => {
-                    const num = phoneModalInput.value.trim();
-                    if (!num) {
-                        showToast('Please enter a phone number.', 'error');
-                        return;
-                    }
-                    openSMS(num, pendingModalMessage);
-                    closePhoneModal();
-                });
-                phoneModalInput.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') phoneModalConfirm.click();
-                });
+                document.getElementById('whatsappSendBtn').addEventListener('click', sendWhatsApp);
                 document.getElementById('globalSaveBtn').addEventListener('click', () => {
                     saveToStorage();
                     showToast('✅ All data saved locally!', 'success');
@@ -2028,11 +1628,36 @@
                 document.getElementById('lockAppBtn').addEventListener('click', lockApp);
                 document.getElementById('addTodoBtn').addEventListener('click', addTodo);
                 document.getElementById('smsSendBtn').addEventListener('click', sendSMS);
-                
+
+                document.getElementById('codingSubmitBtn').addEventListener('click', submitCodingLesson);
+                document.getElementById('promptSubmitBtn').addEventListener('click', submitPrompt);
+                document.getElementById('notesSubmitBtn').addEventListener('click', saveLessonNotes);
+                document.getElementById('lessonsSmsBtn').addEventListener('click', sendLessonsSMS);
+
                 todoInput.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') addTodo();
                 });
                 todoInput.addEventListener('input', updateTodoWordCounter);
+
+                customPrompt.addEventListener('input', () => {
+                    const words = countWords(customPrompt.value);
+                    if (words > 250) {
+                        const truncated = customPrompt.value.split(/\s+/).slice(0, 250).join(' ');
+                        customPrompt.value = truncated;
+                    }
+                    updatePromptWordCounter();
+                    localStorage.setItem('webswan_prompt', customPrompt.value);
+                });
+
+                lessonNotes.addEventListener('input', () => {
+                    const words = countWords(lessonNotes.value);
+                    if (words > 500) {
+                        const truncated = lessonNotes.value.split(/\s+/).slice(0, 500).join(' ');
+                        lessonNotes.value = truncated;
+                    }
+                    updateNotesWordCounter();
+                    localStorage.setItem('webswan_notes', lessonNotes.value);
+                });
 
                 generalCommentEl.addEventListener('input', () => {
                     const words = countWords(generalCommentEl.value);
@@ -2044,21 +1669,9 @@
                     localStorage.setItem('webswan_general', generalCommentEl.value);
                 });
 
-                briefingCommentEl.addEventListener('input', () => {
-                    const words = countWords(briefingCommentEl.value);
-                    if (words > 5000) {
-                        const truncated = briefingCommentEl.value.split(/\s+/).slice(0, 5000).join(' ');
-                        briefingCommentEl.value = truncated;
-                    }
-                    updateBriefingWordCounter();
-                    localStorage.setItem('webswan_briefing', briefingCommentEl.value);
-                });
-
                 updateTodoWordCounter();
-                showToast('🔓 Welcome back, love! 💙', 'success');
             }
         })();
     </script>
 </body>
 </html>
-                
