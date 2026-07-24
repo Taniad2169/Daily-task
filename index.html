@@ -215,6 +215,14 @@
         .btn-purple i {
             color: white;
         }
+        .btn-ai {
+            background: #10a37f;
+            color: white;
+            border: 1px solid #10a37f;
+        }
+        .btn-ai i {
+            color: white;
+        }
         .btn-danger {
             background: #dc3545;
             color: white;
@@ -316,6 +324,7 @@
             resize: vertical;
             min-height: 55px;
             border-radius: 18px;
+            transition: height 0.2s ease;
         }
         .comment-box {
             grid-column: 1 / -1;
@@ -323,6 +332,18 @@
         }
         .comment-box textarea {
             min-height: 65px;
+        }
+        .stretch-textarea {
+            width: 100%;
+            min-height: 80px;
+            resize: vertical;
+            transition: height 0.2s ease;
+        }
+        .stretch-textarea.large {
+            min-height: 150px;
+        }
+        .stretch-textarea.xlarge {
+            min-height: 200px;
         }
         .lead-actions {
             display: flex;
@@ -336,6 +357,68 @@
         .lead-actions .btn {
             padding: 0.35rem 1.1rem;
             font-size: 0.78rem;
+        }
+        .briefing-section {
+            background: white;
+            border-radius: 28px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            border: 2px solid #0077b6;
+        }
+        .briefing-section h3 {
+            color: #023e8a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+        .briefing-section textarea {
+            width: 100%;
+            min-height: 120px;
+            border: 1.5px solid #d4eaf5;
+            border-radius: 24px;
+            padding: 1rem;
+            font-size: 0.95rem;
+            background: #f5faff;
+            resize: vertical;
+            transition: height 0.2s ease;
+        }
+        .briefing-section textarea:focus {
+            outline: 3px solid #0077b6;
+            background: white;
+        }
+        .ai-chat-section {
+            background: white;
+            border-radius: 28px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            border: 1px solid rgba(0, 119, 182, 0.12);
+        }
+        .ai-chat-section h3 {
+            color: #023e8a;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+        .ai-chat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            align-items: end;
+        }
+        .ai-chat-grid .field-group {
+            gap: 6px;
+        }
+        .ai-chat-grid .field-group label {
+            font-size: 0.75rem;
+        }
+        .ai-chat-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 1rem;
+            justify-content: flex-end;
         }
         .general-comment {
             background: white;
@@ -360,6 +443,8 @@
             background: #f5faff;
             min-height: 100px;
             margin-top: 10px;
+            resize: vertical;
+            transition: height 0.2s ease;
         }
         .general-comment textarea:focus {
             outline: 3px solid #0077b6;
@@ -613,7 +698,7 @@
             .header h1 {
                 font-size: 1.4rem;
             }
-            .lead-grid, .lesson-grid {
+            .lead-grid, .lesson-grid, .ai-chat-grid {
                 grid-template-columns: 1fr;
                 gap: 0.8rem;
             }
@@ -703,6 +788,42 @@
         .smooth-slide {
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
+        .ai-link-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0.5rem 1rem;
+            border-radius: 40px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: 0.2s;
+            border: 2px solid transparent;
+        }
+        .ai-link-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .ai-link-btn.chatgpt {
+            background: #10a37f;
+            color: white;
+            border-color: #10a37f;
+        }
+        .ai-link-btn.deepseek {
+            background: #4a6cf7;
+            color: white;
+            border-color: #4a6cf7;
+        }
+        .ai-link-btn.gemini {
+            background: #4285f4;
+            color: white;
+            border-color: #4285f4;
+        }
+        .ai-link-btn.claude {
+            background: #7c3aed;
+            color: white;
+            border-color: #7c3aed;
+        }
     </style>
 </head>
 <body>
@@ -762,6 +883,39 @@
                     <div class="word-counter" id="todoWordCount">0 / 250 words</div>
                 </div>
 
+                <!-- ===== BRIEFING SECTION ===== -->
+                <div class="briefing-section">
+                    <h3><i class="fas fa-clipboard-list" style="color:#0077b6;"></i> Briefing <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(5000 words max - stretches as you type)</span></h3>
+                    <textarea id="briefingText" placeholder="Write your detailed briefing here... This container stretches as you type!" maxlength="30000" style="min-height:150px;"></textarea>
+                    <div class="word-counter" id="briefingWordCount">0 / 5000 words</div>
+                </div>
+
+                <!-- ===== AI CHAT SECTION ===== -->
+                <div class="ai-chat-section">
+                    <h3><i class="fas fa-robot" style="color:#6f42c1;"></i> AI Chat <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">- Select AI to chat with</span></h3>
+                    <div class="ai-chat-grid">
+                        <div class="field-group">
+                            <label><i class="fas fa-brain"></i> Select AI Assistant</label>
+                            <select id="aiChatSelect">
+                                <option value="chatgpt">ChatGPT</option>
+                                <option value="deepseek">DeepSeek</option>
+                                <option value="gemini">Gemini</option>
+                                <option value="claude">Claude</option>
+                            </select>
+                        </div>
+                        <div class="field-group">
+                            <label><i class="fas fa-comment"></i> Your Message (1000 words max - stretches)</label>
+                            <textarea id="aiChatMessage" placeholder="Type your message to the AI..." maxlength="6000" style="min-height:80px;resize:vertical;"></textarea>
+                            <div class="word-counter" id="aiChatWordCount">0 / 1000 words</div>
+                        </div>
+                    </div>
+                    <div class="ai-chat-actions">
+                        <button class="btn btn-ai" id="aiChatSendBtn"><i class="fas fa-paper-plane"></i> Send to AI</button>
+                        <a href="#" id="aiChatLinkBtn" class="ai-link-btn chatgpt" target="_blank"><i class="fas fa-external-link-alt"></i> Open AI Chat</a>
+                    </div>
+                </div>
+
+                <!-- ===== COMPLETED TASKS ===== -->
                 <div class="completed-section">
                     <h3><i class="fas fa-check-circle"></i> Completed Tasks</h3>
                     <div id="completedContainer">
@@ -787,8 +941,9 @@
                 <div class="lessons-container">
                     <h2><i class="fas fa-graduation-cap" style="color:#6f42c1;"></i> WebSwan Lessons</h2>
 
+                    <!-- Coding Lessons -->
                     <div class="lesson-card">
-                        <h4><i class="fas fa-code" style="color:#0077b6;"></i> Coding Lessons</h4>
+                        <h4><i class="fas fa-code" style="color:#0077b6;"></i> Coding Lessons <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(1000 words max - stretches)</span></h4>
                         <div class="lesson-grid">
                             <div class="field-group">
                                 <label><i class="fas fa-code"></i> Select Topic</label>
@@ -826,13 +981,19 @@
                                 </select>
                             </div>
                         </div>
+                        <div class="field-group" style="margin-top:1rem;">
+                            <label><i class="fas fa-pen"></i> Lesson Content (1000 words max - stretches)</label>
+                            <textarea id="lessonContent" placeholder="Write your lesson content, code, or instructions here..." maxlength="6000" style="min-height:120px;resize:vertical;"></textarea>
+                            <div class="word-counter" id="lessonContentWordCount">0 / 1000 words</div>
+                        </div>
                         <div class="lesson-actions">
                             <button class="btn btn-purple" id="codingSubmitBtn"><i class="fas fa-paper-plane"></i> Submit Lesson</button>
                         </div>
                     </div>
 
+                    <!-- AI Prompts -->
                     <div class="lesson-card">
-                        <h4><i class="fas fa-brain" style="color:#6f42c1;"></i> AI Prompts & Instructions</h4>
+                        <h4><i class="fas fa-brain" style="color:#6f42c1;"></i> AI Prompts & Instructions <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(1000 words max - stretches)</span></h4>
                         <div class="field-group" style="margin-bottom: 1rem;">
                             <label><i class="fas fa-list-dropdown"></i> Prompt Type</label>
                             <select id="promptType">
@@ -844,20 +1005,21 @@
                             </select>
                         </div>
                         <div class="field-group">
-                            <label><i class="fas fa-comment"></i> Custom Prompt (250 words max)</label>
-                            <textarea id="customPrompt" placeholder="Enter your specific prompt or instructions here..." maxlength="1500" style="min-height:100px;"></textarea>
-                            <div class="word-counter" id="promptWordCount">0 / 250 words</div>
+                            <label><i class="fas fa-comment"></i> Custom Prompt (1000 words max - stretches)</label>
+                            <textarea id="customPrompt" placeholder="Enter your specific prompt or instructions here..." maxlength="6000" style="min-height:100px;resize:vertical;"></textarea>
+                            <div class="word-counter" id="promptWordCount">0 / 1000 words</div>
                         </div>
                         <div class="lesson-actions">
                             <button class="btn btn-purple" id="promptSubmitBtn"><i class="fas fa-paper-plane"></i> Submit Prompt</button>
                         </div>
                     </div>
 
+                    <!-- Lesson Notes -->
                     <div class="lesson-card">
-                        <h4><i class="fas fa-sticky-note" style="color:#6f42c1;"></i> Lesson Notes</h4>
+                        <h4><i class="fas fa-sticky-note" style="color:#6f42c1;"></i> Lesson Notes <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(500 words max - stretches)</span></h4>
                         <div class="field-group">
-                            <label><i class="fas fa-pen"></i> Your Notes (500 words max)</label>
-                            <textarea id="lessonNotes" placeholder="Write your lesson notes, key takeaways, or code snippets here..." maxlength="3000" style="min-height:120px;"></textarea>
+                            <label><i class="fas fa-pen"></i> Your Notes (stretches as you type)</label>
+                            <textarea id="lessonNotes" placeholder="Write your lesson notes, key takeaways, or code snippets here..." maxlength="3000" style="min-height:120px;resize:vertical;"></textarea>
                             <div class="word-counter" id="notesWordCount">0 / 500 words</div>
                         </div>
                         <div class="lesson-actions">
@@ -1010,6 +1172,15 @@
             const todoInput = document.getElementById('todoInput');
             const todoWordCount = document.getElementById('todoWordCount');
 
+            // New elements
+            const briefingText = document.getElementById('briefingText');
+            const briefingWordCount = document.getElementById('briefingWordCount');
+            const aiChatMessage = document.getElementById('aiChatMessage');
+            const aiChatWordCount = document.getElementById('aiChatWordCount');
+            const aiChatSelect = document.getElementById('aiChatSelect');
+            const aiChatLinkBtn = document.getElementById('aiChatLinkBtn');
+            const lessonContent = document.getElementById('lessonContent');
+            const lessonContentWordCount = document.getElementById('lessonContentWordCount');
             const customPrompt = document.getElementById('customPrompt');
             const promptWordCount = document.getElementById('promptWordCount');
             const lessonNotes = document.getElementById('lessonNotes');
@@ -1032,10 +1203,28 @@
                 todoWordCount.style.color = words > 250 ? '#b22222' : '#2c7da0';
             }
 
+            function updateBriefingWordCounter() {
+                const words = countWords(briefingText.value);
+                briefingWordCount.textContent = `${words} / 5000 words`;
+                briefingWordCount.style.color = words > 5000 ? '#b22222' : '#2c7da0';
+            }
+
+            function updateAIChatWordCounter() {
+                const words = countWords(aiChatMessage.value);
+                aiChatWordCount.textContent = `${words} / 1000 words`;
+                aiChatWordCount.style.color = words > 1000 ? '#b22222' : '#2c7da0';
+            }
+
+            function updateLessonContentWordCounter() {
+                const words = countWords(lessonContent.value);
+                lessonContentWordCount.textContent = `${words} / 1000 words`;
+                lessonContentWordCount.style.color = words > 1000 ? '#b22222' : '#2c7da0';
+            }
+
             function updatePromptWordCounter() {
                 const words = countWords(customPrompt.value);
-                promptWordCount.textContent = `${words} / 250 words`;
-                promptWordCount.style.color = words > 250 ? '#b22222' : '#2c7da0';
+                promptWordCount.textContent = `${words} / 1000 words`;
+                promptWordCount.style.color = words > 1000 ? '#b22222' : '#2c7da0';
             }
 
             function updateNotesWordCounter() {
@@ -1044,6 +1233,55 @@
                 notesWordCount.style.color = words > 500 ? '#b22222' : '#2c7da0';
             }
 
+            // ===== AI CHAT LINKS =====
+            function updateAILink() {
+                const selected = aiChatSelect.value;
+                const message = encodeURIComponent(aiChatMessage.value.trim() || 'Hello!');
+                let url = '';
+                switch(selected) {
+                    case 'chatgpt':
+                        url = `https://chat.openai.com/?q=${message}`;
+                        aiChatLinkBtn.className = 'ai-link-btn chatgpt';
+                        aiChatLinkBtn.innerHTML = '<i class="fas fa-external-link-alt"></i> Open ChatGPT';
+                        break;
+                    case 'deepseek':
+                        url = `https://chat.deepseek.com/?q=${message}`;
+                        aiChatLinkBtn.className = 'ai-link-btn deepseek';
+                        aiChatLinkBtn.innerHTML = '<i class="fas fa-external-link-alt"></i> Open DeepSeek';
+                        break;
+                    case 'gemini':
+                        url = `https://gemini.google.com/?q=${message}`;
+                        aiChatLinkBtn.className = 'ai-link-btn gemini';
+                        aiChatLinkBtn.innerHTML = '<i class="fas fa-external-link-alt"></i> Open Gemini';
+                        break;
+                    case 'claude':
+                        url = `https://claude.ai/?q=${message}`;
+                        aiChatLinkBtn.className = 'ai-link-btn claude';
+                        aiChatLinkBtn.innerHTML = '<i class="fas fa-external-link-alt"></i> Open Claude';
+                        break;
+                }
+                aiChatLinkBtn.href = url;
+            }
+
+            aiChatSelect.addEventListener('change', updateAILink);
+            aiChatMessage.addEventListener('input', updateAILink);
+
+            // ===== AI CHAT SEND =====
+            function sendAIChat() {
+                const message = aiChatMessage.value.trim();
+                if (!message) {
+                    showToast('Please type a message to send to the AI.', 'error');
+                    return;
+                }
+                if (countWords(message) > 1000) {
+                    showToast('Message exceeds 1000 words limit!', 'error');
+                    return;
+                }
+                aiChatLinkBtn.click();
+                showToast(`📤 Sending to ${aiChatSelect.options[aiChatSelect.selectedIndex].text}...`, 'success');
+            }
+
+            // ----- STORAGE -----
             function loadFromStorage() {
                 try {
                     const storedLeads = localStorage.getItem('webswan_leads');
@@ -1053,7 +1291,6 @@
                         leads.forEach(l => { if (l.id && l.id > maxId) maxId = l.id; });
                         nextId = maxId + 1;
                     } else {
-                        // REMOVED fake Bob Chen lead - only real lead
                         leads = [
                             { id: nextId++, name: 'Solene - Base44', phone: '', company: '', url: 'taniad2169.github.io/Daily-task', dropdown: 'call back', comment: '', customDropdown: '', completed: false }
                         ];
@@ -1074,7 +1311,6 @@
                     const storedCompleted = localStorage.getItem('webswan_completed');
                     if (storedCompleted) {
                         completedItems = JSON.parse(storedCompleted);
-                        // Remove any fake Bob Chen entries from completed
                         completedItems = completedItems.filter(item => 
                             !item.text.includes('Bob Chen') && 
                             !item.text.includes('555 987 6543')
@@ -1083,8 +1319,18 @@
                         completedItems = [];
                     }
 
+                    const savedBriefing = localStorage.getItem('webswan_briefing');
+                    if (savedBriefing) briefingText.value = savedBriefing;
+                    
+                    const savedAIChat = localStorage.getItem('webswan_aichat');
+                    if (savedAIChat) aiChatMessage.value = savedAIChat;
+                    
+                    const savedLessonContent = localStorage.getItem('webswan_lessoncontent');
+                    if (savedLessonContent) lessonContent.value = savedLessonContent;
+                    
                     const savedPrompt = localStorage.getItem('webswan_prompt');
                     if (savedPrompt) customPrompt.value = savedPrompt;
+                    
                     const savedNotes = localStorage.getItem('webswan_notes');
                     if (savedNotes) lessonNotes.value = savedNotes;
                     
@@ -1100,6 +1346,9 @@
                 localStorage.setItem('webswan_todos', JSON.stringify(todos));
                 localStorage.setItem('webswan_completed', JSON.stringify(completedItems));
                 localStorage.setItem('webswan_general', generalCommentEl.value);
+                localStorage.setItem('webswan_briefing', briefingText.value);
+                localStorage.setItem('webswan_aichat', aiChatMessage.value);
+                localStorage.setItem('webswan_lessoncontent', lessonContent.value);
                 localStorage.setItem('webswan_prompt', customPrompt.value);
                 localStorage.setItem('webswan_notes', lessonNotes.value);
             }
@@ -1278,9 +1527,7 @@
             }
 
             function deleteLead(leadId) {
-                // Remove from leads
                 leads = leads.filter(l => l.id !== leadId);
-                // Also remove from completed items if it's there
                 completedItems = completedItems.filter(item => item.leadId !== leadId);
                 saveToStorage();
                 renderLeads();
@@ -1459,14 +1706,12 @@
                     completedContainer.appendChild(div);
                 });
 
-                // Add delete functionality to each completed item
                 document.querySelectorAll('.delete-completed').forEach(btn => {
                     btn.addEventListener('click', function() {
                         const index = parseInt(this.dataset.index);
                         const actualIndex = completedItems.length - 1 - index;
                         if (confirm('Remove this item from completed tasks?')) {
                             const item = completedItems[actualIndex];
-                            // If it's a lead, also un-complete it
                             if (item.type === 'lead' && item.leadId) {
                                 const lead = leads.find(l => l.id === item.leadId);
                                 if (lead) {
@@ -1521,6 +1766,21 @@
                     });
                 }
 
+                if (briefingText.value.trim()) {
+                    message += '\n━━━━━━━━━━━━━━━━━━\n';
+                    message += '📋 *BRIEFING*\n';
+                    message += '━━━━━━━━━━━━━━━━━━\n';
+                    message += briefingText.value;
+                }
+
+                if (aiChatMessage.value.trim()) {
+                    message += '\n━━━━━━━━━━━━━━━━━━\n';
+                    message += '🤖 *AI CHAT MESSAGE*\n';
+                    message += '━━━━━━━━━━━━━━━━━━\n';
+                    message += `AI: ${aiChatSelect.options[aiChatSelect.selectedIndex].text}\n`;
+                    message += `Message: ${aiChatMessage.value}`;
+                }
+
                 message += '\n━━━━━━━━━━━━━━━━━━\n';
                 message += '✅ *COMPLETED TASKS*\n';
                 message += '━━━━━━━━━━━━━━━━━━\n';
@@ -1554,11 +1814,23 @@
                 const topic = document.getElementById('codingTopic').value;
                 const language = document.getElementById('lessonLanguage').value;
                 const ai = document.getElementById('aiAssistant').value;
+                const content = lessonContent.value.trim();
                 
-                const message = `📚 *WebSwan Lesson Request*\n\n` +
+                if (!content) {
+                    showToast('Please enter lesson content.', 'error');
+                    return;
+                }
+                
+                if (countWords(content) > 1000) {
+                    showToast('Lesson content exceeds 1000 words limit!', 'error');
+                    return;
+                }
+                
+                const message = `📚 *WebSwan Lesson*\n\n` +
                     `📌 Topic: ${topic}\n` +
                     `🌍 Language: ${language}\n` +
                     `🤖 AI Assistant: ${ai}\n` +
+                    `📝 Content: ${content}\n\n` +
                     `📅 ${new Date().toLocaleString()}`;
                 
                 completedItems.push({
@@ -1570,10 +1842,10 @@
                 
                 saveToStorage();
                 renderCompleted();
-                showToast(`✅ Lesson submitted: ${topic} with ${ai}!`, 'success');
+                showToast(`✅ Lesson submitted!`, 'success');
                 
                 navigator.clipboard.writeText(message).then(() => {
-                    showToast('📋 Lesson details copied to clipboard!', 'success');
+                    showToast('📋 Lesson copied to clipboard!', 'success');
                 }).catch(() => {});
             }
 
@@ -1586,12 +1858,12 @@
                     return;
                 }
                 
-                if (countWords(promptText) > 250) {
-                    showToast('Prompt exceeds 250 words limit!', 'error');
+                if (countWords(promptText) > 1000) {
+                    showToast('Prompt exceeds 1000 words limit!', 'error');
                     return;
                 }
                 
-                const message = `🤖 *AI Prompt Request*\n\n` +
+                const message = `🤖 *AI Prompt*\n\n` +
                     `📋 Type: ${promptType}\n` +
                     `💬 Prompt: ${promptText}\n` +
                     `📅 ${new Date().toLocaleString()}`;
@@ -1627,6 +1899,7 @@
                 const topic = document.getElementById('codingTopic').value;
                 const language = document.getElementById('lessonLanguage').value;
                 const ai = document.getElementById('aiAssistant').value;
+                const content = lessonContent.value.trim() || 'No content';
                 const promptType = document.getElementById('promptType').value;
                 const promptText = customPrompt.value.trim() || 'No prompt entered';
                 const notes = lessonNotes.value.trim() || 'No notes saved';
@@ -1637,7 +1910,8 @@
                 message += '━━━━━━━━━━━━━━━━━━\n';
                 message += `Topic: ${topic}\n`;
                 message += `Language: ${language}\n`;
-                message += `AI Assistant: ${ai}\n\n`;
+                message += `AI Assistant: ${ai}\n`;
+                message += `Content: ${content}\n\n`;
                 
                 message += '━━━━━━━━━━━━━━━━━━\n';
                 message += '🤖 *AI PROMPT*\n';
@@ -1707,6 +1981,9 @@
                     localStorage.removeItem('webswan_todos');
                     localStorage.removeItem('webswan_completed');
                     localStorage.removeItem('webswan_general');
+                    localStorage.removeItem('webswan_briefing');
+                    localStorage.removeItem('webswan_aichat');
+                    localStorage.removeItem('webswan_lessoncontent');
                     localStorage.removeItem('webswan_prompt');
                     localStorage.removeItem('webswan_notes');
                     leads = [];
@@ -1715,6 +1992,9 @@
                     nextId = 1;
                     nextTodoId = 1;
                     generalCommentEl.value = '';
+                    briefingText.value = '';
+                    aiChatMessage.value = '';
+                    lessonContent.value = '';
                     customPrompt.value = '';
                     lessonNotes.value = '';
                     saveToStorage();
@@ -1722,6 +2002,9 @@
                     renderTodos();
                     renderCompleted();
                     updateGeneralWordCounter();
+                    updateBriefingWordCounter();
+                    updateAIChatWordCounter();
+                    updateLessonContentWordCounter();
                     updatePromptWordCounter();
                     updateNotesWordCounter();
                     showToast('🗑️ All data cleared.', 'success');
@@ -1751,6 +2034,11 @@
                         const status = todo.completed ? '✅' : '⬜';
                         message += `   ${status} ${todo.text}\n`;
                     });
+                }
+
+                if (briefingText.value.trim()) {
+                    message += '\n📋 *BRIEFING*\n';
+                    message += briefingText.value;
                 }
 
                 if (generalCommentEl.value.trim()) {
@@ -1787,8 +2075,12 @@
                 renderLeads();
                 renderTodos();
                 renderCompleted();
+                updateBriefingWordCounter();
+                updateAIChatWordCounter();
+                updateLessonContentWordCounter();
                 updatePromptWordCounter();
                 updateNotesWordCounter();
+                updateAILink();
 
                 document.getElementById('addLeadBtn').addEventListener('click', addLead);
                 document.getElementById('whatsappSendBtn').addEventListener('click', sendWhatsApp);
@@ -1800,6 +2092,7 @@
                 document.getElementById('lockAppBtn').addEventListener('click', lockApp);
                 document.getElementById('addTodoBtn').addEventListener('click', addTodo);
                 document.getElementById('smsSendBtn').addEventListener('click', sendSMS);
+                document.getElementById('aiChatSendBtn').addEventListener('click', sendAIChat);
 
                 document.getElementById('codingSubmitBtn').addEventListener('click', submitCodingLesson);
                 document.getElementById('promptSubmitBtn').addEventListener('click', submitPrompt);
@@ -1811,10 +2104,41 @@
                 });
                 todoInput.addEventListener('input', updateTodoWordCounter);
 
+                briefingText.addEventListener('input', () => {
+                    const words = countWords(briefingText.value);
+                    if (words > 5000) {
+                        const truncated = briefingText.value.split(/\s+/).slice(0, 5000).join(' ');
+                        briefingText.value = truncated;
+                    }
+                    updateBriefingWordCounter();
+                    localStorage.setItem('webswan_briefing', briefingText.value);
+                });
+
+                aiChatMessage.addEventListener('input', () => {
+                    const words = countWords(aiChatMessage.value);
+                    if (words > 1000) {
+                        const truncated = aiChatMessage.value.split(/\s+/).slice(0, 1000).join(' ');
+                        aiChatMessage.value = truncated;
+                    }
+                    updateAIChatWordCounter();
+                    localStorage.setItem('webswan_aichat', aiChatMessage.value);
+                    updateAILink();
+                });
+
+                lessonContent.addEventListener('input', () => {
+                    const words = countWords(lessonContent.value);
+                    if (words > 1000) {
+                        const truncated = lessonContent.value.split(/\s+/).slice(0, 1000).join(' ');
+                        lessonContent.value = truncated;
+                    }
+                    updateLessonContentWordCounter();
+                    localStorage.setItem('webswan_lessoncontent', lessonContent.value);
+                });
+
                 customPrompt.addEventListener('input', () => {
                     const words = countWords(customPrompt.value);
-                    if (words > 250) {
-                        const truncated = customPrompt.value.split(/\s+/).slice(0, 250).join(' ');
+                    if (words > 1000) {
+                        const truncated = customPrompt.value.split(/\s+/).slice(0, 1000).join(' ');
                         customPrompt.value = truncated;
                     }
                     updatePromptWordCounter();
@@ -1844,7 +2168,6 @@
                 updateTodoWordCounter();
             }
 
-            // Close dropdowns when clicking outside
             document.addEventListener('click', function(e) {
                 document.querySelectorAll('.edit-dropdown-content').forEach(dropdown => {
                     if (!dropdown.closest('.edit-dropdown')) {
