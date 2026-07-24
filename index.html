@@ -18,7 +18,7 @@
             padding: 1rem;
             display: flex;
             justify-content: center;
-            align-items: center;
+            align-items: flex-start;
         }
         #lockScreen {
             position: fixed;
@@ -120,7 +120,7 @@
         }
         .app-container {
             width: 100%;
-            background: rgba(255, 255, 255, 0.88);
+            background: rgba(255, 255, 255, 0.92);
             backdrop-filter: blur(6px);
             border-radius: 36px 36px 28px 28px;
             padding: 1.5rem 1.5rem 2rem;
@@ -223,12 +223,12 @@
         .btn-ai i {
             color: white;
         }
-        .btn-danger {
-            background: #dc3545;
+        .btn-copy {
+            background: #6c757d;
             color: white;
-            border: 1px solid #dc3545;
+            border: 1px solid #6c757d;
         }
-        .btn-danger i {
+        .btn-copy i {
             color: white;
         }
         .btn:hover {
@@ -279,7 +279,7 @@
         }
         .lead-form-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            grid-template-columns: 1fr 1fr;
             gap: 1rem;
         }
         .lead-form-grid .field-group {
@@ -287,6 +287,9 @@
         }
         .lead-form-grid .field-group label {
             font-size: 0.75rem;
+        }
+        .lead-form-grid .field-group.full-width {
+            grid-column: 1 / -1;
         }
         .lead-form-actions {
             display: flex;
@@ -712,6 +715,33 @@
             background: #f0fff4;
             color: #28a745;
         }
+        /* Copy Link Section */
+        .copy-link-section {
+            background: white;
+            border-radius: 28px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            border: 1px solid rgba(0, 119, 182, 0.12);
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+        }
+        .copy-link-section .link-display {
+            flex: 1;
+            background: #f5faff;
+            border: 1.5px solid #d4eaf5;
+            border-radius: 20px;
+            padding: 0.6rem 1rem;
+            font-size: 0.9rem;
+            color: #034b77;
+            min-width: 200px;
+            word-break: break-all;
+        }
+        .copy-link-section .link-display i {
+            color: #0077b6;
+            margin-right: 8px;
+        }
         @media (max-width: 640px) {
             .app-container {
                 padding: 1rem;
@@ -720,7 +750,11 @@
             .header h1 {
                 font-size: 1.4rem;
             }
-            .lead-grid, .lesson-grid, .ai-chat-grid, .lead-form-grid {
+            .lead-grid, .lesson-grid, .ai-chat-grid {
+                grid-template-columns: 1fr;
+                gap: 0.8rem;
+            }
+            .lead-form-grid {
                 grid-template-columns: 1fr;
                 gap: 0.8rem;
             }
@@ -744,6 +778,13 @@
             .page-nav .btn {
                 min-width: 80px;
                 font-size: 0.7rem;
+            }
+            .copy-link-section {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .copy-link-section .link-display {
+                min-width: unset;
             }
         }
         @media (max-width: 400px) {
@@ -849,6 +890,13 @@
         .lead-form .field-group textarea {
             min-height: 60px;
         }
+        .lead-form-grid .field-group.full-width textarea {
+            min-height: 80px;
+        }
+        .btn-copy.copied {
+            background: #28a745;
+            border-color: #28a745;
+        }
     </style>
 </head>
 <body>
@@ -916,9 +964,9 @@
                             <label><i class="fas fa-link"></i> URL</label>
                             <input type="url" id="leadFormUrl" placeholder="Enter website URL..." />
                         </div>
-                        <div class="field-group" style="grid-column: 1 / -1;">
+                        <div class="field-group full-width">
                             <label><i class="fas fa-comment"></i> Notes / Comments</label>
-                            <textarea id="leadFormComment" placeholder="Add any additional notes..." maxlength="1200" style="min-height:60px;"></textarea>
+                            <textarea id="leadFormComment" placeholder="Add any additional notes..." maxlength="1200" style="min-height:80px;"></textarea>
                             <div class="word-counter" id="leadFormWordCount">0 / 200 words</div>
                         </div>
                     </div>
@@ -985,6 +1033,15 @@
                     <label><i class="fas fa-sticky-note" style="color:#0077b6;"></i> Daily general comment <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(max 500 words)</span></label>
                     <textarea id="generalComment" placeholder="Write your daily summary, notes, or anything..." maxlength="3000"></textarea>
                     <div class="word-counter" id="generalWordCount">0 / 500 words</div>
+                </div>
+
+                <!-- ===== COPY LINK SECTION ===== -->
+                <div class="copy-link-section">
+                    <div class="link-display">
+                        <i class="fas fa-link"></i> <span id="shareLinkText">https://taniad2169.github.io/Daily-task/</span>
+                    </div>
+                    <button class="btn btn-copy" id="copyLinkBtn"><i class="fas fa-copy"></i> Copy Link</button>
+                    <button class="btn btn-outline" id="shareLinkBtn" style="border-color:#1da1f2;color:#1da1f2;"><i class="fas fa-share-alt"></i> Share</button>
                 </div>
 
                 <div class="footer-bar">
@@ -1238,6 +1295,12 @@
             const leadFormComment = document.getElementById('leadFormComment');
             const leadFormWordCount = document.getElementById('leadFormWordCount');
 
+            // Copy Link elements
+            const copyLinkBtn = document.getElementById('copyLinkBtn');
+            const shareLinkBtn = document.getElementById('shareLinkBtn');
+            const shareLinkText = document.getElementById('shareLinkText');
+            const APP_URL = 'https://taniad2169.github.io/Daily-task/';
+
             // New elements
             const briefingText = document.getElementById('briefingText');
             const briefingWordCount = document.getElementById('briefingWordCount');
@@ -1303,6 +1366,67 @@
                 const words = countWords(lessonNotes.value);
                 notesWordCount.textContent = `${words} / 500 words`;
                 notesWordCount.style.color = words > 500 ? '#b22222' : '#2c7da0';
+            }
+
+            // ===== COPY LINK FUNCTION =====
+            function copyLink() {
+                const link = APP_URL;
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(link).then(() => {
+                        copyLinkBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                        copyLinkBtn.classList.add('copied');
+                        showToast('✅ Link copied to clipboard!', 'success');
+                        setTimeout(() => {
+                            copyLinkBtn.innerHTML = '<i class="fas fa-copy"></i> Copy Link';
+                            copyLinkBtn.classList.remove('copied');
+                        }, 2000);
+                    }).catch(() => {
+                        fallbackCopyLink(link);
+                    });
+                } else {
+                    fallbackCopyLink(link);
+                }
+            }
+
+            function fallbackCopyLink(link) {
+                const textarea = document.createElement('textarea');
+                textarea.value = link;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    copyLinkBtn.innerHTML = '<i class="fas fa-check"></i> Copied!';
+                    copyLinkBtn.classList.add('copied');
+                    showToast('✅ Link copied to clipboard!', 'success');
+                    setTimeout(() => {
+                        copyLinkBtn.innerHTML = '<i class="fas fa-copy"></i> Copy Link';
+                        copyLinkBtn.classList.remove('copied');
+                    }, 2000);
+                } catch (err) {
+                    showToast('❌ Could not copy link. Please copy manually.', 'error');
+                }
+                document.body.removeChild(textarea);
+            }
+
+            function shareLink() {
+                const link = APP_URL;
+                if (navigator.share) {
+                    navigator.share({
+                        title: 'WebSwan Daily Task Suite',
+                        text: 'Check out my WebSwan Daily Task Suite!',
+                        url: link
+                    }).then(() => {
+                        showToast('✅ Shared successfully!', 'success');
+                    }).catch(() => {
+                        showToast('Share cancelled.', 'error');
+                    });
+                } else {
+                    // Fallback: copy link
+                    copyLink();
+                    showToast('📋 Link copied! Share it anywhere.', 'success');
+                }
             }
 
             // ===== AI CHAT LINKS =====
@@ -1445,7 +1569,6 @@
                     return;
                 }
 
-                // Create new lead
                 const newLead = {
                     id: nextId++,
                     name: name || 'No name',
@@ -1455,12 +1578,11 @@
                     comment: comment || '',
                     dropdown: 'call back',
                     customDropdown: '',
-                    completed: true // Auto-complete
+                    completed: true
                 };
 
                 leads.push(newLead);
 
-                // Add to completed tasks
                 const displayText = `${name || 'No name'} - ${phone || 'No phone'} (${email || 'No email'})`;
                 completedItems.push({
                     id: Date.now(),
@@ -1475,7 +1597,6 @@
                 renderCompleted();
                 renderTodos();
 
-                // Reset form
                 leadFormName.value = '';
                 leadFormPhone.value = '';
                 leadFormEmail.value = '';
@@ -1949,12 +2070,6 @@
                 message += '📅 ' + new Date().toLocaleString();
                 message += '\n📱 Sent via WebSwan Suite';
 
-                // Make sure message is not empty
-                if (!message.trim() || message === '📋 *WebSwan Complete Report* 📋\n\n\n\n━━━━━━━━━━━━━━━━━━\n📌 *LEADS*\n━━━━━━━━━━━━━━━━━━\nNo leads yet.\n\n━━━━━━━━━━━━━━━━━━\n📝 *PERSONAL TO-DOS*\n━━━━━━━━━━━━━━━━━━\nNo personal tasks.\n\n━━━━━━━━━━━━━━━━━━\n✅ *COMPLETED TASKS*\n━━━━━━━━━━━━━━━━━━\nNo completed tasks yet.\n\n\n━━━━━━━━━━━━━━━━━━\n📅 ' + new Date().toLocaleString() + '\n📱 Sent via WebSwan Suite') {
-                    showToast('Please add some data before sending to WhatsApp.', 'error');
-                    return;
-                }
-
                 const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
                 window.open(url, '_blank');
                 showToast('📱 WhatsApp opened! Select your contact manually.', 'success');
@@ -2232,6 +2347,10 @@
                 document.getElementById('aiChatSendBtn').addEventListener('click', sendAIChat);
                 document.getElementById('submitLeadBtn').addEventListener('click', submitLeadForm);
                 document.getElementById('clearFormBtn').addEventListener('click', clearLeadForm);
+
+                // Copy Link buttons
+                copyLinkBtn.addEventListener('click', copyLink);
+                shareLinkBtn.addEventListener('click', shareLink);
 
                 document.getElementById('codingSubmitBtn').addEventListener('click', submitCodingLesson);
                 document.getElementById('promptSubmitBtn').addEventListener('click', submitPrompt);
