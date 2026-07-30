@@ -289,7 +289,6 @@
             from { opacity: 0; transform: translateX(30px); }
             to { opacity: 1; transform: translateX(0); }
         }
-        /* Lead Form */
         .lead-form {
             background: white;
             border-radius: 28px;
@@ -743,7 +742,6 @@
             background: #f0fff4;
             color: #28a745;
         }
-        /* Copy Link Section */
         .copy-link-section {
             background: white;
             border-radius: 28px;
@@ -771,7 +769,6 @@
             margin-right: 8px;
         }
 
-        /* ===== NOTES SECTION ===== */
         .notes-section {
             background: white;
             border-radius: 28px;
@@ -802,7 +799,6 @@
             font-size: 0.8rem;
         }
         
-        /* Dropdown Notes List */
         .notes-dropdown-container {
             position: relative;
             display: inline-block;
@@ -1004,7 +1000,6 @@
             color: #d97706;
         }
 
-        /* Current note being edited indicator */
         .current-note-indicator {
             display: none;
             padding: 8px 14px;
@@ -1230,8 +1225,8 @@
                 <h1><i class="fas fa-feather-alt"></i> WebSwan <span style="font-weight:300;color:#0077b6;">·</span> Suite</h1>
                 <div class="header-actions">
                     <button class="btn btn-whatsapp" id="whatsappSendBtn"><i class="fab fa-whatsapp"></i> WhatsApp</button>
-                    <button class="btn btn-gemini" id="geminiChatBtn"><i class="fas fa-robot"></i> Gemini</button>
-                    <button class="btn btn-claude" id="claudeChatBtn"><i class="fas fa-brain"></i> Claude</button>
+                    <button class="btn btn-gemini" id="geminiSendBtn"><i class="fas fa-robot"></i> Gemini</button>
+                    <button class="btn btn-claude" id="claudeSendBtn"><i class="fas fa-brain"></i> Claude</button>
                     <button class="btn btn-outline" id="lockAppBtn" style="border-color:#0077b6;"><i class="fas fa-lock"></i> Lock</button>
                 </div>
             </div>
@@ -1358,7 +1353,6 @@
                 <div class="lessons-container">
                     <h2><i class="fas fa-graduation-cap" style="color:#6f42c1;"></i> WebSwan Lessons</h2>
 
-                    <!-- Coding Lessons -->
                     <div class="lesson-card">
                         <h4><i class="fas fa-code" style="color:#0077b6;"></i> Coding Lessons <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(1000 words max - stretches)</span></h4>
                         <div class="lesson-grid">
@@ -1408,7 +1402,6 @@
                         </div>
                     </div>
 
-                    <!-- AI Prompts -->
                     <div class="lesson-card">
                         <h4><i class="fas fa-brain" style="color:#6f42c1;"></i> AI Prompts & Instructions <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(1000 words max - stretches)</span></h4>
                         <div class="field-group" style="margin-bottom: 1rem;">
@@ -1431,7 +1424,6 @@
                         </div>
                     </div>
 
-                    <!-- Lesson Notes -->
                     <div class="lesson-card">
                         <h4><i class="fas fa-sticky-note" style="color:#6f42c1;"></i> Lesson Notes <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(500 words max - stretches)</span></h4>
                         <div class="field-group">
@@ -1458,13 +1450,11 @@
                     <div class="notes-controls">
                         <button class="btn btn-notes" id="addNoteBtn"><i class="fas fa-plus"></i> New Note</button>
                         
-                        <!-- Dropdown for saved notes -->
                         <div class="notes-dropdown-container">
                             <button class="btn notes-dropdown-btn" id="notesDropdownBtn">
                                 <i class="fas fa-folder-open"></i> Saved Notes <span id="notesCountBadge" style="background:rgba(255,255,255,0.2);padding:0 8px;border-radius:10px;font-size:0.7rem;">0</span>
                             </button>
                             <div class="notes-dropdown-content" id="notesDropdownContent">
-                                <!-- Dynamically populated -->
                                 <div class="notes-dropdown-empty">No saved notes yet.</div>
                             </div>
                         </div>
@@ -1473,7 +1463,6 @@
                         <span class="notes-save-indicator saved" id="notesSaveIndicator"><i class="fas fa-check"></i> Saved</span>
                     </div>
 
-                    <!-- Current note being edited indicator -->
                     <div class="current-note-indicator" id="currentNoteIndicator">
                         <i class="fas fa-pen"></i>
                         <span>Editing: </span>
@@ -1481,7 +1470,6 @@
                         <button class="btn btn-outline" id="closeNoteBtn" style="padding:2px 10px;font-size:0.7rem;border-color:#e74c3c;color:#e74c3c;margin-left:auto;"><i class="fas fa-times"></i> Close</button>
                     </div>
 
-                    <!-- Note Input Area (hidden until a note is selected/created) -->
                     <div id="noteInputArea" style="display:none; margin-bottom: 1rem; transition: all 0.4s ease;">
                         <div class="field-group">
                             <label><i class="fas fa-pen"></i> Note Content (5000 words max - stretches)</label>
@@ -1494,7 +1482,6 @@
                         </div>
                     </div>
 
-                    <!-- Notes List (hidden, used for display but dropdown is the main view) -->
                     <div class="notes-list" id="notesListContainer">
                         <div class="notes-empty">No notes yet. Click "New Note" to create your first note! 📝</div>
                     </div>
@@ -1645,7 +1632,6 @@
             const todoInput = document.getElementById('todoInput');
             const todoWordCount = document.getElementById('todoWordCount');
 
-            // Lead Form elements
             const leadFormName = document.getElementById('leadFormName');
             const leadFormPhone = document.getElementById('leadFormPhone');
             const leadFormEmail = document.getElementById('leadFormEmail');
@@ -1653,13 +1639,11 @@
             const leadFormComment = document.getElementById('leadFormComment');
             const leadFormWordCount = document.getElementById('leadFormWordCount');
 
-            // Copy Link elements
             const copyLinkBtn = document.getElementById('copyLinkBtn');
             const shareLinkBtn = document.getElementById('shareLinkBtn');
             const shareLinkText = document.getElementById('shareLinkText');
             const APP_URL = 'https://taniad2169.github.io/Daily-task/';
 
-            // Elements
             const briefingText = document.getElementById('briefingText');
             const briefingWordCount = document.getElementById('briefingWordCount');
             const aiChatMessage = document.getElementById('aiChatMessage');
@@ -1673,7 +1657,6 @@
             const lessonNotes = document.getElementById('lessonNotes');
             const notesWordCount = document.getElementById('notesWordCount');
 
-            // Notes elements
             const noteContentInput = document.getElementById('noteContentInput');
             const noteInputWordCount = document.getElementById('noteInputWordCount');
             const notesListContainer = document.getElementById('notesListContainer');
@@ -1745,6 +1728,140 @@
                 noteInputWordCount.style.color = words > 5000 ? '#b22222' : '#6d28d9';
             }
 
+            // ===== BUILD COMPLETE REPORT =====
+            function buildCompleteReport() {
+                let message = '📋 *WebSwan Complete Report* 📋\n\n';
+                
+                message += '📌 *LEADS*\n';
+                if (leads.length === 0) {
+                    message += 'No leads yet.\n';
+                } else {
+                    leads.forEach((lead, index) => {
+                        const status = lead.completed ? '✅ COMPLETED' : '⏳ PENDING';
+                        message += `\n${index + 1}. ${lead.name || 'No name'}\n`;
+                        message += `   📞 ${lead.phone || 'No phone'}\n`;
+                        message += `   ✉️ ${lead.email || 'No email'}\n`;
+                        message += `   🔗 ${lead.url || 'No URL'}\n`;
+                        message += `   🎯 ${lead.dropdown || 'No action'}\n`;
+                        if (lead.customDropdown) message += `   ✏️ ${lead.customDropdown}\n`;
+                        if (lead.comment) message += `   💬 ${lead.comment}\n`;
+                        message += `   📊 ${status}\n`;
+                    });
+                }
+
+                message += '\n📝 *PERSONAL TO-DOS*\n';
+                if (todos.length === 0) {
+                    message += 'No personal tasks.\n';
+                } else {
+                    todos.forEach((todo) => {
+                        const status = todo.completed ? '✅' : '⬜';
+                        message += `   ${status} ${todo.text}\n`;
+                    });
+                }
+
+                if (briefingText.value.trim()) {
+                    message += '\n📋 *BRIEFING*\n';
+                    message += briefingText.value;
+                }
+
+                if (aiChatMessage.value.trim()) {
+                    message += '\n🤖 *AI CHAT MESSAGE*\n';
+                    message += `AI: ${aiChatSelect.options[aiChatSelect.selectedIndex].text}\n`;
+                    message += `Message: ${aiChatMessage.value}`;
+                }
+
+                if (completedItems.length > 0) {
+                    message += '\n✅ *COMPLETED TASKS*\n';
+                    completedItems.forEach((item) => {
+                        message += `   ✅ ${item.text} (${item.type})\n`;
+                    });
+                }
+
+                if (generalCommentEl.value.trim()) {
+                    message += '\n📖 *DAILY COMMENT*\n';
+                    message += generalCommentEl.value;
+                }
+
+                if (notes.length > 0) {
+                    message += '\n📝 *NOTES*\n';
+                    notes.forEach((note, index) => {
+                        const status = note.completed ? '✅' : '📝';
+                        message += `${status} ${index + 1}. ${note.content}\n\n`;
+                    });
+                }
+
+                // Lessons content
+                const lessonContentVal = lessonContent.value.trim();
+                if (lessonContentVal) {
+                    message += '\n📚 *CODING LESSON*\n';
+                    message += `Topic: ${document.getElementById('codingTopic').value}\n`;
+                    message += `Language: ${document.getElementById('lessonLanguage').value}\n`;
+                    message += `AI Assistant: ${document.getElementById('aiAssistant').value}\n`;
+                    message += `Content: ${lessonContentVal}`;
+                }
+
+                const promptVal = customPrompt.value.trim();
+                if (promptVal) {
+                    message += '\n🤖 *AI PROMPT*\n';
+                    message += `Type: ${document.getElementById('promptType').value}\n`;
+                    message += `Prompt: ${promptVal}`;
+                }
+
+                const lessonNotesVal = lessonNotes.value.trim();
+                if (lessonNotesVal) {
+                    message += '\n📝 *LESSON NOTES*\n';
+                    message += lessonNotesVal;
+                }
+
+                message += '\n\n📅 ' + new Date().toLocaleString();
+                message += '\n📱 Sent via WebSwan Suite';
+
+                return message;
+            }
+
+            // ===== SEND TO GEMINI =====
+            function sendToGemini() {
+                const message = buildCompleteReport();
+                const url = `https://gemini.google.com/?q=${encodeURIComponent(message)}`;
+                window.open(url, '_blank');
+                showToast('🤖 Sending to Gemini...', 'success');
+            }
+
+            // ===== SEND TO CLAUDE =====
+            function sendToClaude() {
+                const message = buildCompleteReport();
+                const url = `https://claude.ai/?q=${encodeURIComponent(message)}`;
+                window.open(url, '_blank');
+                showToast('🧠 Sending to Claude...', 'success');
+            }
+
+            // ===== SEND TO WHATSAPP =====
+            function sendWhatsApp() {
+                const message = buildCompleteReport();
+                const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
+                window.open(url, '_blank');
+                showToast('📱 WhatsApp opened! Select your contact manually.', 'success');
+            }
+
+            // ===== SEND SMS =====
+            function sendSMS() {
+                const message = buildCompleteReport();
+                const encoded = encodeURIComponent(message);
+                const phoneNumber = '4158770687';
+                const smsUrl = `sms:${phoneNumber}?body=${encoded}`;
+
+                try {
+                    window.location.href = smsUrl;
+                    showToast(`📱 Opening SMS to ${phoneNumber}...`, 'success');
+                } catch(e) {
+                    navigator.clipboard.writeText(message).then(() => {
+                        showToast('📋 Report copied to clipboard!', 'success');
+                    }).catch(() => {
+                        showToast('📋 Could not open SMS - report copied', 'error');
+                    });
+                }
+            }
+
             // ===== NOTES FUNCTIONS =====
 
             function getNoteTitle(content) {
@@ -1768,7 +1885,6 @@
 
                 notesCountBadge.textContent = notes.length;
 
-                // Show newest first
                 const sorted = [...notes].reverse();
                 sorted.forEach(note => {
                     const item = document.createElement('div');
@@ -1806,7 +1922,6 @@
                     
                     item.addEventListener('click', function() {
                         openNote(note.id);
-                        // Close dropdown
                         notesDropdownContent.classList.remove('show');
                     });
                     
@@ -1826,7 +1941,6 @@
                 noteContentInput.value = note.content;
                 updateNoteInputWordCounter();
                 
-                // Show input area
                 noteInputArea.style.display = 'block';
                 currentNoteIndicator.classList.add('visible');
                 currentNoteTitle.textContent = getNoteTitle(note.content);
@@ -1858,19 +1972,16 @@
                 }
 
                 if (editingNoteId !== null) {
-                    // Update existing note
                     const note = notes.find(n => n.id === editingNoteId);
                     if (note) {
                         note.content = content;
                         note.updatedAt = new Date().toISOString();
                         saveNotesToStorage();
                         renderNotesDropdown();
-                        // Update current title
                         currentNoteTitle.textContent = getNoteTitle(content);
                         showToast('✅ Note updated!', 'success');
                     }
                 } else {
-                    // Create new note
                     notes.push({
                         id: nextNoteId++,
                         content: content,
@@ -1883,7 +1994,6 @@
                     showToast('✅ New note saved!', 'success');
                 }
 
-                // Reset input area
                 noteContentInput.value = '';
                 updateNoteInputWordCounter();
                 noteInputArea.style.display = 'none';
@@ -1921,7 +2031,6 @@
             function saveNotesToStorage() {
                 localStorage.setItem('webswan_notes', JSON.stringify(notes));
                 updateSaveIndicator(true);
-                // Update badge
                 notesCountBadge.textContent = notes.length;
             }
 
@@ -1958,12 +2067,10 @@
                 }
             }
 
-            // Toggle dropdown
             function toggleNotesDropdown() {
                 notesDropdownContent.classList.toggle('show');
             }
 
-            // Close dropdown when clicking outside
             document.addEventListener('click', function(e) {
                 const container = document.querySelector('.notes-dropdown-container');
                 if (container && !container.contains(e.target)) {
@@ -1971,38 +2078,54 @@
                 }
             });
 
-            // ===== GEMINI & CLAUDE CHAT BUTTONS =====
-            function openGeminiChat() {
-                // Get all notes content for context
-                let notesContent = '';
-                if (notes.length > 0) {
-                    notesContent = '\n\n📝 My Notes:\n' + notes.map((n, i) => 
-                        `--- Note ${i+1} ---\n${n.content}`
-                    ).join('\n\n');
+            // ===== AI CHAT LINKS =====
+            function updateAILink() {
+                const selected = aiChatSelect.value;
+                const message = encodeURIComponent(aiChatMessage.value.trim() || 'Hello!');
+                let url = '';
+                switch(selected) {
+                    case 'chatgpt':
+                        url = `https://chat.openai.com/?q=${message}`;
+                        aiChatLinkBtn.className = 'ai-link-btn chatgpt';
+                        aiChatLinkBtn.innerHTML = '<i class="fas fa-external-link-alt"></i> Open ChatGPT';
+                        break;
+                    case 'deepseek':
+                        url = `https://chat.deepseek.com/?q=${message}`;
+                        aiChatLinkBtn.className = 'ai-link-btn deepseek';
+                        aiChatLinkBtn.innerHTML = '<i class="fas fa-external-link-alt"></i> Open DeepSeek';
+                        break;
+                    case 'gemini':
+                        url = `https://gemini.google.com/?q=${message}`;
+                        aiChatLinkBtn.className = 'ai-link-btn gemini';
+                        aiChatLinkBtn.innerHTML = '<i class="fas fa-external-link-alt"></i> Open Gemini';
+                        break;
+                    case 'claude':
+                        url = `https://claude.ai/?q=${message}`;
+                        aiChatLinkBtn.className = 'ai-link-btn claude';
+                        aiChatLinkBtn.innerHTML = '<i class="fas fa-external-link-alt"></i> Open Claude';
+                        break;
                 }
-                
-                const message = `Hello Gemini! I'm using WebSwan Suite. Here's what I'm working on:${notesContent}\n\nCan you help me with my tasks?`;
-                const url = `https://gemini.google.com/?q=${encodeURIComponent(message)}`;
-                window.open(url, '_blank');
-                showToast('🤖 Opening Gemini chat...', 'success');
+                aiChatLinkBtn.href = url;
             }
 
-            function openClaudeChat() {
-                // Get all notes content for context
-                let notesContent = '';
-                if (notes.length > 0) {
-                    notesContent = '\n\n📝 My Notes:\n' + notes.map((n, i) => 
-                        `--- Note ${i+1} ---\n${n.content}`
-                    ).join('\n\n');
+            aiChatSelect.addEventListener('change', updateAILink);
+            aiChatMessage.addEventListener('input', updateAILink);
+
+            function sendAIChat() {
+                const message = aiChatMessage.value.trim();
+                if (!message) {
+                    showToast('Please type a message to send to the AI.', 'error');
+                    return;
                 }
-                
-                const message = `Hello Claude! I'm using WebSwan Suite. Here's what I'm working on:${notesContent}\n\nCan you help me with my tasks?`;
-                const url = `https://claude.ai/?q=${encodeURIComponent(message)}`;
-                window.open(url, '_blank');
-                showToast('🧠 Opening Claude chat...', 'success');
+                if (countWords(message) > 1000) {
+                    showToast('Message exceeds 1000 words limit!', 'error');
+                    return;
+                }
+                aiChatLinkBtn.click();
+                showToast(`📤 Sending to ${aiChatSelect.options[aiChatSelect.selectedIndex].text}...`, 'success');
             }
 
-            // ===== COPY LINK FUNCTION =====
+            // ===== COPY LINK =====
             function copyLink() {
                 const link = APP_URL;
                 if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -2062,54 +2185,6 @@
                 }
             }
 
-            // ===== AI CHAT LINKS =====
-            function updateAILink() {
-                const selected = aiChatSelect.value;
-                const message = encodeURIComponent(aiChatMessage.value.trim() || 'Hello!');
-                let url = '';
-                switch(selected) {
-                    case 'chatgpt':
-                        url = `https://chat.openai.com/?q=${message}`;
-                        aiChatLinkBtn.className = 'ai-link-btn chatgpt';
-                        aiChatLinkBtn.innerHTML = '<i class="fas fa-external-link-alt"></i> Open ChatGPT';
-                        break;
-                    case 'deepseek':
-                        url = `https://chat.deepseek.com/?q=${message}`;
-                        aiChatLinkBtn.className = 'ai-link-btn deepseek';
-                        aiChatLinkBtn.innerHTML = '<i class="fas fa-external-link-alt"></i> Open DeepSeek';
-                        break;
-                    case 'gemini':
-                        url = `https://gemini.google.com/?q=${message}`;
-                        aiChatLinkBtn.className = 'ai-link-btn gemini';
-                        aiChatLinkBtn.innerHTML = '<i class="fas fa-external-link-alt"></i> Open Gemini';
-                        break;
-                    case 'claude':
-                        url = `https://claude.ai/?q=${message}`;
-                        aiChatLinkBtn.className = 'ai-link-btn claude';
-                        aiChatLinkBtn.innerHTML = '<i class="fas fa-external-link-alt"></i> Open Claude';
-                        break;
-                }
-                aiChatLinkBtn.href = url;
-            }
-
-            aiChatSelect.addEventListener('change', updateAILink);
-            aiChatMessage.addEventListener('input', updateAILink);
-
-            // ===== AI CHAT SEND =====
-            function sendAIChat() {
-                const message = aiChatMessage.value.trim();
-                if (!message) {
-                    showToast('Please type a message to send to the AI.', 'error');
-                    return;
-                }
-                if (countWords(message) > 1000) {
-                    showToast('Message exceeds 1000 words limit!', 'error');
-                    return;
-                }
-                aiChatLinkBtn.click();
-                showToast(`📤 Sending to ${aiChatSelect.options[aiChatSelect.selectedIndex].text}...`, 'success');
-            }
-
             // ----- STORAGE -----
             function loadFromStorage() {
                 try {
@@ -2139,10 +2214,6 @@
                     const storedCompleted = localStorage.getItem('webswan_completed');
                     if (storedCompleted) {
                         completedItems = JSON.parse(storedCompleted);
-                        completedItems = completedItems.filter(item => 
-                            !item.text.includes('Bob Chen') && 
-                            !item.text.includes('555 987 6543')
-                        );
                     } else {
                         completedItems = [];
                     }
@@ -2445,7 +2516,6 @@
                 return div;
             }
 
-            // ----- TOGGLE LEAD COMPLETE -----
             function toggleLeadComplete(leadId) {
                 const lead = leads.find(l => l.id === leadId);
                 if (!lead) return;
@@ -2472,7 +2542,6 @@
                 renderTodos();
             }
 
-            // ----- RENDER TODOS -----
             function renderTodos() {
                 if (!todoContainer) return;
                 todoContainer.innerHTML = '';
@@ -2512,7 +2581,6 @@
                 });
             }
 
-            // ----- TOGGLE TODO COMPLETE -----
             function toggleTodoComplete(todoId) {
                 const todo = todos.find(t => t.id === todoId);
                 if (!todo) return;
@@ -2538,7 +2606,6 @@
                 renderCompleted();
             }
 
-            // ----- DELETE TODO -----
             function deleteTodo(todoId) {
                 const todo = todos.find(t => t.id === todoId);
                 if (todo && todo.completed) {
@@ -2551,7 +2618,6 @@
                 showToast('🗑️ Task deleted', 'success');
             }
 
-            // ----- ADD TODO -----
             function addTodo() {
                 const text = todoInput.value.trim();
                 if (!text) {
@@ -2577,7 +2643,6 @@
                 showToast('✅ Task added!', 'success');
             }
 
-            // ----- RENDER COMPLETED with Delete Button -----
             function renderCompleted() {
                 if (!completedContainer) return;
                 if (completedItems.length === 0) {
@@ -2623,59 +2688,6 @@
                 });
             }
 
-            // ===== WHATSAPP =====
-            function sendWhatsApp() {
-                let message = '📋 *WebSwan Complete Report* 📋\n\n';
-                
-                message += '📌 *LEADS*\n';
-                if (leads.length === 0) {
-                    message += 'No leads yet.\n';
-                } else {
-                    leads.forEach((lead, index) => {
-                        const status = lead.completed ? '✅ COMPLETED' : '⏳ PENDING';
-                        message += `\n${index + 1}. ${lead.name || 'No name'}\n`;
-                        message += `   📞 ${lead.phone || 'No phone'}\n`;
-                        message += `   ✉️ ${lead.email || 'No email'}\n`;
-                        message += `   📊 ${status}\n`;
-                    });
-                }
-
-                message += '\n📝 *PERSONAL TO-DOS*\n';
-                if (todos.length === 0) {
-                    message += 'No personal tasks.\n';
-                } else {
-                    todos.forEach((todo) => {
-                        const status = todo.completed ? '✅' : '⬜';
-                        message += `   ${status} ${todo.text}\n`;
-                    });
-                }
-
-                if (briefingText.value.trim()) {
-                    message += '\n📋 *BRIEFING*\n';
-                    message += briefingText.value;
-                }
-
-                if (generalCommentEl.value.trim()) {
-                    message += '\n📖 *DAILY COMMENT*\n';
-                    message += generalCommentEl.value;
-                }
-
-                if (notes.length > 0) {
-                    message += '\n📝 *NOTES*\n';
-                    notes.forEach((note, index) => {
-                        const status = note.completed ? '✅' : '📝';
-                        message += `${status} ${index + 1}. ${note.content}\n\n`;
-                    });
-                }
-
-                message += '\n\n📅 ' + new Date().toLocaleString();
-                message += '\n📱 Sent via WebSwan Suite';
-
-                const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
-                window.open(url, '_blank');
-                showToast('📱 WhatsApp opened! Select your contact manually.', 'success');
-            }
-
             // ===== LESSONS FUNCTIONS =====
             function submitCodingLesson() {
                 const topic = document.getElementById('codingTopic').value;
@@ -2693,13 +2705,6 @@
                     return;
                 }
                 
-                const message = `📚 *WebSwan Lesson*\n\n` +
-                    `📌 Topic: ${topic}\n` +
-                    `🌍 Language: ${language}\n` +
-                    `🤖 AI Assistant: ${ai}\n` +
-                    `📝 Content: ${content}\n\n` +
-                    `📅 ${new Date().toLocaleString()}`;
-                
                 completedItems.push({
                     id: Date.now(),
                     type: 'lesson',
@@ -2710,10 +2715,6 @@
                 saveToStorage();
                 renderCompleted();
                 showToast(`✅ Lesson submitted!`, 'success');
-                
-                navigator.clipboard.writeText(message).then(() => {
-                    showToast('📋 Lesson copied to clipboard!', 'success');
-                }).catch(() => {});
             }
 
             function submitPrompt() {
@@ -2730,11 +2731,6 @@
                     return;
                 }
                 
-                const message = `🤖 *AI Prompt*\n\n` +
-                    `📋 Type: ${promptType}\n` +
-                    `💬 Prompt: ${promptText}\n` +
-                    `📅 ${new Date().toLocaleString()}`;
-                
                 completedItems.push({
                     id: Date.now(),
                     type: 'prompt',
@@ -2745,10 +2741,6 @@
                 saveToStorage();
                 renderCompleted();
                 showToast('✅ Prompt submitted!', 'success');
-                
-                navigator.clipboard.writeText(message).then(() => {
-                    showToast('📋 Prompt copied to clipboard!', 'success');
-                }).catch(() => {});
             }
 
             function saveLessonNotes() {
@@ -2757,44 +2749,12 @@
                     showToast('Notes exceed 500 words limit!', 'error');
                     return;
                 }
-                
                 saveToStorage();
                 showToast('✅ Notes saved!', 'success');
             }
 
             function sendLessonsSMS() {
-                const topic = document.getElementById('codingTopic').value;
-                const language = document.getElementById('lessonLanguage').value;
-                const ai = document.getElementById('aiAssistant').value;
-                const content = lessonContent.value.trim() || 'No content';
-                const promptType = document.getElementById('promptType').value;
-                const promptText = customPrompt.value.trim() || 'No prompt entered';
-                const notes = lessonNotes.value.trim() || 'No notes saved';
-                
-                let message = '📚 *WebSwan Lessons Report* 📚\n\n';
-                message += '━━━━━━━━━━━━━━━━━━\n';
-                message += '📌 *CODING LESSON*\n';
-                message += '━━━━━━━━━━━━━━━━━━\n';
-                message += `Topic: ${topic}\n`;
-                message += `Language: ${language}\n`;
-                message += `AI Assistant: ${ai}\n`;
-                message += `Content: ${content}\n\n`;
-                
-                message += '━━━━━━━━━━━━━━━━━━\n';
-                message += '🤖 *AI PROMPT*\n';
-                message += '━━━━━━━━━━━━━━━━━━\n';
-                message += `Type: ${promptType}\n`;
-                message += `Prompt: ${promptText}\n\n`;
-                
-                message += '━━━━━━━━━━━━━━━━━━\n';
-                message += '📝 *LESSON NOTES*\n';
-                message += '━━━━━━━━━━━━━━━━━━\n';
-                message += `${notes}\n\n`;
-                
-                message += '━━━━━━━━━━━━━━━━━━\n';
-                message += '📅 ' + new Date().toLocaleString();
-                message += '\n📱 Sent via WebSwan Suite';
-                
+                const message = buildCompleteReport();
                 const encoded = encodeURIComponent(message);
                 const phoneNumber = '4158770687';
                 const smsUrl = `sms:${phoneNumber}?body=${encoded}`;
@@ -2870,68 +2830,6 @@
                 }
             }
 
-            function sendSMS() {
-                let message = '📋 *WebSwan Daily Report* 📋\n\n';
-                message += '📌 *LEADS*\n';
-                if (leads.length === 0) {
-                    message += 'No leads yet.\n';
-                } else {
-                    leads.forEach((lead, index) => {
-                        const status = lead.completed ? '✅ COMPLETED' : '⏳ PENDING';
-                        message += `\n${index + 1}. ${lead.name || 'No name'}\n`;
-                        message += `   📞 ${lead.phone || 'No phone'}\n`;
-                        message += `   ✉️ ${lead.email || 'No email'}\n`;
-                        message += `   📊 ${status}\n`;
-                    });
-                }
-
-                message += '\n📝 *PERSONAL TO-DOS*\n';
-                if (todos.length === 0) {
-                    message += 'No personal tasks.\n';
-                } else {
-                    todos.forEach((todo) => {
-                        const status = todo.completed ? '✅' : '⬜';
-                        message += `   ${status} ${todo.text}\n`;
-                    });
-                }
-
-                if (briefingText.value.trim()) {
-                    message += '\n📋 *BRIEFING*\n';
-                    message += briefingText.value;
-                }
-
-                if (generalCommentEl.value.trim()) {
-                    message += '\n📖 *DAILY COMMENT*\n';
-                    message += generalCommentEl.value;
-                }
-
-                if (notes.length > 0) {
-                    message += '\n📝 *NOTES*\n';
-                    notes.forEach((note, index) => {
-                        const status = note.completed ? '✅' : '📝';
-                        message += `${status} ${index + 1}. ${note.content}\n\n`;
-                    });
-                }
-
-                message += '\n\n📅 ' + new Date().toLocaleString();
-                message += '\n📱 Sent via WebSwan Suite';
-
-                const encoded = encodeURIComponent(message);
-                const phoneNumber = '4158770687';
-                const smsUrl = `sms:${phoneNumber}?body=${encoded}`;
-
-                try {
-                    window.location.href = smsUrl;
-                    showToast(`📱 Opening SMS to ${phoneNumber}...`, 'success');
-                } catch(e) {
-                    navigator.clipboard.writeText(message).then(() => {
-                        showToast('📋 Report copied to clipboard!', 'success');
-                    }).catch(() => {
-                        showToast('📋 Could not open SMS - report copied', 'error');
-                    });
-                }
-            }
-
             // ===== INIT APP =====
             function initApp() {
                 if (appInitialized) return;
@@ -2953,10 +2851,10 @@
                 updateNoteInputWordCounter();
                 updateAILink();
 
-                // Header buttons
+                // Header buttons - FIXED: Use send functions
                 document.getElementById('whatsappSendBtn').addEventListener('click', sendWhatsApp);
-                document.getElementById('geminiChatBtn').addEventListener('click', openGeminiChat);
-                document.getElementById('claudeChatBtn').addEventListener('click', openClaudeChat);
+                document.getElementById('geminiSendBtn').addEventListener('click', sendToGemini);
+                document.getElementById('claudeSendBtn').addEventListener('click', sendToClaude);
                 document.getElementById('globalSaveBtn').addEventListener('click', () => {
                     saveToStorage();
                     showToast('✅ All data saved locally!', 'success');
@@ -2969,21 +2867,16 @@
                 document.getElementById('submitLeadBtn').addEventListener('click', submitLeadForm);
                 document.getElementById('clearFormBtn').addEventListener('click', clearLeadForm);
 
-                // Copy Link buttons
                 copyLinkBtn.addEventListener('click', copyLink);
                 shareLinkBtn.addEventListener('click', shareLink);
 
-                // Lessons buttons
                 document.getElementById('codingSubmitBtn').addEventListener('click', submitCodingLesson);
                 document.getElementById('promptSubmitBtn').addEventListener('click', submitPrompt);
                 document.getElementById('notesSubmitBtn').addEventListener('click', saveLessonNotes);
                 document.getElementById('lessonsSmsBtn').addEventListener('click', sendLessonsSMS);
 
-                // Notes buttons
                 document.getElementById('addNoteBtn').addEventListener('click', () => {
-                    // Close any existing note
                     closeCurrentNote();
-                    // Open new note input
                     noteContentInput.value = '';
                     editingNoteId = null;
                     document.getElementById('saveNoteBtn').textContent = '<i class="fas fa-save"></i> Save Note';
@@ -3000,13 +2893,11 @@
                 document.getElementById('clearAllNotesBtn').addEventListener('click', clearAllNotes);
                 document.getElementById('closeNoteBtn').addEventListener('click', closeCurrentNote);
 
-                // Notes dropdown toggle
                 notesDropdownBtn.addEventListener('click', function(e) {
                     e.stopPropagation();
                     toggleNotesDropdown();
                 });
 
-                // Note input auto-save indicator
                 noteContentInput.addEventListener('input', () => {
                     const words = countWords(noteContentInput.value);
                     if (words > 5000) {
