@@ -186,6 +186,22 @@
         .btn-whatsapp i {
             color: white;
         }
+        .btn-gemini {
+            background: #4285F4;
+            color: white;
+            border: 1px solid #4285F4;
+        }
+        .btn-gemini i {
+            color: white;
+        }
+        .btn-claude {
+            background: #7C3AED;
+            color: white;
+            border: 1px solid #7C3AED;
+        }
+        .btn-claude i {
+            color: white;
+        }
         .btn-outline {
             background: transparent;
             border: 2px solid #0077b6;
@@ -785,6 +801,91 @@
             padding: 0.4rem 1rem;
             font-size: 0.8rem;
         }
+        
+        /* Dropdown Notes List */
+        .notes-dropdown-container {
+            position: relative;
+            display: inline-block;
+        }
+        .notes-dropdown-btn {
+            background: #8B5CF6;
+            color: white;
+            border: 1px solid #8B5CF6;
+        }
+        .notes-dropdown-btn i {
+            color: white;
+        }
+        .notes-dropdown-content {
+            display: none;
+            position: absolute;
+            background: white;
+            min-width: 280px;
+            max-width: 400px;
+            max-height: 300px;
+            overflow-y: auto;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+            border-radius: 16px;
+            z-index: 100;
+            left: 0;
+            top: 100%;
+            margin-top: 8px;
+            border: 1px solid #e9d5ff;
+            padding: 8px 0;
+        }
+        .notes-dropdown-content.show {
+            display: block;
+        }
+        .notes-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            cursor: pointer;
+            transition: 0.15s;
+            border-bottom: 1px solid #f3e8ff;
+            font-size: 0.85rem;
+            color: #2d3748;
+        }
+        .notes-dropdown-item:hover {
+            background: #f5f0ff;
+        }
+        .notes-dropdown-item:last-child {
+            border-bottom: none;
+        }
+        .notes-dropdown-item .note-title {
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .notes-dropdown-item .note-status {
+            font-size: 0.7rem;
+            color: #a0aec0;
+        }
+        .notes-dropdown-item .note-status.completed {
+            color: #28a745;
+        }
+        .notes-dropdown-empty {
+            padding: 16px;
+            text-align: center;
+            color: #a0aec0;
+            font-style: italic;
+        }
+        .notes-dropdown-item .delete-note-dropdown {
+            background: none;
+            border: none;
+            color: #fc8181;
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 0 4px;
+            border-radius: 8px;
+            transition: 0.2s;
+        }
+        .notes-dropdown-item .delete-note-dropdown:hover {
+            color: #dc3545;
+            background: #fff5f5;
+        }
+
         .notes-textarea {
             width: 100%;
             min-height: 200px;
@@ -812,6 +913,10 @@
         }
         .notes-list {
             margin-top: 1rem;
+            display: none;
+        }
+        .notes-list.visible {
+            display: block;
         }
         .notes-item {
             display: flex;
@@ -899,6 +1004,30 @@
             color: #d97706;
         }
 
+        /* Current note being edited indicator */
+        .current-note-indicator {
+            display: none;
+            padding: 8px 14px;
+            background: #f5f0ff;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            color: #6d28d9;
+            margin-bottom: 10px;
+            border: 1px solid #e9d5ff;
+        }
+        .current-note-indicator.visible {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .current-note-indicator .note-title-display {
+            font-weight: 600;
+            flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
         @media (max-width: 640px) {
             .app-container {
                 padding: 1rem;
@@ -949,6 +1078,12 @@
             }
             .notes-controls .btn {
                 justify-content: center;
+            }
+            .notes-dropdown-content {
+                min-width: 200px;
+                max-width: 300px;
+                left: 0;
+                right: auto;
             }
         }
         @media (max-width: 400px) {
@@ -1095,6 +1230,8 @@
                 <h1><i class="fas fa-feather-alt"></i> WebSwan <span style="font-weight:300;color:#0077b6;">·</span> Suite</h1>
                 <div class="header-actions">
                     <button class="btn btn-whatsapp" id="whatsappSendBtn"><i class="fab fa-whatsapp"></i> WhatsApp</button>
+                    <button class="btn btn-gemini" id="geminiChatBtn"><i class="fas fa-robot"></i> Gemini</button>
+                    <button class="btn btn-claude" id="claudeChatBtn"><i class="fas fa-brain"></i> Claude</button>
                     <button class="btn btn-outline" id="lockAppBtn" style="border-color:#0077b6;"><i class="fas fa-lock"></i> Lock</button>
                 </div>
             </div>
@@ -1316,19 +1453,39 @@
             <!-- ===== PAGE 3: NOTES ===== -->
             <div id="page-notes" class="page">
                 <div class="notes-section">
-                    <h3><i class="fas fa-sticky-note"></i> 📝 Notes <span style="font-weight:400;font-size:0.75rem;color:#6d28d9;">(5000 words max - auto-saves)</span></h3>
+                    <h3><i class="fas fa-sticky-note"></i> 📝 Notes <span style="font-weight:400;font-size:0.75rem;color:#6d28d9;">(5000 words max per note - all saved)</span></h3>
                     
                     <div class="notes-controls">
-                        <button class="btn btn-notes" id="addNoteBtn"><i class="fas fa-plus"></i> Add Note</button>
-                        <button class="btn btn-outline" id="clearAllNotesBtn" style="border-color:#e74c3c;color:#e74c3c;"><i class="fas fa-trash"></i> Clear All Notes</button>
+                        <button class="btn btn-notes" id="addNoteBtn"><i class="fas fa-plus"></i> New Note</button>
+                        
+                        <!-- Dropdown for saved notes -->
+                        <div class="notes-dropdown-container">
+                            <button class="btn notes-dropdown-btn" id="notesDropdownBtn">
+                                <i class="fas fa-folder-open"></i> Saved Notes <span id="notesCountBadge" style="background:rgba(255,255,255,0.2);padding:0 8px;border-radius:10px;font-size:0.7rem;">0</span>
+                            </button>
+                            <div class="notes-dropdown-content" id="notesDropdownContent">
+                                <!-- Dynamically populated -->
+                                <div class="notes-dropdown-empty">No saved notes yet.</div>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-outline" id="clearAllNotesBtn" style="border-color:#e74c3c;color:#e74c3c;"><i class="fas fa-trash"></i> Clear All</button>
                         <span class="notes-save-indicator saved" id="notesSaveIndicator"><i class="fas fa-check"></i> Saved</span>
                     </div>
 
-                    <!-- Note Input Area (collapsible) -->
+                    <!-- Current note being edited indicator -->
+                    <div class="current-note-indicator" id="currentNoteIndicator">
+                        <i class="fas fa-pen"></i>
+                        <span>Editing: </span>
+                        <span class="note-title-display" id="currentNoteTitle">Untitled</span>
+                        <button class="btn btn-outline" id="closeNoteBtn" style="padding:2px 10px;font-size:0.7rem;border-color:#e74c3c;color:#e74c3c;margin-left:auto;"><i class="fas fa-times"></i> Close</button>
+                    </div>
+
+                    <!-- Note Input Area (hidden until a note is selected/created) -->
                     <div id="noteInputArea" style="display:none; margin-bottom: 1rem; transition: all 0.4s ease;">
                         <div class="field-group">
-                            <label><i class="fas fa-pen"></i> Write your note (5000 words max - stretches)</label>
-                            <textarea id="noteContentInput" placeholder="Paste your note content here... (supports up to 5000 words)" maxlength="30000" style="min-height:150px;resize:vertical;"></textarea>
+                            <label><i class="fas fa-pen"></i> Note Content (5000 words max - stretches)</label>
+                            <textarea id="noteContentInput" placeholder="Write your note content here..." maxlength="30000" style="min-height:150px;resize:vertical;"></textarea>
                             <div class="notes-word-counter" id="noteInputWordCount">0 / 5000 words</div>
                         </div>
                         <div style="display:flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
@@ -1337,9 +1494,9 @@
                         </div>
                     </div>
 
-                    <!-- Notes List -->
+                    <!-- Notes List (hidden, used for display but dropdown is the main view) -->
                     <div class="notes-list" id="notesListContainer">
-                        <div class="notes-empty">No notes yet. Click "Add Note" to create your first note! 📝</div>
+                        <div class="notes-empty">No notes yet. Click "New Note" to create your first note! 📝</div>
                     </div>
                 </div>
             </div>
@@ -1478,6 +1635,7 @@
             let nextNoteId = 1;
             let appInitialized = false;
             let editingNoteId = null;
+            let currentNoteId = null;
 
             const container = document.getElementById('leadsContainer');
             const todoContainer = document.getElementById('todoContainer');
@@ -1501,7 +1659,7 @@
             const shareLinkText = document.getElementById('shareLinkText');
             const APP_URL = 'https://taniad2169.github.io/Daily-task/';
 
-            // New elements
+            // Elements
             const briefingText = document.getElementById('briefingText');
             const briefingWordCount = document.getElementById('briefingWordCount');
             const aiChatMessage = document.getElementById('aiChatMessage');
@@ -1521,6 +1679,12 @@
             const notesListContainer = document.getElementById('notesListContainer');
             const noteInputArea = document.getElementById('noteInputArea');
             const notesSaveIndicator = document.getElementById('notesSaveIndicator');
+            const notesDropdownBtn = document.getElementById('notesDropdownBtn');
+            const notesDropdownContent = document.getElementById('notesDropdownContent');
+            const notesCountBadge = document.getElementById('notesCountBadge');
+            const currentNoteIndicator = document.getElementById('currentNoteIndicator');
+            const currentNoteTitle = document.getElementById('currentNoteTitle');
+            const closeNoteBtn = document.getElementById('closeNoteBtn');
 
             function countWords(text) {
                 if (!text) return 0;
@@ -1583,91 +1747,103 @@
 
             // ===== NOTES FUNCTIONS =====
 
-            function renderNotes() {
-                if (!notesListContainer) return;
+            function getNoteTitle(content) {
+                if (!content) return 'Untitled';
+                const lines = content.split('\n').filter(line => line.trim().length > 0);
+                if (lines.length === 0) return 'Untitled';
+                const firstLine = lines[0].trim();
+                return firstLine.length > 50 ? firstLine.substring(0, 50) + '...' : firstLine;
+            }
+
+            function renderNotesDropdown() {
+                if (!notesDropdownContent) return;
+                
+                notesDropdownContent.innerHTML = '';
+                
                 if (notes.length === 0) {
-                    notesListContainer.innerHTML = '<div class="notes-empty">No notes yet. Click "Add Note" to create your first note! 📝</div>';
+                    notesDropdownContent.innerHTML = '<div class="notes-dropdown-empty">No saved notes yet. 📝</div>';
+                    notesCountBadge.textContent = '0';
                     return;
                 }
 
-                notesListContainer.innerHTML = '';
+                notesCountBadge.textContent = notes.length;
+
                 // Show newest first
                 const sorted = [...notes].reverse();
                 sorted.forEach(note => {
-                    const div = document.createElement('div');
-                    div.className = 'notes-item';
-                    if (note.completed) div.classList.add('completed-note');
-
-                    const checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.className = 'note-checkbox';
-                    checkbox.checked = note.completed || false;
-                    checkbox.addEventListener('change', () => {
-                        toggleNoteComplete(note.id);
-                    });
-
-                    const contentSpan = document.createElement('span');
-                    contentSpan.className = 'note-content';
-                    if (note.completed) contentSpan.classList.add('done');
-                    contentSpan.textContent = note.content;
-
-                    const actionsDiv = document.createElement('div');
-                    actionsDiv.className = 'note-actions';
-
-                    const editBtn = document.createElement('button');
-                    editBtn.className = 'note-edit';
-                    editBtn.innerHTML = '<i class="fas fa-pen"></i>';
-                    editBtn.title = 'Edit note';
-                    editBtn.addEventListener('click', () => {
-                        editNote(note.id);
-                    });
-
+                    const item = document.createElement('div');
+                    item.className = 'notes-dropdown-item';
+                    
+                    const title = document.createElement('span');
+                    title.className = 'note-title';
+                    title.textContent = getNoteTitle(note.content);
+                    
+                    const status = document.createElement('span');
+                    status.className = 'note-status' + (note.completed ? ' completed' : '');
+                    status.textContent = note.completed ? '✅' : '📝';
+                    
                     const deleteBtn = document.createElement('button');
-                    deleteBtn.className = 'note-delete';
-                    deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                    deleteBtn.className = 'delete-note-dropdown';
+                    deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
                     deleteBtn.title = 'Delete note';
-                    deleteBtn.addEventListener('click', () => {
-                        deleteNote(note.id);
+                    deleteBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        if (confirm('Delete this note?')) {
+                            const noteId = note.id;
+                            if (currentNoteId === noteId) {
+                                closeCurrentNote();
+                            }
+                            notes = notes.filter(n => n.id !== noteId);
+                            saveNotesToStorage();
+                            renderNotesDropdown();
+                            showToast('🗑️ Note deleted!', 'success');
+                        }
                     });
-
-                    actionsDiv.appendChild(editBtn);
-                    actionsDiv.appendChild(deleteBtn);
-
-                    div.appendChild(checkbox);
-                    div.appendChild(contentSpan);
-                    div.appendChild(actionsDiv);
-                    notesListContainer.appendChild(div);
+                    
+                    item.appendChild(status);
+                    item.appendChild(title);
+                    item.appendChild(deleteBtn);
+                    
+                    item.addEventListener('click', function() {
+                        openNote(note.id);
+                        // Close dropdown
+                        notesDropdownContent.classList.remove('show');
+                    });
+                    
+                    notesDropdownContent.appendChild(item);
                 });
             }
 
-            function toggleNoteComplete(noteId) {
+            function openNote(noteId) {
                 const note = notes.find(n => n.id === noteId);
-                if (!note) return;
-                note.completed = !note.completed;
-                saveNotesToStorage();
-                renderNotes();
-                showToast(note.completed ? '✅ Note marked as complete!' : '↩️ Note unmarked', 'success');
-            }
-
-            function deleteNote(noteId) {
-                if (confirm('Delete this note?')) {
-                    notes = notes.filter(n => n.id !== noteId);
-                    saveNotesToStorage();
-                    renderNotes();
-                    showToast('🗑️ Note deleted!', 'success');
+                if (!note) {
+                    showToast('Note not found.', 'error');
+                    return;
                 }
-            }
-
-            function editNote(noteId) {
-                const note = notes.find(n => n.id === noteId);
-                if (!note) return;
+                
+                currentNoteId = noteId;
                 editingNoteId = noteId;
                 noteContentInput.value = note.content;
                 updateNoteInputWordCounter();
+                
+                // Show input area
                 noteInputArea.style.display = 'block';
-                noteInputArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                currentNoteIndicator.classList.add('visible');
+                currentNoteTitle.textContent = getNoteTitle(note.content);
                 document.getElementById('saveNoteBtn').textContent = '<i class="fas fa-save"></i> Update Note';
-                showToast('✏️ Editing note - make your changes and click Update', 'success');
+                
+                noteInputArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                showToast('📖 Note loaded: ' + getNoteTitle(note.content), 'success');
+            }
+
+            function closeCurrentNote() {
+                currentNoteId = null;
+                editingNoteId = null;
+                noteContentInput.value = '';
+                updateNoteInputWordCounter();
+                noteInputArea.style.display = 'none';
+                currentNoteIndicator.classList.remove('visible');
+                document.getElementById('saveNoteBtn').textContent = '<i class="fas fa-save"></i> Save Note';
             }
 
             function saveNote() {
@@ -1688,11 +1864,11 @@
                         note.content = content;
                         note.updatedAt = new Date().toISOString();
                         saveNotesToStorage();
-                        renderNotes();
+                        renderNotesDropdown();
+                        // Update current title
+                        currentNoteTitle.textContent = getNoteTitle(content);
                         showToast('✅ Note updated!', 'success');
                     }
-                    editingNoteId = null;
-                    document.getElementById('saveNoteBtn').textContent = '<i class="fas fa-save"></i> Save Note';
                 } else {
                     // Create new note
                     notes.push({
@@ -1703,20 +1879,26 @@
                         updatedAt: new Date().toISOString()
                     });
                     saveNotesToStorage();
-                    renderNotes();
-                    showToast('✅ Note saved!', 'success');
+                    renderNotesDropdown();
+                    showToast('✅ New note saved!', 'success');
                 }
 
                 // Reset input area
                 noteContentInput.value = '';
                 updateNoteInputWordCounter();
                 noteInputArea.style.display = 'none';
+                currentNoteIndicator.classList.remove('visible');
+                currentNoteId = null;
+                editingNoteId = null;
+                document.getElementById('saveNoteBtn').textContent = '<i class="fas fa-save"></i> Save Note';
             }
 
             function cancelNote() {
                 noteContentInput.value = '';
                 updateNoteInputWordCounter();
                 noteInputArea.style.display = 'none';
+                currentNoteIndicator.classList.remove('visible');
+                currentNoteId = null;
                 editingNoteId = null;
                 document.getElementById('saveNoteBtn').textContent = '<i class="fas fa-save"></i> Save Note';
                 showToast('✖️ Cancelled', 'success');
@@ -1729,8 +1911,9 @@
                 }
                 if (confirm('⚠️ Delete ALL notes? This cannot be undone!')) {
                     notes = [];
+                    closeCurrentNote();
                     saveNotesToStorage();
-                    renderNotes();
+                    renderNotesDropdown();
                     showToast('🗑️ All notes cleared!', 'success');
                 }
             }
@@ -1738,6 +1921,8 @@
             function saveNotesToStorage() {
                 localStorage.setItem('webswan_notes', JSON.stringify(notes));
                 updateSaveIndicator(true);
+                // Update badge
+                notesCountBadge.textContent = notes.length;
             }
 
             function loadNotesFromStorage() {
@@ -1752,13 +1937,13 @@
                         notes = [];
                         nextNoteId = 1;
                     }
-                    // Ensure each note has completed field
                     notes = notes.map(n => ({ ...n, completed: n.completed || false }));
                 } catch(e) {
                     notes = [];
                     nextNoteId = 1;
                 }
-                renderNotes();
+                renderNotesDropdown();
+                notesCountBadge.textContent = notes.length;
             }
 
             function updateSaveIndicator(saved = true) {
@@ -1771,6 +1956,50 @@
                         notesSaveIndicator.innerHTML = '<i class="fas fa-clock"></i> Unsaved';
                     }
                 }
+            }
+
+            // Toggle dropdown
+            function toggleNotesDropdown() {
+                notesDropdownContent.classList.toggle('show');
+            }
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                const container = document.querySelector('.notes-dropdown-container');
+                if (container && !container.contains(e.target)) {
+                    notesDropdownContent.classList.remove('show');
+                }
+            });
+
+            // ===== GEMINI & CLAUDE CHAT BUTTONS =====
+            function openGeminiChat() {
+                // Get all notes content for context
+                let notesContent = '';
+                if (notes.length > 0) {
+                    notesContent = '\n\n📝 My Notes:\n' + notes.map((n, i) => 
+                        `--- Note ${i+1} ---\n${n.content}`
+                    ).join('\n\n');
+                }
+                
+                const message = `Hello Gemini! I'm using WebSwan Suite. Here's what I'm working on:${notesContent}\n\nCan you help me with my tasks?`;
+                const url = `https://gemini.google.com/?q=${encodeURIComponent(message)}`;
+                window.open(url, '_blank');
+                showToast('🤖 Opening Gemini chat...', 'success');
+            }
+
+            function openClaudeChat() {
+                // Get all notes content for context
+                let notesContent = '';
+                if (notes.length > 0) {
+                    notesContent = '\n\n📝 My Notes:\n' + notes.map((n, i) => 
+                        `--- Note ${i+1} ---\n${n.content}`
+                    ).join('\n\n');
+                }
+                
+                const message = `Hello Claude! I'm using WebSwan Suite. Here's what I'm working on:${notesContent}\n\nCan you help me with my tasks?`;
+                const url = `https://claude.ai/?q=${encodeURIComponent(message)}`;
+                window.open(url, '_blank');
+                showToast('🧠 Opening Claude chat...', 'success');
             }
 
             // ===== COPY LINK FUNCTION =====
@@ -2394,15 +2623,11 @@
                 });
             }
 
-            // ===== WHATSAPP - MANUAL CONTACT SELECTION WITH FULL DATA =====
+            // ===== WHATSAPP =====
             function sendWhatsApp() {
                 let message = '📋 *WebSwan Complete Report* 📋\n\n';
                 
-                // LEADS
-                message += '━━━━━━━━━━━━━━━━━━\n';
                 message += '📌 *LEADS*\n';
-                message += '━━━━━━━━━━━━━━━━━━\n';
-                
                 if (leads.length === 0) {
                     message += 'No leads yet.\n';
                 } else {
@@ -2411,19 +2636,11 @@
                         message += `\n${index + 1}. ${lead.name || 'No name'}\n`;
                         message += `   📞 ${lead.phone || 'No phone'}\n`;
                         message += `   ✉️ ${lead.email || 'No email'}\n`;
-                        message += `   🔗 ${lead.url || 'No URL'}\n`;
-                        message += `   🎯 ${lead.dropdown || 'No action'}\n`;
-                        if (lead.customDropdown) message += `   ✏️ ${lead.customDropdown}\n`;
-                        if (lead.comment) message += `   💬 ${lead.comment}\n`;
                         message += `   📊 ${status}\n`;
                     });
                 }
 
-                // PERSONAL TO-DOS
-                message += '\n━━━━━━━━━━━━━━━━━━\n';
-                message += '📝 *PERSONAL TO-DOS*\n';
-                message += '━━━━━━━━━━━━━━━━━━\n';
-                
+                message += '\n📝 *PERSONAL TO-DOS*\n';
                 if (todos.length === 0) {
                     message += 'No personal tasks.\n';
                 } else {
@@ -2433,57 +2650,25 @@
                     });
                 }
 
-                // BRIEFING
                 if (briefingText.value.trim()) {
-                    message += '\n━━━━━━━━━━━━━━━━━━\n';
-                    message += '📋 *BRIEFING*\n';
-                    message += '━━━━━━━━━━━━━━━━━━\n';
+                    message += '\n📋 *BRIEFING*\n';
                     message += briefingText.value;
                 }
 
-                // AI CHAT
-                if (aiChatMessage.value.trim()) {
-                    message += '\n━━━━━━━━━━━━━━━━━━\n';
-                    message += '🤖 *AI CHAT MESSAGE*\n';
-                    message += '━━━━━━━━━━━━━━━━━━\n';
-                    message += `AI: ${aiChatSelect.options[aiChatSelect.selectedIndex].text}\n`;
-                    message += `Message: ${aiChatMessage.value}`;
-                }
-
-                // COMPLETED TASKS
-                message += '\n━━━━━━━━━━━━━━━━━━\n';
-                message += '✅ *COMPLETED TASKS*\n';
-                message += '━━━━━━━━━━━━━━━━━━\n';
-                
-                if (completedItems.length === 0) {
-                    message += 'No completed tasks yet.\n';
-                } else {
-                    completedItems.forEach((item) => {
-                        message += `   ✅ ${item.text} (${item.type})\n`;
-                    });
-                }
-
-                // DAILY COMMENT
                 if (generalCommentEl.value.trim()) {
-                    message += '\n━━━━━━━━━━━━━━━━━━\n';
-                    message += '📖 *DAILY COMMENT*\n';
-                    message += '━━━━━━━━━━━━━━━━━━\n';
+                    message += '\n📖 *DAILY COMMENT*\n';
                     message += generalCommentEl.value;
                 }
 
-                // NOTES
                 if (notes.length > 0) {
-                    message += '\n━━━━━━━━━━━━━━━━━━\n';
-                    message += '📝 *NOTES*\n';
-                    message += '━━━━━━━━━━━━━━━━━━\n';
+                    message += '\n📝 *NOTES*\n';
                     notes.forEach((note, index) => {
                         const status = note.completed ? '✅' : '📝';
                         message += `${status} ${index + 1}. ${note.content}\n\n`;
                     });
                 }
 
-                message += '\n\n━━━━━━━━━━━━━━━━━━\n';
-                message += '📅 ' + new Date().toLocaleString();
+                message += '\n\n📅 ' + new Date().toLocaleString();
                 message += '\n📱 Sent via WebSwan Suite';
 
                 const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
@@ -2667,11 +2852,12 @@
                     leadFormUrl.value = '';
                     leadFormComment.value = '';
                     noteContentInput.value = '';
+                    closeCurrentNote();
                     saveToStorage();
                     renderLeads();
                     renderTodos();
                     renderCompleted();
-                    renderNotes();
+                    renderNotesDropdown();
                     updateGeneralWordCounter();
                     updateBriefingWordCounter();
                     updateAIChatWordCounter();
@@ -2719,7 +2905,6 @@
                     message += generalCommentEl.value;
                 }
 
-                // NOTES
                 if (notes.length > 0) {
                     message += '\n📝 *NOTES*\n';
                     notes.forEach((note, index) => {
@@ -2758,7 +2943,7 @@
                 renderLeads();
                 renderTodos();
                 renderCompleted();
-                renderNotes();
+                renderNotesDropdown();
                 updateBriefingWordCounter();
                 updateAIChatWordCounter();
                 updateLessonContentWordCounter();
@@ -2768,7 +2953,10 @@
                 updateNoteInputWordCounter();
                 updateAILink();
 
+                // Header buttons
                 document.getElementById('whatsappSendBtn').addEventListener('click', sendWhatsApp);
+                document.getElementById('geminiChatBtn').addEventListener('click', openGeminiChat);
+                document.getElementById('claudeChatBtn').addEventListener('click', openClaudeChat);
                 document.getElementById('globalSaveBtn').addEventListener('click', () => {
                     saveToStorage();
                     showToast('✅ All data saved locally!', 'success');
@@ -2785,6 +2973,7 @@
                 copyLinkBtn.addEventListener('click', copyLink);
                 shareLinkBtn.addEventListener('click', shareLink);
 
+                // Lessons buttons
                 document.getElementById('codingSubmitBtn').addEventListener('click', submitCodingLesson);
                 document.getElementById('promptSubmitBtn').addEventListener('click', submitPrompt);
                 document.getElementById('notesSubmitBtn').addEventListener('click', saveLessonNotes);
@@ -2792,16 +2981,30 @@
 
                 // Notes buttons
                 document.getElementById('addNoteBtn').addEventListener('click', () => {
+                    // Close any existing note
+                    closeCurrentNote();
+                    // Open new note input
                     noteContentInput.value = '';
                     editingNoteId = null;
                     document.getElementById('saveNoteBtn').textContent = '<i class="fas fa-save"></i> Save Note';
                     noteInputArea.style.display = 'block';
+                    currentNoteIndicator.classList.add('visible');
+                    currentNoteTitle.textContent = 'New Note';
                     noteInputArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     updateNoteInputWordCounter();
+                    showToast('📝 Creating new note...', 'success');
                 });
+                
                 document.getElementById('saveNoteBtn').addEventListener('click', saveNote);
                 document.getElementById('cancelNoteBtn').addEventListener('click', cancelNote);
                 document.getElementById('clearAllNotesBtn').addEventListener('click', clearAllNotes);
+                document.getElementById('closeNoteBtn').addEventListener('click', closeCurrentNote);
+
+                // Notes dropdown toggle
+                notesDropdownBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    toggleNotesDropdown();
+                });
 
                 // Note input auto-save indicator
                 noteContentInput.addEventListener('input', () => {
