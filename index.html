@@ -1851,9 +1851,12 @@
                 return record;
             }
 
-            // ===== BUILD COMPLETE REPORT =====
+            // ===== BUILD CLIENT-SAFE REPORT =====
+            // Only client lead details/comments, briefings, completed tasks,
+            // and the daily comment leave the suite. Private notes, personal
+            // to-dos, AI drafts, prompts, and lessons are intentionally excluded.
             function buildCompleteReport() {
-                let message = '📋 *WebSwan Complete Report* 📋\n\n';
+                let message = '📋 *WebSwan Client Activity Report* 📋\n\n';
 
                 const currentForm = {
                     name: leadFormName.value.trim(),
@@ -1902,37 +1905,9 @@
                     });
                 }
 
-                message += '\n📝 *PERSONAL TO-DOS*\n';
-                const storedTodosForReport = readStoredArrayForReport('webswan_todos');
-                const reportTodos = todos.length ? todos : storedTodosForReport;
-                const liveTodoItems = Array.from(todoContainer.querySelectorAll('.todo-item'));
-                if (reportTodos.length === 0 && liveTodoItems.length === 0 && !todoInput.value.trim()) {
-                    message += 'No personal tasks.\n';
-                } else if (reportTodos.length > 0) {
-                    reportTodos.forEach((todo) => {
-                        const status = todo.completed ? '✅' : '⬜';
-                        message += `   ${status} ${todo.text}\n`;
-                    });
-                } else {
-                    liveTodoItems.forEach((item) => {
-                        const checkbox = item.querySelector('input[type="checkbox"]');
-                        const text = item.querySelector('.todo-text')?.textContent.trim() || item.textContent.trim();
-                        message += `   ${checkbox && checkbox.checked ? '✅' : '⬜'} ${text}\n`;
-                    });
-                }
-                if (todoInput.value.trim()) {
-                    message += `   ➕ Current unsaved task: ${todoInput.value.trim()}\n`;
-                }
-
                 if (briefingText.value.trim()) {
                     message += '\n📋 *BRIEFING*\n';
                     message += briefingText.value;
-                }
-
-                if (aiChatMessage.value.trim()) {
-                    message += '\n🤖 *AI CHAT MESSAGE*\n';
-                    message += `AI: ${aiChatSelect.options[aiChatSelect.selectedIndex].text}\n`;
-                    message += `Message: ${aiChatMessage.value}`;
                 }
 
                 const storedCompletedForReport = readStoredArrayForReport('webswan_completed');
@@ -1954,43 +1929,6 @@
                 if (generalCommentEl.value.trim()) {
                     message += '\n📖 *DAILY COMMENT*\n';
                     message += generalCommentEl.value;
-                }
-
-                const storedNotesForReport = readStoredArrayForReport('webswan_saved_notes');
-                const reportNotes = notes.length ? notes : storedNotesForReport;
-                if (reportNotes.length > 0) {
-                    message += '\n📝 *NOTES*\n';
-                    reportNotes.forEach((note, index) => {
-                        const status = note.completed ? '✅' : '📝';
-                        message += `${status} ${index + 1}. ${note.content}\n\n`;
-                    });
-                }
-                if (noteContentInput.value.trim()) {
-                    message += '\n✍️ *CURRENT NOTE ON SCREEN*\n';
-                    message += noteContentInput.value.trim();
-                }
-
-                // Lessons content
-                const lessonContentVal = lessonContent.value.trim();
-                if (lessonContentVal) {
-                    message += '\n📚 *CODING LESSON*\n';
-                    message += `Topic: ${document.getElementById('codingTopic').value}\n`;
-                    message += `Language: ${document.getElementById('lessonLanguage').value}\n`;
-                    message += `AI Assistant: ${document.getElementById('aiAssistant').value}\n`;
-                    message += `Content: ${lessonContentVal}`;
-                }
-
-                const promptVal = customPrompt.value.trim();
-                if (promptVal) {
-                    message += '\n🤖 *AI PROMPT*\n';
-                    message += `Type: ${document.getElementById('promptType').value}\n`;
-                    message += `Prompt: ${promptVal}`;
-                }
-
-                const lessonNotesVal = lessonNotes.value.trim();
-                if (lessonNotesVal) {
-                    message += '\n📝 *LESSON NOTES*\n';
-                    message += lessonNotesVal;
                 }
 
                 message += '\n\n📅 ' + new Date().toLocaleString();
@@ -2023,7 +1961,7 @@
                 copyCompleteReport(message).then((copied) => {
                     showToast(
                         copied
-                            ? `${icon} Complete report copied. Paste it into ${name}.`
+                            ? `${icon} Client activity report copied. Paste it into ${name}.`
                             : `${icon} ${name} opened. Use Backup Data to attach your information.`,
                         copied ? 'success' : 'error'
                     );
@@ -2056,7 +1994,7 @@
                 if (isMobileDevice && navigator.share) {
                     try {
                         await navigator.share({
-                            title: 'WebSwan Complete Report',
+                            title: 'WebSwan Client Activity Report',
                             text: message
                         });
                         showToast('✅ Report shared!', 'success');
@@ -2070,23 +2008,20 @@
                     }
                 }
 
-                // Windows/Desktop: copy the complete report first, then launch
-                // the installed WhatsApp app directly. This avoids the browser
-                // intermediary page that can unexpectedly close or show 404.
-                const copied = await copyCompleteReport(message);
-                const url = `whatsapp://send?text=${encodeURIComponent(message)}`;
-                const whatsappLink = document.createElement('a');
-                whatsappLink.href = url;
-                whatsappLink.style.display = 'none';
-                document.body.appendChild(whatsappLink);
-                whatsappLink.click();
-                whatsappLink.remove();
-                showToast(
-                    copied
-                        ? '📱 WhatsApp Desktop opened with the full report. If the box is blank, press Ctrl+V.'
-                        : '📱 WhatsApp Desktop opened. Choose your contact.',
-                    'success'
-                );
+                // Windows/Desktop: begin copying while the click is still an
+                // active user gesture, then launch the installed app with a
+                // short command. Passing the full report through the protocol
+                // can exceed Windows' URL limit and prevent WhatsApp opening.
+                const copyPromise = copyCompleteReport(message);
+                window.location.href = 'whatsapp://send';
+                copyPromise.then((copied) => {
+                    showToast(
+                        copied
+                            ? '📱 WhatsApp opened. Choose a contact, then press Ctrl+V to paste the client activity report.'
+                            : '📱 WhatsApp opened. Use Backup Data if the report was not copied.',
+                        copied ? 'success' : 'error'
+                    );
+                });
             }
 
             // ===== SEND SMS =====
