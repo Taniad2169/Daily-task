@@ -1251,6 +1251,7 @@
                 <h1><i class="fas fa-feather-alt"></i> WebSwan <span style="font-weight:300;color:#0077b6;">·</span> Suite</h1>
                 <div class="header-actions">
                     <button class="btn btn-whatsapp" id="whatsappSendBtn"><i class="fab fa-whatsapp"></i> WhatsApp</button>
+                    <button class="btn btn-outline" id="chatgptSendBtn" style="border-color:#10a37f;color:#087d61;"><i class="fas fa-comment-dots"></i> ChatGPT</button>
                     <button class="btn btn-gemini" id="geminiSendBtn"><i class="fas fa-robot"></i> Gemini</button>
                     <button class="btn btn-claude" id="claudeSendBtn"><i class="fas fa-brain"></i> Claude</button>
                     <a class="btn btn-residual" href="https://taniad2169.github.io/webswan-dagigoia-task/" target="_blank" rel="noopener noreferrer"><i class="fas fa-chart-line"></i> WebSwan Residual</a>
@@ -1824,15 +1825,60 @@
                 noteInputWordCount.style.color = words > 5000 ? '#b22222' : '#6d28d9';
             }
 
+            function readStoredArrayForReport(key) {
+                try {
+                    const value = JSON.parse(localStorage.getItem(key) || '[]');
+                    return Array.isArray(value) ? value : [];
+                } catch (error) {
+                    return [];
+                }
+            }
+
+            function readLeadCardFromScreen(card) {
+                const record = {};
+                card.querySelectorAll('.field-group').forEach((group) => {
+                    const labelElement = group.querySelector('label');
+                    const control = group.querySelector('input, textarea, select');
+                    if (!control) return;
+                    const label = labelElement
+                        ? labelElement.textContent.replace(/\s+/g, ' ').trim()
+                        : (control.id || 'Field');
+                    const value = control.tagName === 'SELECT'
+                        ? control.options[control.selectedIndex]?.text || control.value
+                        : control.value;
+                    if (value && value.trim()) record[label] = value.trim();
+                });
+                return record;
+            }
+
             // ===== BUILD COMPLETE REPORT =====
             function buildCompleteReport() {
                 let message = '📋 *WebSwan Complete Report* 📋\n\n';
+
+                const currentForm = {
+                    name: leadFormName.value.trim(),
+                    phone: leadFormPhone.value.trim(),
+                    email: leadFormEmail.value.trim(),
+                    url: leadFormUrl.value.trim(),
+                    comment: leadFormComment.value.trim()
+                };
+                if (Object.values(currentForm).some(Boolean)) {
+                    message += '👤 *CURRENT CONTACT FORM*\n';
+                    message += `   Name: ${currentForm.name || 'Not entered'}\n`;
+                    message += `   Phone: ${currentForm.phone || 'Not entered'}\n`;
+                    message += `   Email: ${currentForm.email || 'Not entered'}\n`;
+                    message += `   URL: ${currentForm.url || 'Not entered'}\n`;
+                    message += `   Comments: ${currentForm.comment || 'None'}\n\n`;
+                }
                 
                 message += '📌 *LEADS*\n';
-                if (leads.length === 0) {
+                const storedLeadsForReport = readStoredArrayForReport('webswan_leads');
+                const reportLeads = leads.length ? leads : storedLeadsForReport;
+                const liveLeadCards = Array.from(container.querySelectorAll('.lead-card'));
+                if (reportLeads.length === 0 && liveLeadCards.length === 0) {
                     message += 'No leads yet.\n';
-                } else {
-                    leads.forEach((lead, index) => {
+                } else if (reportLeads.length > 0) {
+                    reportLeads.forEach((lead, index) => {
                         const status = lead.completed ? '✅ COMPLETED' : '⏳ PENDING';
                         message += `\n${index + 1}. ${lead.name || 'No name'}\n`;
                         message += `   📞 ${lead.phone || 'No phone'}\n`;
@@ -1843,16 +1889,39 @@
                         if (lead.comment) message += `   💬 ${lead.comment}\n`;
                         message += `   📊 ${status}\n`;
                     });
+                } else {
+                    liveLeadCards.forEach((card, index) => {
+                        const record = readLeadCardFromScreen(card);
+                        message += `\n${index + 1}. SAVED CONTACT\n`;
+                        Object.entries(record).forEach(([label, value]) => {
+                            message += `   ${label}: ${value}\n`;
+                        });
+                        message += card.classList.contains('completed')
+                            ? '   Status: ✅ COMPLETED\n'
+                            : '   Status: ⏳ PENDING\n';
+                    });
                 }
 
                 message += '\n📝 *PERSONAL TO-DOS*\n';
-                if (todos.length === 0) {
+                const storedTodosForReport = readStoredArrayForReport('webswan_todos');
+                const reportTodos = todos.length ? todos : storedTodosForReport;
+                const liveTodoItems = Array.from(todoContainer.querySelectorAll('.todo-item'));
+                if (reportTodos.length === 0 && liveTodoItems.length === 0 && !todoInput.value.trim()) {
                     message += 'No personal tasks.\n';
-                } else {
-                    todos.forEach((todo) => {
+                } else if (reportTodos.length > 0) {
+                    reportTodos.forEach((todo) => {
                         const status = todo.completed ? '✅' : '⬜';
                         message += `   ${status} ${todo.text}\n`;
                     });
+                } else {
+                    liveTodoItems.forEach((item) => {
+                        const checkbox = item.querySelector('input[type="checkbox"]');
+                        const text = item.querySelector('.todo-text')?.textContent.trim() || item.textContent.trim();
+                        message += `   ${checkbox && checkbox.checked ? '✅' : '⬜'} ${text}\n`;
+                    });
+                }
+                if (todoInput.value.trim()) {
+                    message += `   ➕ Current unsaved task: ${todoInput.value.trim()}\n`;
                 }
 
                 if (briefingText.value.trim()) {
@@ -1866,11 +1935,20 @@
                     message += `Message: ${aiChatMessage.value}`;
                 }
 
-                if (completedItems.length > 0) {
+                const storedCompletedForReport = readStoredArrayForReport('webswan_completed');
+                const reportCompleted = completedItems.length ? completedItems : storedCompletedForReport;
+                const liveCompletedItems = Array.from(completedContainer.querySelectorAll('.completed-item'));
+                if (reportCompleted.length > 0 || liveCompletedItems.length > 0) {
                     message += '\n✅ *COMPLETED TASKS*\n';
-                    completedItems.forEach((item) => {
+                    reportCompleted.forEach((item) => {
                         message += `   ✅ ${item.text} (${item.type})\n`;
                     });
+                    if (reportCompleted.length === 0) {
+                        liveCompletedItems.forEach((item) => {
+                            const text = item.querySelector('.item-text')?.textContent.trim() || item.textContent.trim();
+                            message += `   ✅ ${text}\n`;
+                        });
+                    }
                 }
 
                 if (generalCommentEl.value.trim()) {
@@ -1878,12 +1956,18 @@
                     message += generalCommentEl.value;
                 }
 
-                if (notes.length > 0) {
+                const storedNotesForReport = readStoredArrayForReport('webswan_saved_notes');
+                const reportNotes = notes.length ? notes : storedNotesForReport;
+                if (reportNotes.length > 0) {
                     message += '\n📝 *NOTES*\n';
-                    notes.forEach((note, index) => {
+                    reportNotes.forEach((note, index) => {
                         const status = note.completed ? '✅' : '📝';
                         message += `${status} ${index + 1}. ${note.content}\n\n`;
                     });
+                }
+                if (noteContentInput.value.trim()) {
+                    message += '\n✍️ *CURRENT NOTE ON SCREEN*\n';
+                    message += noteContentInput.value.trim();
                 }
 
                 // Lessons content
@@ -1915,29 +1999,61 @@
                 return message;
             }
 
+            async function copyCompleteReport(message) {
+                try {
+                    await navigator.clipboard.writeText(message);
+                    return true;
+                } catch (error) {
+                    const helper = document.createElement('textarea');
+                    helper.value = message;
+                    helper.setAttribute('readonly', '');
+                    helper.style.position = 'fixed';
+                    helper.style.opacity = '0';
+                    document.body.appendChild(helper);
+                    helper.select();
+                    const copied = document.execCommand('copy');
+                    helper.remove();
+                    return copied;
+                }
+            }
+
+            function openAIWithCompleteReport(url, name, icon) {
+                const message = buildCompleteReport();
+                const aiWindow = window.open(url, '_blank', 'noopener,noreferrer');
+                copyCompleteReport(message).then((copied) => {
+                    showToast(
+                        copied
+                            ? `${icon} Complete report copied. Paste it into ${name}.`
+                            : `${icon} ${name} opened. Use Backup Data to attach your information.`,
+                        copied ? 'success' : 'error'
+                    );
+                });
+                if (!aiWindow) window.location.href = url;
+            }
+
+            // ===== SEND TO CHATGPT =====
+            function sendToChatGPT() {
+                openAIWithCompleteReport('https://chatgpt.com/', 'ChatGPT', '💬');
+            }
+
             // ===== SEND TO GEMINI =====
             function sendToGemini() {
-                const message = buildCompleteReport();
-                const url = `https://gemini.google.com/?q=${encodeURIComponent(message)}`;
-                window.open(url, '_blank');
-                showToast('🤖 Sending to Gemini...', 'success');
+                openAIWithCompleteReport('https://gemini.google.com/app', 'Gemini', '🤖');
             }
 
             // ===== SEND TO CLAUDE =====
             function sendToClaude() {
-                const message = buildCompleteReport();
-                const url = `https://claude.ai/?q=${encodeURIComponent(message)}`;
-                window.open(url, '_blank');
-                showToast('🧠 Sending to Claude...', 'success');
+                openAIWithCompleteReport('https://claude.ai/new', 'Claude', '🧠');
             }
 
             // ===== SEND TO WHATSAPP =====
             async function sendWhatsApp() {
                 const message = buildCompleteReport();
+                const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
                 // On Android/iPhone, the native share sheet passes the complete
                 // report directly to WhatsApp without putting a long report in a URL.
-                if (navigator.share) {
+                if (isMobileDevice && navigator.share) {
                     try {
                         await navigator.share({
                             title: 'WebSwan Complete Report',
@@ -1954,14 +2070,21 @@
                     }
                 }
 
-                // Desktop/fallback route. api.whatsapp.com is more reliable than
-                // a blank-recipient wa.me link and still lets you choose a contact.
+                // Windows/Desktop: avoid the native share sheet because some
+                // WhatsApp Desktop versions open the selected chat with a blank
+                // composer. The WhatsApp API URL preserves the prefilled report.
+                const copied = await copyCompleteReport(message);
                 const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
                 const whatsappWindow = window.open(url, '_blank', 'noopener,noreferrer');
                 if (!whatsappWindow) {
                     window.location.href = url;
                 }
-                showToast('📱 WhatsApp opened! Choose your contact.', 'success');
+                showToast(
+                    copied
+                        ? '📱 Full report prepared. Choose a contact; if the box is blank, press Ctrl+V.'
+                        : '📱 WhatsApp opened with the complete report. Choose your contact.',
+                    'success'
+                );
             }
 
             // ===== SEND SMS =====
@@ -3247,6 +3370,7 @@
 
                 // Header buttons - FIXED: Use send functions
                 document.getElementById('whatsappSendBtn').addEventListener('click', sendWhatsApp);
+                document.getElementById('chatgptSendBtn').addEventListener('click', sendToChatGPT);
                 document.getElementById('geminiSendBtn').addEventListener('click', sendToGemini);
                 document.getElementById('claudeSendBtn').addEventListener('click', sendToClaude);
                 document.getElementById('globalSaveBtn').addEventListener('click', async () => {
