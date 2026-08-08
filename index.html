@@ -260,6 +260,23 @@
             background: #28a745;
             border-color: #28a745;
         }
+        .firebase-sync-status {
+            display: inline-flex;
+            align-items: center;
+            min-height: 32px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: #eef7ff;
+            color: #175d8f;
+            font-size: 0.72rem;
+            font-weight: 700;
+            border: 1px solid #b9ddf5;
+        }
+        .firebase-sync-status.connected {
+            background: #e9f9ef;
+            color: #19713a;
+            border-color: #a7dfba;
+        }
         .btn-notes {
             background: #8B5CF6;
             color: white;
@@ -1237,6 +1254,8 @@
                     <button class="btn btn-gemini" id="geminiSendBtn"><i class="fas fa-robot"></i> Gemini</button>
                     <button class="btn btn-claude" id="claudeSendBtn"><i class="fas fa-brain"></i> Claude</button>
                     <a class="btn btn-residual" href="https://taniad2169.github.io/webswan-dagigoia-task/" target="_blank" rel="noopener noreferrer"><i class="fas fa-chart-line"></i> WebSwan Residual</a>
+                    <button class="btn btn-outline" id="firebaseAuthBtn" style="border-color:#4285f4;color:#2467c7;"><i class="fab fa-google"></i> Sign in to Sync</button>
+                    <span class="firebase-sync-status" id="firebaseSyncStatus">Local backup active</span>
                     <button class="btn btn-outline" id="lockAppBtn" style="border-color:#0077b6;"><i class="fas fa-lock"></i> Lock</button>
                 </div>
             </div>
@@ -1502,6 +1521,70 @@
             </div>
         </div>
     </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+        import {
+            getAuth,
+            GoogleAuthProvider,
+            signInWithPopup,
+            signOut,
+            onAuthStateChanged
+        } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+        import {
+            getFirestore,
+            doc,
+            getDoc,
+            setDoc,
+            serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBxuPZnF8rSZPkmoeqNR_9PQtFUJNKU3JM",
+            authDomain: "webswan-gigoia-task.firebaseapp.com",
+            projectId: "webswan-gigoia-task",
+            storageBucket: "webswan-gigoia-task.firebasestorage.app",
+            messagingSenderId: "970866236717",
+            appId: "1:970866236717:web:63ddb5c2557d083b8bc7a4",
+            measurementId: "G-YQ70H661LZ"
+        };
+
+        const firebaseApp = initializeApp(firebaseConfig);
+        const auth = getAuth(firebaseApp);
+        const db = getFirestore(firebaseApp);
+        const googleProvider = new GoogleAuthProvider();
+        googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+        window.dailyFirebase = {
+            signIn: () => signInWithPopup(auth, googleProvider),
+            signOut: () => signOut(auth),
+            currentUser: () => auth.currentUser,
+            async load(uid) {
+                const snapshot = await getDoc(doc(db, 'daily_task_data', uid));
+                return snapshot.exists() ? snapshot.data() : null;
+            },
+            async save(uid, storage) {
+                await setDoc(doc(db, 'daily_task_data', uid), {
+                    app: 'WebSwan Daily Task',
+                    version: 3,
+                    storage,
+                    updatedAt: serverTimestamp()
+                }, { merge: true });
+            }
+        };
+
+        onAuthStateChanged(auth, (user) => {
+            window.dispatchEvent(new CustomEvent('daily-auth-changed', {
+                detail: user ? {
+                    uid: user.uid,
+                    email: user.email || '',
+                    displayName: user.displayName || ''
+                } : null
+            }));
+        });
+
+        window.dispatchEvent(new Event('daily-firebase-ready'));
+    </script>
 
     <script>
         (function() {
@@ -2251,6 +2334,168 @@
                 'webswan_saved_notes',
                 'webswan_notes'
             ];
+
+            let firebaseUser = null;
+            let firebaseSyncBusy = false;
+
+            function collectStoredDailyTaskData() {
+                const data = {};
+                DAILY_TASK_STORAGE_KEYS.forEach((key) => {
+                    const value = localStorage.getItem(key);
+                    if (value !== null) data[key] = value;
+                });
+                return data;
+            }
+
+            function hasMeaningfulDailyTaskData(data) {
+                return Object.entries(data).some(([key, value]) => {
+                    if (key === 'webswan_page' || value === '' || value === '[]' || value === '{}') return false;
+                    return true;
+                });
+            }
+
+            function applyStoredDailyTaskData(data) {
+                DAILY_TASK_STORAGE_KEYS.forEach((key) => {
+                    if (Object.prototype.hasOwnProperty.call(data, key)) {
+                        localStorage.setItem(key, data[key]);
+                    } else {
+                        localStorage.removeItem(key);
+                    }
+                });
+            }
+
+            function refreshDailyTaskFromStorage() {
+                loadFromStorage();
+                loadGeneralComment();
+                loadNotesFromStorage();
+                renderLeads();
+                renderTodos();
+                renderCompleted();
+                renderNotesDropdown();
+                updateBriefingWordCounter();
+                updateAIChatWordCounter();
+                updateLessonContentWordCounter();
+                updatePromptWordCounter();
+                updateNotesWordCounter();
+                updateLeadFormWordCounter();
+                updateNoteInputWordCounter();
+            }
+
+            function updateFirebaseControls(message, connected = false) {
+                const button = document.getElementById('firebaseAuthBtn');
+                const status = document.getElementById('firebaseSyncStatus');
+                if (!button || !status) return;
+                button.innerHTML = firebaseUser
+                    ? '<i class="fab fa-google"></i> Sign out'
+                    : '<i class="fab fa-google"></i> Sign in to Sync';
+                status.textContent = message || (firebaseUser ? 'Firebase connected' : 'Local backup active');
+                status.classList.toggle('connected', connected);
+            }
+
+            async function saveDailyTaskToFirebase(showSuccess = true) {
+                if (!firebaseUser || !window.dailyFirebase || firebaseSyncBusy) return false;
+                firebaseSyncBusy = true;
+                updateFirebaseControls('Saving to Firebase…', true);
+                try {
+                    saveToStorage();
+                    await window.dailyFirebase.save(firebaseUser.uid, collectStoredDailyTaskData());
+                    updateFirebaseControls('Firebase synced', true);
+                    if (showSuccess) showToast('✅ Saved locally and permanently to Firebase!', 'success');
+                    return true;
+                } catch (error) {
+                    console.error('Firebase save failed:', error);
+                    updateFirebaseControls('Firebase sync failed', false);
+                    showToast('❌ Saved locally, but Firebase sync failed.', 'error');
+                    return false;
+                } finally {
+                    firebaseSyncBusy = false;
+                }
+            }
+
+            async function synchronizeDailyTaskAfterSignIn() {
+                if (!firebaseUser || !window.dailyFirebase || !appInitialized || firebaseSyncBusy) return;
+                firebaseSyncBusy = true;
+                updateFirebaseControls('Checking Firebase…', true);
+                try {
+                    saveToStorage();
+                    const localData = collectStoredDailyTaskData();
+                    const remoteRecord = await window.dailyFirebase.load(firebaseUser.uid);
+                    const remoteData = remoteRecord && remoteRecord.storage ? remoteRecord.storage : null;
+
+                    if (!remoteData) {
+                        await window.dailyFirebase.save(firebaseUser.uid, localData);
+                        updateFirebaseControls('Firebase backup created', true);
+                        showToast('✅ Firebase connected and your Daily Task backup was created!', 'success');
+                        return;
+                    }
+
+                    if (JSON.stringify(remoteData) === JSON.stringify(localData)) {
+                        updateFirebaseControls('Firebase synced', true);
+                        return;
+                    }
+
+                    if (!hasMeaningfulDailyTaskData(localData)) {
+                        applyStoredDailyTaskData(remoteData);
+                        refreshDailyTaskFromStorage();
+                        updateFirebaseControls('Firebase data restored', true);
+                        showToast('✅ Your Daily Task information was restored from Firebase!', 'success');
+                        return;
+                    }
+
+                    const loadRemote = confirm(
+                        'Firebase already contains a different Daily Task backup.\n\n' +
+                        'Press OK to load the Firebase copy into this browser.\n' +
+                        'Press Cancel to keep this browser copy and save it to Firebase.'
+                    );
+                    if (loadRemote) {
+                        applyStoredDailyTaskData(remoteData);
+                        refreshDailyTaskFromStorage();
+                        updateFirebaseControls('Firebase data restored', true);
+                        showToast('✅ Firebase copy loaded safely!', 'success');
+                    } else {
+                        await window.dailyFirebase.save(firebaseUser.uid, localData);
+                        updateFirebaseControls('Browser copy synced', true);
+                        showToast('✅ This browser copy was saved to Firebase!', 'success');
+                    }
+                } catch (error) {
+                    console.error('Firebase synchronization failed:', error);
+                    updateFirebaseControls('Firebase connection failed', false);
+                    showToast('❌ Firebase could not synchronize. Your local data is still safe.', 'error');
+                } finally {
+                    firebaseSyncBusy = false;
+                }
+            }
+
+            async function toggleFirebaseAuthentication() {
+                if (!window.dailyFirebase) {
+                    showToast('Firebase is still loading. Please try again.', 'error');
+                    return;
+                }
+                try {
+                    if (firebaseUser) {
+                        await window.dailyFirebase.signOut();
+                        showToast('Signed out of Firebase. Local saving remains active.', 'success');
+                    } else {
+                        await window.dailyFirebase.signIn();
+                    }
+                } catch (error) {
+                    console.error('Firebase sign-in failed:', error);
+                    const message = error && error.code === 'auth/unauthorized-domain'
+                        ? 'Add taniad2169.github.io to Firebase Authentication authorized domains.'
+                        : 'Google sign-in did not complete. Your local data is still safe.';
+                    showToast('❌ ' + message, 'error');
+                }
+            }
+
+            window.addEventListener('daily-auth-changed', (event) => {
+                firebaseUser = event.detail;
+                if (firebaseUser) {
+                    updateFirebaseControls('Signed in — preparing sync', true);
+                    synchronizeDailyTaskAfterSignIn();
+                } else {
+                    updateFirebaseControls('Local backup active', false);
+                }
+            });
 
             function exportAllData() {
                 // Capture anything currently typed on screen before making the backup.
@@ -3004,10 +3249,15 @@
                 document.getElementById('whatsappSendBtn').addEventListener('click', sendWhatsApp);
                 document.getElementById('geminiSendBtn').addEventListener('click', sendToGemini);
                 document.getElementById('claudeSendBtn').addEventListener('click', sendToClaude);
-                document.getElementById('globalSaveBtn').addEventListener('click', () => {
+                document.getElementById('globalSaveBtn').addEventListener('click', async () => {
                     saveToStorage();
-                    showToast('✅ All data saved locally!', 'success');
+                    if (firebaseUser) {
+                        await saveDailyTaskToFirebase(true);
+                    } else {
+                        showToast('✅ Saved locally. Sign in to Sync for permanent Firebase backup.', 'success');
+                    }
                 });
+                document.getElementById('firebaseAuthBtn').addEventListener('click', toggleFirebaseAuthentication);
                 document.getElementById('exportDataBtn').addEventListener('click', exportAllData);
                 document.getElementById('importDataBtn').addEventListener('click', () => {
                     document.getElementById('importDataInput').click();
@@ -3131,6 +3381,21 @@
                 });
 
                 updateTodoWordCounter();
+
+                const existingFirebaseUser = window.dailyFirebase && window.dailyFirebase.currentUser
+                    ? window.dailyFirebase.currentUser()
+                    : null;
+                if (existingFirebaseUser) {
+                    firebaseUser = {
+                        uid: existingFirebaseUser.uid,
+                        email: existingFirebaseUser.email || '',
+                        displayName: existingFirebaseUser.displayName || ''
+                    };
+                    updateFirebaseControls('Signed in — preparing sync', true);
+                    synchronizeDailyTaskAfterSignIn();
+                } else {
+                    updateFirebaseControls('Local backup active', false);
+                }
             }
 
             document.addEventListener('click', function(e) {
