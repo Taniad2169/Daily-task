@@ -1851,10 +1851,10 @@
                 return record;
             }
 
-            // ===== BUILD CLIENT-SAFE REPORT =====
-            // Only client lead details/comments, briefings, completed tasks,
-            // and the daily comment leave the suite. Private notes, personal
-            // to-dos, AI drafts, prompts, and lessons are intentionally excluded.
+            // ===== BUILD STRICT CLIENT REPORT =====
+            // This is an explicit whitelist: only filled lead-form fields,
+            // lead comments, and the Briefing field may leave the suite.
+            // The Notes page and every other section are never read here.
             function buildCompleteReport() {
                 let message = '📋 *WebSwan Client Activity Report* 📋\n\n';
 
@@ -1882,7 +1882,6 @@
                     message += 'No leads yet.\n';
                 } else if (reportLeads.length > 0) {
                     reportLeads.forEach((lead, index) => {
-                        const status = lead.completed ? '✅ COMPLETED' : '⏳ PENDING';
                         message += `\n${index + 1}. ${lead.name || 'No name'}\n`;
                         message += `   📞 ${lead.phone || 'No phone'}\n`;
                         message += `   ✉️ ${lead.email || 'No email'}\n`;
@@ -1890,7 +1889,6 @@
                         message += `   🎯 ${lead.dropdown || 'No action'}\n`;
                         if (lead.customDropdown) message += `   ✏️ ${lead.customDropdown}\n`;
                         if (lead.comment) message += `   💬 ${lead.comment}\n`;
-                        message += `   📊 ${status}\n`;
                     });
                 } else {
                     liveLeadCards.forEach((card, index) => {
@@ -1899,36 +1897,12 @@
                         Object.entries(record).forEach(([label, value]) => {
                             message += `   ${label}: ${value}\n`;
                         });
-                        message += card.classList.contains('completed')
-                            ? '   Status: ✅ COMPLETED\n'
-                            : '   Status: ⏳ PENDING\n';
                     });
                 }
 
                 if (briefingText.value.trim()) {
                     message += '\n📋 *BRIEFING*\n';
                     message += briefingText.value;
-                }
-
-                const storedCompletedForReport = readStoredArrayForReport('webswan_completed');
-                const reportCompleted = completedItems.length ? completedItems : storedCompletedForReport;
-                const liveCompletedItems = Array.from(completedContainer.querySelectorAll('.completed-item'));
-                if (reportCompleted.length > 0 || liveCompletedItems.length > 0) {
-                    message += '\n✅ *COMPLETED TASKS*\n';
-                    reportCompleted.forEach((item) => {
-                        message += `   ✅ ${item.text} (${item.type})\n`;
-                    });
-                    if (reportCompleted.length === 0) {
-                        liveCompletedItems.forEach((item) => {
-                            const text = item.querySelector('.item-text')?.textContent.trim() || item.textContent.trim();
-                            message += `   ✅ ${text}\n`;
-                        });
-                    }
-                }
-
-                if (generalCommentEl.value.trim()) {
-                    message += '\n📖 *DAILY COMMENT*\n';
-                    message += generalCommentEl.value;
                 }
 
                 message += '\n\n📅 ' + new Date().toLocaleString();
