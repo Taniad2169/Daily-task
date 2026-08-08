@@ -2070,19 +2070,21 @@
                     }
                 }
 
-                // Windows/Desktop: avoid the native share sheet because some
-                // WhatsApp Desktop versions open the selected chat with a blank
-                // composer. The WhatsApp API URL preserves the prefilled report.
+                // Windows/Desktop: copy the complete report first, then launch
+                // the installed WhatsApp app directly. This avoids the browser
+                // intermediary page that can unexpectedly close or show 404.
                 const copied = await copyCompleteReport(message);
-                const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
-                const whatsappWindow = window.open(url, '_blank', 'noopener,noreferrer');
-                if (!whatsappWindow) {
-                    window.location.href = url;
-                }
+                const url = `whatsapp://send?text=${encodeURIComponent(message)}`;
+                const whatsappLink = document.createElement('a');
+                whatsappLink.href = url;
+                whatsappLink.style.display = 'none';
+                document.body.appendChild(whatsappLink);
+                whatsappLink.click();
+                whatsappLink.remove();
                 showToast(
                     copied
-                        ? '📱 Full report prepared. Choose a contact; if the box is blank, press Ctrl+V.'
-                        : '📱 WhatsApp opened with the complete report. Choose your contact.',
+                        ? '📱 WhatsApp Desktop opened with the full report. If the box is blank, press Ctrl+V.'
+                        : '📱 WhatsApp Desktop opened. Choose your contact.',
                     'success'
                 );
             }
