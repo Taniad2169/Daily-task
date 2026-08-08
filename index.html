@@ -169,6 +169,7 @@
             border: 1px solid #b8dff0;
             cursor: pointer;
             touch-action: manipulation;
+            text-decoration: none;
         }
         .btn-primary {
             background: #0077b6;
@@ -200,6 +201,14 @@
             border: 1px solid #7C3AED;
         }
         .btn-claude i {
+            color: white;
+        }
+        .btn-residual {
+            background: linear-gradient(135deg, #ec4899, #8b5cf6);
+            color: white;
+            border: 1px solid #8b5cf6;
+        }
+        .btn-residual i {
             color: white;
         }
         .btn-outline {
@@ -1227,6 +1236,7 @@
                     <button class="btn btn-whatsapp" id="whatsappSendBtn"><i class="fab fa-whatsapp"></i> WhatsApp</button>
                     <button class="btn btn-gemini" id="geminiSendBtn"><i class="fas fa-robot"></i> Gemini</button>
                     <button class="btn btn-claude" id="claudeSendBtn"><i class="fas fa-brain"></i> Claude</button>
+                    <a class="btn btn-residual" href="https://taniad2169.github.io/webswan-dagigoia-task/" target="_blank" rel="noopener noreferrer"><i class="fas fa-chart-line"></i> WebSwan Residual</a>
                     <button class="btn btn-outline" id="lockAppBtn" style="border-color:#0077b6;"><i class="fas fa-lock"></i> Lock</button>
                 </div>
             </div>
@@ -1343,6 +1353,9 @@
 
                 <div class="footer-bar">
                     <button class="btn btn-primary" id="globalSaveBtn"><i class="fas fa-save"></i> Save all</button>
+                    <button class="btn btn-success" id="exportDataBtn"><i class="fas fa-download"></i> Backup Data</button>
+                    <button class="btn btn-outline" id="importDataBtn" style="border-color:#8B5CF6;color:#6d28d9;"><i class="fas fa-upload"></i> Restore Data</button>
+                    <input type="file" id="importDataInput" accept="application/json,.json" hidden>
                     <button class="btn btn-sms" id="smsSendBtn"><i class="fas fa-sms"></i> Send to 415-877-0687</button>
                     <button class="btn btn-outline" id="clearDataBtn" style="border-color:#e74c3c;color:#e74c3c;"><i class="fas fa-trash"></i> Clear</button>
                 </div>
@@ -1836,11 +1849,36 @@
             }
 
             // ===== SEND TO WHATSAPP =====
-            function sendWhatsApp() {
+            async function sendWhatsApp() {
                 const message = buildCompleteReport();
-                const url = `https://wa.me/?text=${encodeURIComponent(message)}`;
-                window.open(url, '_blank');
-                showToast('📱 WhatsApp opened! Select your contact manually.', 'success');
+
+                // On Android/iPhone, the native share sheet passes the complete
+                // report directly to WhatsApp without putting a long report in a URL.
+                if (navigator.share) {
+                    try {
+                        await navigator.share({
+                            title: 'WebSwan Complete Report',
+                            text: message
+                        });
+                        showToast('✅ Report shared!', 'success');
+                        return;
+                    } catch (error) {
+                        if (error && error.name === 'AbortError') {
+                            showToast('Share cancelled.', 'error');
+                            return;
+                        }
+                        // Continue to the WhatsApp web fallback below.
+                    }
+                }
+
+                // Desktop/fallback route. api.whatsapp.com is more reliable than
+                // a blank-recipient wa.me link and still lets you choose a contact.
+                const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+                const whatsappWindow = window.open(url, '_blank', 'noopener,noreferrer');
+                if (!whatsappWindow) {
+                    window.location.href = url;
+                }
+                showToast('📱 WhatsApp opened! Choose your contact.', 'success');
             }
 
             // ===== SEND SMS =====
@@ -2029,14 +2067,26 @@
             }
 
             function saveNotesToStorage() {
-                localStorage.setItem('webswan_notes', JSON.stringify(notes));
+                localStorage.setItem('webswan_saved_notes', JSON.stringify(notes));
                 updateSaveIndicator(true);
                 notesCountBadge.textContent = notes.length;
             }
 
             function loadNotesFromStorage() {
                 try {
-                    const stored = localStorage.getItem('webswan_notes');
+                    let stored = localStorage.getItem('webswan_saved_notes');
+                    // One-time migration from older versions that shared one key
+                    // between saved notes and lesson notes.
+                    if (!stored) {
+                        const legacyStored = localStorage.getItem('webswan_notes');
+                        if (legacyStored) {
+                            try {
+                                if (Array.isArray(JSON.parse(legacyStored))) stored = legacyStored;
+                            } catch (error) {
+                                // The legacy value is lesson text, not a notes array.
+                            }
+                        }
+                    }
                     if (stored) {
                         notes = JSON.parse(stored);
                         let maxId = 0;
@@ -2185,6 +2235,92 @@
                 }
             }
 
+            // ----- COMPLETE DATA BACKUP / RESTORE -----
+            // These are every storage key used by current and older Daily Task versions.
+            const DAILY_TASK_STORAGE_KEYS = [
+                'webswan_page',
+                'webswan_leads',
+                'webswan_todos',
+                'webswan_completed',
+                'webswan_general',
+                'webswan_briefing',
+                'webswan_aichat',
+                'webswan_lessoncontent',
+                'webswan_prompt',
+                'webswan_lessonnotes',
+                'webswan_saved_notes',
+                'webswan_notes'
+            ];
+
+            function exportAllData() {
+                // Capture anything currently typed on screen before making the backup.
+                saveToStorage();
+
+                const storedData = {};
+                DAILY_TASK_STORAGE_KEYS.forEach((key) => {
+                    const value = localStorage.getItem(key);
+                    if (value !== null) storedData[key] = value;
+                });
+
+                const backup = {
+                    app: 'WebSwan Daily Task',
+                    version: 2,
+                    exportedAt: new Date().toISOString(),
+                    data: storedData
+                };
+
+                const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                const date = new Date().toISOString().slice(0, 10);
+                link.href = url;
+                link.download = `WebSwan-Daily-Task-Backup-${date}.json`;
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                URL.revokeObjectURL(url);
+                showToast('✅ Complete Daily Task backup downloaded!', 'success');
+            }
+
+            function importAllData(event) {
+                const file = event.target.files && event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function() {
+                    try {
+                        const backup = JSON.parse(reader.result);
+                        if (!backup || backup.app !== 'WebSwan Daily Task' || !backup.data) {
+                            throw new Error('Invalid Daily Task backup');
+                        }
+
+                        if (!confirm('Restore this Daily Task backup? It will replace the data currently saved in this browser.')) {
+                            event.target.value = '';
+                            return;
+                        }
+
+                        DAILY_TASK_STORAGE_KEYS.forEach((key) => {
+                            if (Object.prototype.hasOwnProperty.call(backup.data, key)) {
+                                localStorage.setItem(key, backup.data[key]);
+                            } else {
+                                localStorage.removeItem(key);
+                            }
+                        });
+
+                        showToast('✅ Backup restored! Reloading your information...', 'success');
+                        setTimeout(() => window.location.reload(), 900);
+                    } catch (error) {
+                        showToast('❌ This is not a valid WebSwan Daily Task backup.', 'error');
+                        event.target.value = '';
+                    }
+                };
+                reader.onerror = function() {
+                    showToast('❌ The backup file could not be read.', 'error');
+                    event.target.value = '';
+                };
+                reader.readAsText(file);
+            }
+
             // ----- STORAGE -----
             function loadFromStorage() {
                 try {
@@ -2230,8 +2366,19 @@
                     const savedPrompt = localStorage.getItem('webswan_prompt');
                     if (savedPrompt) customPrompt.value = savedPrompt;
                     
-                    const savedNotes = localStorage.getItem('webswan_notes');
-                    if (savedNotes) lessonNotes.value = savedNotes;
+                    let savedLessonNotes = localStorage.getItem('webswan_lessonnotes');
+                    // Preserve lesson text saved by an older version when possible.
+                    if (!savedLessonNotes) {
+                        const legacyNotes = localStorage.getItem('webswan_notes');
+                        if (legacyNotes) {
+                            try {
+                                if (!Array.isArray(JSON.parse(legacyNotes))) savedLessonNotes = legacyNotes;
+                            } catch (error) {
+                                savedLessonNotes = legacyNotes;
+                            }
+                        }
+                    }
+                    if (savedLessonNotes) lessonNotes.value = savedLessonNotes;
                     
                 } catch(e) {
                     leads = [];
@@ -2249,7 +2396,7 @@
                 localStorage.setItem('webswan_aichat', aiChatMessage.value);
                 localStorage.setItem('webswan_lessoncontent', lessonContent.value);
                 localStorage.setItem('webswan_prompt', customPrompt.value);
-                localStorage.setItem('webswan_notes', lessonNotes.value);
+                localStorage.setItem('webswan_lessonnotes', lessonNotes.value);
                 saveNotesToStorage();
             }
 
@@ -2792,6 +2939,8 @@
                     localStorage.removeItem('webswan_aichat');
                     localStorage.removeItem('webswan_lessoncontent');
                     localStorage.removeItem('webswan_prompt');
+                    localStorage.removeItem('webswan_saved_notes');
+                    localStorage.removeItem('webswan_lessonnotes');
                     localStorage.removeItem('webswan_notes');
                     leads = [];
                     todos = [];
@@ -2859,6 +3008,11 @@
                     saveToStorage();
                     showToast('✅ All data saved locally!', 'success');
                 });
+                document.getElementById('exportDataBtn').addEventListener('click', exportAllData);
+                document.getElementById('importDataBtn').addEventListener('click', () => {
+                    document.getElementById('importDataInput').click();
+                });
+                document.getElementById('importDataInput').addEventListener('change', importAllData);
                 document.getElementById('clearDataBtn').addEventListener('click', clearAllData);
                 document.getElementById('lockAppBtn').addEventListener('click', lockApp);
                 document.getElementById('addTodoBtn').addEventListener('click', addTodo);
@@ -2963,7 +3117,7 @@
                         lessonNotes.value = truncated;
                     }
                     updateNotesWordCounter();
-                    localStorage.setItem('webswan_notes', lessonNotes.value);
+                    localStorage.setItem('webswan_lessonnotes', lessonNotes.value);
                 });
 
                 generalCommentEl.addEventListener('input', () => {
