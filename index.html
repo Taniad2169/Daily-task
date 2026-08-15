@@ -260,6 +260,26 @@
             background: #28a745;
             border-color: #28a745;
         }
+        .btn-google-task {
+            background: #4285f4;
+            color: white;
+            border-color: #4285f4;
+        }
+        .btn-google-calendar {
+            background: #ea4335;
+            color: white;
+            border-color: #ea4335;
+        }
+        .btn-google-sheet {
+            background: #0f9d58;
+            color: white;
+            border-color: #0f9d58;
+        }
+        .btn-google-task i,
+        .btn-google-calendar i,
+        .btn-google-sheet i {
+            color: white;
+        }
         .firebase-sync-status {
             display: inline-flex;
             align-items: center;
@@ -1299,6 +1319,9 @@
                     </div>
                     <div class="lead-form-actions">
                         <button class="btn btn-success" id="submitLeadBtn"><i class="fas fa-check-circle"></i> Submit Lead</button>
+                        <button class="btn btn-google-task" id="googleTaskBtn"><i class="fas fa-list-check"></i> Google Task</button>
+                        <button class="btn btn-google-calendar" id="googleCalendarBtn"><i class="fas fa-calendar-plus"></i> Google Calendar</button>
+                        <button class="btn btn-google-sheet" id="googleSheetBtn"><i class="fas fa-table"></i> Google Sheet</button>
                         <button class="btn btn-outline" id="clearFormBtn"><i class="fas fa-undo"></i> Clear Form</button>
                     </div>
                 </div>
@@ -1740,6 +1763,8 @@
             const shareLinkBtn = document.getElementById('shareLinkBtn');
             const shareLinkText = document.getElementById('shareLinkText');
             const APP_URL = 'https://taniad2169.github.io/Daily-task/';
+            const GOOGLE_TASKS_URL = 'https://tasks.google.com/tasks/?utm_source=OGB&utm_medium=app';
+            const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1kNq7gwY_hW7HAFP4UAnCpW30ntYj7rXXD5L_O5NpH_I/edit?usp=drivesdk';
 
             const briefingText = document.getElementById('briefingText');
             const briefingWordCount = document.getElementById('briefingWordCount');
@@ -2688,6 +2713,106 @@
             }
 
             // ===== SUBMIT LEAD FORM =====
+            function getLeadFormData() {
+                return {
+                    name: leadFormName.value.trim(),
+                    phone: leadFormPhone.value.trim(),
+                    email: leadFormEmail.value.trim(),
+                    url: leadFormUrl.value.trim(),
+                    comment: leadFormComment.value.trim()
+                };
+            }
+
+            function hasLeadFormData(lead) {
+                return Object.values(lead).some(value => value);
+            }
+
+            function buildLeadDetails(lead) {
+                return [
+                    `Name: ${lead.name || 'No name'}`,
+                    `Phone: ${lead.phone || 'No phone'}`,
+                    `Email: ${lead.email || 'No email'}`,
+                    `Website: ${lead.url || 'No URL'}`,
+                    `Notes: ${lead.comment || 'No notes'}`
+                ].join('\n');
+            }
+
+            async function copyTextSafely(text) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    return true;
+                } catch (error) {
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    textArea.style.position = 'fixed';
+                    textArea.style.opacity = '0';
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    const copied = document.execCommand('copy');
+                    textArea.remove();
+                    return copied;
+                }
+            }
+
+            async function sendLeadToGoogleTasks() {
+                const lead = getLeadFormData();
+                if (!hasLeadFormData(lead)) {
+                    showToast('Please fill in at least one lead field first.', 'error');
+                    return;
+                }
+
+                const taskText = `Follow up with ${lead.name || 'new lead'}\n\n${buildLeadDetails(lead)}`;
+                window.open(GOOGLE_TASKS_URL, '_blank', 'noopener,noreferrer');
+                await copyTextSafely(taskText);
+                showToast('Lead copied. Paste it into the new Google Task.', 'success');
+            }
+
+            function formatGoogleCalendarDate(date) {
+                const pad = value => String(value).padStart(2, '0');
+                return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}T${pad(date.getHours())}${pad(date.getMinutes())}00`;
+            }
+
+            function sendLeadToGoogleCalendar() {
+                const lead = getLeadFormData();
+                if (!hasLeadFormData(lead)) {
+                    showToast('Please fill in at least one lead field first.', 'error');
+                    return;
+                }
+
+                const start = new Date();
+                start.setDate(start.getDate() + 1);
+                start.setHours(9, 0, 0, 0);
+                const end = new Date(start.getTime() + 30 * 60 * 1000);
+                const params = new URLSearchParams({
+                    action: 'TEMPLATE',
+                    text: `Follow up with ${lead.name || 'new lead'}`,
+                    dates: `${formatGoogleCalendarDate(start)}/${formatGoogleCalendarDate(end)}`,
+                    details: buildLeadDetails(lead)
+                });
+                window.open(`https://calendar.google.com/calendar/u/0/r/eventedit?${params.toString()}`, '_blank', 'noopener,noreferrer');
+                showToast('Google Calendar opened with the lead details.', 'success');
+            }
+
+            async function sendLeadToGoogleSheet() {
+                const lead = getLeadFormData();
+                if (!hasLeadFormData(lead)) {
+                    showToast('Please fill in at least one lead field first.', 'error');
+                    return;
+                }
+
+                const row = [
+                    new Date().toLocaleString(),
+                    lead.name,
+                    lead.phone,
+                    lead.email,
+                    lead.url,
+                    lead.comment
+                ].join('\t');
+                window.open(GOOGLE_SHEET_URL, '_blank', 'noopener,noreferrer');
+                await copyTextSafely(row);
+                showToast('Lead row copied. Paste it into the next empty Sheet row.', 'success');
+            }
+
             function submitLeadForm() {
                 const name = leadFormName.value.trim();
                 const phone = leadFormPhone.value.trim();
@@ -3304,6 +3429,9 @@
                 document.getElementById('smsSendBtn').addEventListener('click', sendSMS);
                 document.getElementById('aiChatSendBtn').addEventListener('click', sendAIChat);
                 document.getElementById('submitLeadBtn').addEventListener('click', submitLeadForm);
+                document.getElementById('googleTaskBtn').addEventListener('click', sendLeadToGoogleTasks);
+                document.getElementById('googleCalendarBtn').addEventListener('click', sendLeadToGoogleCalendar);
+                document.getElementById('googleSheetBtn').addEventListener('click', sendLeadToGoogleSheet);
                 document.getElementById('clearFormBtn').addEventListener('click', clearLeadForm);
 
                 copyLinkBtn.addEventListener('click', copyLink);
