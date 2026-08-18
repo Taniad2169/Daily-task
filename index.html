@@ -2473,56 +2473,32 @@
 
             async function synchronizeDailyTaskAfterSignIn() {
                 if (!firebaseUser || !window.dailyFirebase || !appInitialized || firebaseSyncBusy) return;
-                firebaseSyncBusy = true;
-                updateFirebaseControls('Checking Firebase…', true);
+                firebaseSyncBusy = true; updateFirebaseControls('Checking Firebase…', true);
                 try {
                     saveToStorage();
                     const localData = collectStoredDailyTaskData();
+                    const localHasData = hasMeaningfulDailyTaskData(localData);
                     const remoteRecord = await window.dailyFirebase.load(firebaseUser.uid);
                     const remoteData = remoteRecord && remoteRecord.storage ? remoteRecord.storage : null;
-
+                    const remoteHasData = remoteData && hasMeaningfulDailyTaskData(remoteData);
                     if (!remoteData) {
-                        await window.dailyFirebase.save(firebaseUser.uid, localData);
-                        updateFirebaseControls('Firebase backup created', true);
-                        showToast('✅ Firebase connected and your Daily Task backup was created!', 'success');
+                        if (!localHasData) { updateFirebaseControls('No Firebase backup found — nothing uploaded', false); showToast('Firebase is connected, but there is no saved backup to restore yet.', 'error'); return; }
+                        if (confirm('Create your first Firebase backup from the data in this browser?')) { await window.dailyFirebase.save(firebaseUser.uid, localData); updateFirebaseControls('Firebase backup created', true); showToast('✅ Firebase backup created safely!', 'success'); } else updateFirebaseControls('Firebase backup not changed', false);
                         return;
                     }
-
-                    if (JSON.stringify(remoteData) === JSON.stringify(localData)) {
-                        updateFirebaseControls('Firebase synced', true);
+                    if (!remoteHasData && !localHasData) { updateFirebaseControls('Firebase backup is empty — nothing changed', false); showToast('Firebase has no saved records to restore. Nothing was overwritten.', 'error'); return; }
+                    if (JSON.stringify(remoteData) === JSON.stringify(localData)) { updateFirebaseControls('Firebase synced', true); return; }
+                    if (!localHasData && remoteHasData) { applyStoredDailyTaskData(remoteData); refreshDailyTaskFromStorage(); updateFirebaseControls('Firebase data restored', true); showToast('✅ Your Daily Task information was restored from Firebase!', 'success'); return; }
+                    if (!remoteHasData && localHasData) {
+                        if (confirm('Firebase currently has an empty backup. Replace it with the data in this browser?')) { await window.dailyFirebase.save(firebaseUser.uid, localData); updateFirebaseControls('Firebase backup repaired', true); showToast('✅ Your browser data was saved safely to Firebase!', 'success'); } else updateFirebaseControls('Firebase backup not changed', false);
                         return;
                     }
-
-                    if (!hasMeaningfulDailyTaskData(localData)) {
-                        applyStoredDailyTaskData(remoteData);
-                        refreshDailyTaskFromStorage();
-                        updateFirebaseControls('Firebase data restored', true);
-                        showToast('✅ Your Daily Task information was restored from Firebase!', 'success');
-                        return;
-                    }
-
-                    const loadRemote = confirm(
-                        'Firebase already contains a different Daily Task backup.\n\n' +
-                        'Press OK to load the Firebase copy into this browser.\n' +
-                        'Press Cancel to keep this browser copy and save it to Firebase.'
-                    );
-                    if (loadRemote) {
-                        applyStoredDailyTaskData(remoteData);
-                        refreshDailyTaskFromStorage();
-                        updateFirebaseControls('Firebase data restored', true);
-                        showToast('✅ Firebase copy loaded safely!', 'success');
-                    } else {
-                        await window.dailyFirebase.save(firebaseUser.uid, localData);
-                        updateFirebaseControls('Browser copy synced', true);
-                        showToast('✅ This browser copy was saved to Firebase!', 'success');
-                    }
-                } catch (error) {
-                    console.error('Firebase synchronization failed:', error);
-                    updateFirebaseControls('Firebase connection failed', false);
-                    showToast('❌ Firebase could not synchronize. Your local data is still safe.', 'error');
-                } finally {
-                    firebaseSyncBusy = false;
-                }
+                    const loadRemote = confirm('Firebase already contains a different Daily Task backup.\n\nPress OK to load the Firebase copy into this browser.\nPress Cancel to keep this browser copy and save it to Firebase.');
+                    if (loadRemote) { applyStoredDailyTaskData(remoteData); refreshDailyTaskFromStorage(); updateFirebaseControls('Firebase data restored', true); showToast('✅ Firebase copy loaded safely!', 'success'); }
+                    else if (confirm('Save this browser copy to Firebase and replace the existing backup?')) { await window.dailyFirebase.save(firebaseUser.uid, localData); updateFirebaseControls('Browser copy synced', true); showToast('✅ This browser copy was saved to Firebase!', 'success'); }
+                    else updateFirebaseControls('Firebase backup not changed', false);
+                } catch (error) { console.error('Firebase synchronization failed:', error); updateFirebaseControls('Firebase connection failed', false); showToast('❌ Firebase could not synchronize. Your local data is still safe.', 'error'); }
+                finally { firebaseSyncBusy = false; }
             }
 
             async function toggleFirebaseAuthentication() {
