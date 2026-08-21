@@ -844,7 +844,7 @@
             padding: 0.4rem 1rem;
             font-size: 0.8rem;
         }
-        
+
         .notes-dropdown-container {
             position: relative;
             display: inline-block;
@@ -1290,7 +1290,7 @@
 
             <!-- ===== PAGE 1: TASKS ===== -->
             <div id="page-tasks" class="page active">
-                
+
                 <!-- ===== LEAD FORM ===== -->
                 <div class="lead-form">
                     <h3><i class="fas fa-leaf" style="color:#0077b6;"></i> Lead Form</h3>
@@ -1502,10 +1502,10 @@
             <div id="page-notes" class="page">
                 <div class="notes-section">
                     <h3><i class="fas fa-sticky-note"></i> 📝 Notes <span style="font-weight:400;font-size:0.75rem;color:#6d28d9;">(5000 words max per note - all saved)</span></h3>
-                    
+
                     <div class="notes-controls">
                         <button class="btn btn-notes" id="addNoteBtn"><i class="fas fa-plus"></i> New Note</button>
-                        
+
                         <div class="notes-dropdown-container">
                             <button class="btn notes-dropdown-btn" id="notesDropdownBtn">
                                 <i class="fas fa-folder-open"></i> Saved Notes <span id="notesCountBadge" style="background:rgba(255,255,255,0.2);padding:0 8px;border-radius:10px;font-size:0.7rem;">0</span>
@@ -1679,20 +1679,20 @@
                 e.stopPropagation();
                 if (isUnlocked) return;
                 if (firstLockDone) return;
-                
+
                 firstLockCount++;
-                
+
                 if (firstLockCount < 7) {
                     firstLockStatus.textContent = '🔐';
                     firstLockStatus.style.color = '#ffd700';
                 }
-                
+
                 if (firstLockCount >= 7) {
                     firstLockDone = true;
                     firstLockStatus.textContent = '✅';
                     firstLockStatus.style.color = '#00ff88';
                     firstLockStatus.style.fontWeight = 'bold';
-                    
+
                     setTimeout(function() {
                         firstLockContainer.style.display = 'none';
                         secondLockContainer.classList.add('show');
@@ -1708,20 +1708,20 @@
                 e.stopPropagation();
                 if (isUnlocked) return;
                 if (!firstLockDone) return;
-                
+
                 secondLockCount++;
-                
+
                 if (secondLockCount < 3) {
                     secondLockStatus.textContent = '🗝️';
                     secondLockStatus.style.color = '#ffd700';
                 }
-                
+
                 if (secondLockCount >= 3) {
                     secondLockStatus.textContent = '🔓';
                     secondLockStatus.style.color = '#00ff88';
                     secondLockStatus.style.fontWeight = 'bold';
                     secondLockEmoji.classList.add('pulse');
-                    
+
                     setTimeout(function() {
                         isUnlocked = true;
                         lockScreen.classList.add('hidden');
@@ -1898,7 +1898,7 @@
                     message += `   URL: ${currentForm.url || 'Not entered'}\n`;
                     message += `   Comments: ${currentForm.comment || 'None'}\n\n`;
                 }
-                
+
                 message += '📌 *LEADS*\n';
                 const storedLeadsForReport = readStoredArrayForReport('webswan_leads');
                 const reportLeads = leads.length ? leads : storedLeadsForReport;
@@ -2054,9 +2054,9 @@
 
             function renderNotesDropdown() {
                 if (!notesDropdownContent) return;
-                
+
                 notesDropdownContent.innerHTML = '';
-                
+
                 if (notes.length === 0) {
                     notesDropdownContent.innerHTML = '<div class="notes-dropdown-empty">No saved notes yet. 📝</div>';
                     notesCountBadge.textContent = '0';
@@ -2069,15 +2069,15 @@
                 sorted.forEach(note => {
                     const item = document.createElement('div');
                     item.className = 'notes-dropdown-item';
-                    
+
                     const title = document.createElement('span');
                     title.className = 'note-title';
                     title.textContent = getNoteTitle(note.content);
-                    
+
                     const status = document.createElement('span');
                     status.className = 'note-status' + (note.completed ? ' completed' : '');
                     status.textContent = note.completed ? '✅' : '📝';
-                    
+
                     const deleteBtn = document.createElement('button');
                     deleteBtn.className = 'delete-note-dropdown';
                     deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
@@ -2095,16 +2095,16 @@
                             showToast('🗑️ Note deleted!', 'success');
                         }
                     });
-                    
+
                     item.appendChild(status);
                     item.appendChild(title);
                     item.appendChild(deleteBtn);
-                    
+
                     item.addEventListener('click', function() {
                         openNote(note.id);
                         notesDropdownContent.classList.remove('show');
                     });
-                    
+
                     notesDropdownContent.appendChild(item);
                 });
             }
@@ -2115,17 +2115,17 @@
                     showToast('Note not found.', 'error');
                     return;
                 }
-                
+
                 currentNoteId = noteId;
                 editingNoteId = noteId;
                 noteContentInput.value = note.content;
                 updateNoteInputWordCounter();
-                
+
                 noteInputArea.style.display = 'block';
                 currentNoteIndicator.classList.add('visible');
                 currentNoteTitle.textContent = getNoteTitle(note.content);
                 document.getElementById('saveNoteBtn').textContent = '<i class="fas fa-save"></i> Update Note';
-                
+
                 noteInputArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 showToast('📖 Note loaded: ' + getNoteTitle(note.content), 'success');
             }
@@ -2212,6 +2212,7 @@
                 localStorage.setItem('webswan_saved_notes', JSON.stringify(notes));
                 updateSaveIndicator(true);
                 notesCountBadge.textContent = notes.length;
+                scheduleFirebaseAutoSave();
             }
 
             function loadNotesFromStorage() {
@@ -2396,6 +2397,7 @@
 
             let firebaseUser = null;
             let firebaseSyncBusy = false;
+            let firebaseAutoSaveTimer = null;
 
             function collectStoredDailyTaskData() {
                 const data = {};
@@ -2421,6 +2423,84 @@
                         localStorage.removeItem(key);
                     }
                 });
+            }
+
+            // ----- NON-DESTRUCTIVE MERGE HELPERS -----
+            // The old sync logic could pick ONE side (local OR remote) and
+            // wholesale overwrite the other with it. If Firebase hadn't been
+            // pushed to in a while (it only pushed on a manual "Save all"
+            // click), the Firestore copy was routinely older/thinner than
+            // what was sitting in the browser - and reopening the app could
+            // silently replace fresh local entries with that stale backup.
+            // These helpers instead combine both sides so nothing already
+            // saved (locally or in Firebase) is ever thrown away.
+            function mergeRecordArrays(localArr, remoteArr) {
+                const safeLocal = Array.isArray(localArr) ? localArr : [];
+                const safeRemote = Array.isArray(remoteArr) ? remoteArr : [];
+                const byId = new Map();
+                const order = [];
+                function ingest(list) {
+                    list.forEach((item) => {
+                        if (!item || typeof item !== 'object' || item.id === undefined) return;
+                        if (!byId.has(item.id)) order.push(item.id);
+                        const existing = byId.get(item.id);
+                        if (!existing) { byId.set(item.id, item); return; }
+                        // Keep whichever version of this record has more filled-in
+                        // fields (a rough "more complete" heuristic), so neither
+                        // side's edits get silently dropped.
+                        const scoreOf = (rec) => Object.values(rec).filter(v => v !== '' && v !== null && v !== undefined).length;
+                        byId.set(item.id, scoreOf(item) >= scoreOf(existing) ? item : existing);
+                    });
+                }
+                ingest(safeLocal);
+                ingest(safeRemote);
+                return order.map(id => byId.get(id));
+            }
+
+            function mergeJsonArrayStrings(localJson, remoteJson) {
+                let localArr = [];
+                let remoteArr = [];
+                try { localArr = JSON.parse(localJson || '[]'); } catch (e) { localArr = []; }
+                try { remoteArr = JSON.parse(remoteJson || '[]'); } catch (e) { remoteArr = []; }
+                if (!Array.isArray(localArr)) localArr = [];
+                if (!Array.isArray(remoteArr)) remoteArr = [];
+                return JSON.stringify(mergeRecordArrays(localArr, remoteArr));
+            }
+
+            // For freeform text fields there is no reliable way to "merge" two
+            // edited paragraphs, so the rule is: never let a non-empty value be
+            // replaced by an emptier one. Prefer whichever side has MORE text,
+            // since that is the version least likely to have lost content.
+            function mergeTextValue(localVal, remoteVal) {
+                const l = localVal || '';
+                const r = remoteVal || '';
+                if (l === r) return l;
+                if (!l) return r;
+                if (!r) return l;
+                return l.length >= r.length ? l : r;
+            }
+
+            const ARRAY_STORAGE_KEYS = new Set([
+                'webswan_leads', 'webswan_todos', 'webswan_completed', 'webswan_saved_notes'
+            ]);
+
+            function mergeDailyTaskData(localData, remoteData) {
+                const merged = {};
+                const allKeys = new Set([...Object.keys(localData || {}), ...Object.keys(remoteData || {})]);
+                allKeys.forEach((key) => {
+                    const localVal = localData ? localData[key] : undefined;
+                    const remoteVal = remoteData ? remoteData[key] : undefined;
+                    if (key === 'webswan_page') {
+                        merged[key] = localVal !== undefined ? localVal : remoteVal;
+                        return;
+                    }
+                    if (ARRAY_STORAGE_KEYS.has(key)) {
+                        merged[key] = mergeJsonArrayStrings(localVal, remoteVal);
+                        return;
+                    }
+                    merged[key] = mergeTextValue(localVal, remoteVal);
+                });
+                return merged;
             }
 
             function refreshDailyTaskFromStorage() {
@@ -2471,6 +2551,19 @@
                 }
             }
 
+            // Auto-push to Firebase a couple seconds after any local edit, so the
+            // cloud copy almost never lags far behind what's on screen. This is
+            // what keeps the merge-on-reconnect step above from ever having to
+            // reconcile two very different copies in the first place.
+            function scheduleFirebaseAutoSave() {
+                if (!firebaseUser || !window.dailyFirebase) return;
+                if (firebaseAutoSaveTimer) clearTimeout(firebaseAutoSaveTimer);
+                firebaseAutoSaveTimer = setTimeout(() => {
+                    firebaseAutoSaveTimer = null;
+                    saveDailyTaskToFirebase(false);
+                }, 2000);
+            }
+
             async function synchronizeDailyTaskAfterSignIn() {
                 if (!firebaseUser || !window.dailyFirebase || !appInitialized || firebaseSyncBusy) return;
                 firebaseSyncBusy = true; updateFirebaseControls('Checking Firebase…', true);
@@ -2481,22 +2574,33 @@
                     const remoteRecord = await window.dailyFirebase.load(firebaseUser.uid);
                     const remoteData = remoteRecord && remoteRecord.storage ? remoteRecord.storage : null;
                     const remoteHasData = remoteData && hasMeaningfulDailyTaskData(remoteData);
-                    if (!remoteData) {
-                        if (!localHasData) { updateFirebaseControls('No Firebase backup found — nothing uploaded', false); showToast('Firebase is connected, but there is no saved backup to restore yet.', 'error'); return; }
-                        if (confirm('Create your first Firebase backup from the data in this browser?')) { await window.dailyFirebase.save(firebaseUser.uid, localData); updateFirebaseControls('Firebase backup created', true); showToast('✅ Firebase backup created safely!', 'success'); } else updateFirebaseControls('Firebase backup not changed', false);
+
+                    if (!remoteData || !remoteHasData) {
+                        // Nothing usable in Firebase yet - just push what's here.
+                        if (localHasData) {
+                            await window.dailyFirebase.save(firebaseUser.uid, localData);
+                            updateFirebaseControls('Firebase backup created', true);
+                        } else {
+                            updateFirebaseControls('Local backup active', false);
+                        }
                         return;
                     }
-                    if (!remoteHasData && !localHasData) { updateFirebaseControls('Firebase backup is empty — nothing changed', false); showToast('Firebase has no saved records to restore. Nothing was overwritten.', 'error'); return; }
-                    if (JSON.stringify(remoteData) === JSON.stringify(localData)) { updateFirebaseControls('Firebase synced', true); return; }
-                    if (!localHasData && remoteHasData) { applyStoredDailyTaskData(remoteData); refreshDailyTaskFromStorage(); updateFirebaseControls('Firebase data restored', true); showToast('✅ Your Daily Task information was restored from Firebase!', 'success'); return; }
-                    if (!remoteHasData && localHasData) {
-                        if (confirm('Firebase currently has an empty backup. Replace it with the data in this browser?')) { await window.dailyFirebase.save(firebaseUser.uid, localData); updateFirebaseControls('Firebase backup repaired', true); showToast('✅ Your browser data was saved safely to Firebase!', 'success'); } else updateFirebaseControls('Firebase backup not changed', false);
+
+                    if (JSON.stringify(remoteData) === JSON.stringify(localData)) {
+                        updateFirebaseControls('Firebase synced', true);
                         return;
                     }
-                    const loadRemote = confirm('Firebase already contains a different Daily Task backup.\n\nPress OK to load the Firebase copy into this browser.\nPress Cancel to keep this browser copy and save it to Firebase.');
-                    if (loadRemote) { applyStoredDailyTaskData(remoteData); refreshDailyTaskFromStorage(); updateFirebaseControls('Firebase data restored', true); showToast('✅ Firebase copy loaded safely!', 'success'); }
-                    else if (confirm('Save this browser copy to Firebase and replace the existing backup?')) { await window.dailyFirebase.save(firebaseUser.uid, localData); updateFirebaseControls('Browser copy synced', true); showToast('✅ This browser copy was saved to Firebase!', 'success'); }
-                    else updateFirebaseControls('Firebase backup not changed', false);
+
+                    // Both sides have something and they differ: merge them together
+                    // (union of leads/todos/notes, longer text wins) instead of
+                    // picking one side and discarding the other. Nothing the user
+                    // already saved - locally or in the cloud - is ever dropped.
+                    const merged = mergeDailyTaskData(localData, remoteData);
+                    applyStoredDailyTaskData(merged);
+                    refreshDailyTaskFromStorage();
+                    await window.dailyFirebase.save(firebaseUser.uid, collectStoredDailyTaskData());
+                    updateFirebaseControls('Firebase synced', true);
+                    showToast('✅ Combined your local and Firebase data safely - nothing was lost.', 'success');
                 } catch (error) { console.error('Firebase synchronization failed:', error); updateFirebaseControls('Firebase connection failed', false); showToast('❌ Firebase could not synchronize. Your local data is still safe.', 'error'); }
                 finally { firebaseSyncBusy = false; }
             }
@@ -2636,16 +2740,16 @@
 
                     const savedBriefing = localStorage.getItem('webswan_briefing');
                     if (savedBriefing) briefingText.value = savedBriefing;
-                    
+
                     const savedAIChat = localStorage.getItem('webswan_aichat');
                     if (savedAIChat) aiChatMessage.value = savedAIChat;
-                    
+
                     const savedLessonContent = localStorage.getItem('webswan_lessoncontent');
                     if (savedLessonContent) lessonContent.value = savedLessonContent;
-                    
+
                     const savedPrompt = localStorage.getItem('webswan_prompt');
                     if (savedPrompt) customPrompt.value = savedPrompt;
-                    
+
                     let savedLessonNotes = localStorage.getItem('webswan_lessonnotes');
                     // Preserve lesson text saved by an older version when possible.
                     if (!savedLessonNotes) {
@@ -2659,7 +2763,7 @@
                         }
                     }
                     if (savedLessonNotes) lessonNotes.value = savedLessonNotes;
-                    
+
                 } catch(e) {
                     leads = [];
                     todos = [];
@@ -2678,6 +2782,7 @@
                 localStorage.setItem('webswan_prompt', customPrompt.value);
                 localStorage.setItem('webswan_lessonnotes', lessonNotes.value);
                 saveNotesToStorage();
+                scheduleFirebaseAutoSave();
             }
 
             function loadGeneralComment() {
@@ -2956,7 +3061,7 @@
 
                     const dropdownContainer = document.createElement('div');
                     dropdownContainer.className = 'edit-dropdown';
-                    
+
                     const dropdownBtn = document.createElement('button');
                     dropdownBtn.className = 'btn btn-outline';
                     dropdownBtn.innerHTML = '<i class="fas fa-ellipsis-v"></i> Edit';
@@ -2968,7 +3073,7 @@
 
                     const dropdownContent = document.createElement('div');
                     dropdownContent.className = 'edit-dropdown-content';
-                    
+
                     const editOption = document.createElement('button');
                     editOption.className = 'edit-option';
                     editOption.innerHTML = '<i class="fas fa-pen"></i> Edit Field';
@@ -3010,7 +3115,7 @@
                     dropdownContent.appendChild(saveOption);
                     dropdownContainer.appendChild(dropdownBtn);
                     dropdownContainer.appendChild(dropdownContent);
-                    
+
                     actions.appendChild(completeBtn);
                     actions.appendChild(dropdownContainer);
                     card.appendChild(actions);
@@ -3221,24 +3326,24 @@
                 const language = document.getElementById('lessonLanguage').value;
                 const ai = document.getElementById('aiAssistant').value;
                 const content = lessonContent.value.trim();
-                
+
                 if (!content) {
                     showToast('Please enter lesson content.', 'error');
                     return;
                 }
-                
+
                 if (countWords(content) > 1000) {
                     showToast('Lesson content exceeds 1000 words limit!', 'error');
                     return;
                 }
-                
+
                 completedItems.push({
                     id: Date.now(),
                     type: 'lesson',
                     text: `Lesson: ${topic} (${language}) - AI: ${ai}`,
                     timestamp: new Date().toLocaleString()
                 });
-                
+
                 saveToStorage();
                 renderCompleted();
                 showToast(`✅ Lesson submitted!`, 'success');
@@ -3247,32 +3352,32 @@
             function submitPrompt() {
                 const promptType = document.getElementById('promptType').value;
                 const promptText = customPrompt.value.trim();
-                
+
                 if (!promptText) {
                     showToast('Please enter a prompt.', 'error');
                     return;
                 }
-                
+
                 if (countWords(promptText) > 1000) {
                     showToast('Prompt exceeds 1000 words limit!', 'error');
                     return;
                 }
-                
+
                 completedItems.push({
                     id: Date.now(),
                     type: 'prompt',
                     text: `Prompt: ${promptType} - ${promptText.substring(0, 50)}...`,
                     timestamp: new Date().toLocaleString()
                 });
-                
+
                 saveToStorage();
                 renderCompleted();
                 showToast('✅ Prompt submitted!', 'success');
             }
 
             function saveLessonNotes() {
-                const notes = lessonNotes.value.trim();
-                if (countWords(notes) > 500) {
+                const notesVal = lessonNotes.value.trim();
+                if (countWords(notesVal) > 500) {
                     showToast('Notes exceed 500 words limit!', 'error');
                     return;
                 }
@@ -3285,7 +3390,7 @@
                 const encoded = encodeURIComponent(message);
                 const phoneNumber = '4158770687';
                 const smsUrl = `sms:${phoneNumber}?body=${encoded}`;
-                
+
                 try {
                     window.location.href = smsUrl;
                     showToast(`📱 Opening SMS to ${phoneNumber}...`, 'success');
@@ -3430,7 +3535,7 @@
                     updateNoteInputWordCounter();
                     showToast('📝 Creating new note...', 'success');
                 });
-                
+
                 document.getElementById('saveNoteBtn').addEventListener('click', saveNote);
                 document.getElementById('cancelNoteBtn').addEventListener('click', cancelNote);
                 document.getElementById('clearAllNotesBtn').addEventListener('click', clearAllNotes);
@@ -3466,6 +3571,7 @@
                     }
                     updateBriefingWordCounter();
                     localStorage.setItem('webswan_briefing', briefingText.value);
+                    scheduleFirebaseAutoSave();
                 });
 
                 aiChatMessage.addEventListener('input', () => {
@@ -3477,6 +3583,7 @@
                     updateAIChatWordCounter();
                     localStorage.setItem('webswan_aichat', aiChatMessage.value);
                     updateAILink();
+                    scheduleFirebaseAutoSave();
                 });
 
                 lessonContent.addEventListener('input', () => {
@@ -3487,6 +3594,7 @@
                     }
                     updateLessonContentWordCounter();
                     localStorage.setItem('webswan_lessoncontent', lessonContent.value);
+                    scheduleFirebaseAutoSave();
                 });
 
                 customPrompt.addEventListener('input', () => {
@@ -3497,6 +3605,7 @@
                     }
                     updatePromptWordCounter();
                     localStorage.setItem('webswan_prompt', customPrompt.value);
+                    scheduleFirebaseAutoSave();
                 });
 
                 lessonNotes.addEventListener('input', () => {
@@ -3507,6 +3616,7 @@
                     }
                     updateNotesWordCounter();
                     localStorage.setItem('webswan_lessonnotes', lessonNotes.value);
+                    scheduleFirebaseAutoSave();
                 });
 
                 generalCommentEl.addEventListener('input', () => {
@@ -3517,6 +3627,7 @@
                     }
                     updateGeneralWordCounter();
                     localStorage.setItem('webswan_general', generalCommentEl.value);
+                    scheduleFirebaseAutoSave();
                 });
 
                 updateTodoWordCounter();
