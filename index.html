@@ -1237,6 +1237,109 @@
             background: #28a745;
             border-color: #28a745;
         }
+
+        /* ===== LEAD SEARCH BAR ===== */
+        .lead-search-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 1rem;
+            background: white;
+            border-radius: 20px;
+            padding: 0.7rem 1.2rem;
+            border: 1.5px solid #d4eaf5;
+            box-shadow: 0 4px 10px rgba(0, 60, 100, 0.05);
+        }
+        .lead-search-bar i.fa-search {
+            color: #0077b6;
+        }
+        .lead-search-bar input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 0.95rem;
+            background: transparent;
+            color: #034b77;
+        }
+        .lead-search-count {
+            font-size: 0.75rem;
+            color: #2c7da0;
+            white-space: nowrap;
+        }
+        .lead-search-clear {
+            display: none;
+            padding: 0.3rem 0.8rem;
+            font-size: 0.75rem;
+            border-color: #e74c3c;
+            color: #e74c3c;
+        }
+
+        /* ===== HIGHLIGHT FEATURE ===== */
+        [data-highlight] {
+            border-radius: 14px;
+            transition: background 0.2s ease, box-shadow 0.2s ease;
+        }
+        .field-group[data-highlight],
+        .todo-item[data-highlight] {
+            padding: 8px;
+            margin: -8px -8px 6px -8px;
+        }
+        [data-highlight="yellow"] { background: #fff9c4 !important; box-shadow: inset 0 0 0 2px #fbc02d; }
+        [data-highlight="green"]  { background: #e8f5e9 !important; box-shadow: inset 0 0 0 2px #43a047; }
+        [data-highlight="red"]    { background: #ffebee !important; box-shadow: inset 0 0 0 2px #e53935; }
+        [data-highlight="blue"]   { background: #e3f2fd !important; box-shadow: inset 0 0 0 2px #1e88e5; }
+        [data-highlight="orange"] { background: #fff3e0 !important; box-shadow: inset 0 0 0 2px #fb8c00; }
+
+        .hl-selecting {
+            outline: 2px dashed #0077b6 !important;
+            outline-offset: 3px;
+            border-radius: 12px;
+        }
+
+        #highlightToolbar {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 9998;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+        }
+        #highlightColorPicker {
+            display: none;
+            background: white;
+            border-radius: 24px;
+            padding: 10px 14px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+            gap: 8px;
+            align-items: center;
+        }
+        #highlightColorPicker.show {
+            display: flex;
+        }
+        .hl-swatch {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px solid rgba(0,0,0,0.15);
+            cursor: pointer;
+            padding: 0;
+            transition: transform 0.15s;
+        }
+        .hl-swatch:hover {
+            transform: scale(1.15);
+        }
+        #highlightMainBtn {
+            border-radius: 50px;
+            box-shadow: 0 8px 20px rgba(0,60,110,0.3);
+        }
+        @media (max-width: 640px) {
+            #highlightToolbar {
+                bottom: 16px;
+                right: 16px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1295,23 +1398,23 @@
                 <div class="lead-form">
                     <h3><i class="fas fa-leaf" style="color:#0077b6;"></i> Lead Form</h3>
                     <div class="lead-form-grid">
-                        <div class="field-group">
+                        <div class="field-group" data-hlkey="leadForm-name">
                             <label><i class="fas fa-user"></i> Name</label>
                             <input type="text" id="leadFormName" placeholder="Enter full name..." />
                         </div>
-                        <div class="field-group">
+                        <div class="field-group" data-hlkey="leadForm-phone">
                             <label><i class="fas fa-phone"></i> Phone</label>
                             <input type="tel" id="leadFormPhone" placeholder="Enter phone number..." />
                         </div>
-                        <div class="field-group">
+                        <div class="field-group" data-hlkey="leadForm-email">
                             <label><i class="fas fa-envelope"></i> Email</label>
                             <input type="email" id="leadFormEmail" placeholder="Enter email address..." />
                         </div>
-                        <div class="field-group">
+                        <div class="field-group" data-hlkey="leadForm-url">
                             <label><i class="fas fa-link"></i> URL</label>
                             <input type="url" id="leadFormUrl" placeholder="Enter website URL..." />
                         </div>
-                        <div class="field-group full-width">
+                        <div class="field-group full-width" data-hlkey="leadForm-comment">
                             <label><i class="fas fa-comment"></i> Notes / Comments</label>
                             <textarea id="leadFormComment" placeholder="Add any additional notes..." maxlength="1200" style="min-height:80px;"></textarea>
                             <div class="word-counter" id="leadFormWordCount">0 / 200 words</div>
@@ -1322,8 +1425,17 @@
                         <button class="btn btn-google-task" id="googleTaskBtn"><i class="fas fa-list-check"></i> Google Task</button>
                         <button class="btn btn-google-calendar" id="googleCalendarBtn"><i class="fas fa-calendar-plus"></i> Google Calendar</button>
                         <button class="btn btn-google-sheet" id="googleSheetBtn"><i class="fas fa-table"></i> Google Sheet</button>
+                        <button class="btn" id="crmBtn" style="background:#e91e63;color:white;border-color:#e91e63;"><i class="fas fa-database"></i> CRM</button>
                         <button class="btn btn-outline" id="clearFormBtn"><i class="fas fa-undo"></i> Clear Form</button>
                     </div>
+                </div>
+
+                <!-- ===== LEAD SEARCH BAR ===== -->
+                <div class="lead-search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="leadSearchInput" placeholder="Search leads by name..." />
+                    <span class="lead-search-count" id="leadSearchCount"></span>
+                    <button class="btn btn-outline lead-search-clear" id="leadSearchClearBtn"><i class="fas fa-times"></i></button>
                 </div>
 
                 <!-- ===== LEADS CONTAINER (saved leads) ===== -->
@@ -1546,6 +1658,18 @@
         </div>
     </div>
 
+    <!-- ===== HIGHLIGHT TOOLBAR ===== -->
+    <div id="highlightToolbar">
+        <div id="highlightColorPicker">
+            <button class="hl-swatch" data-color="yellow" style="background:#fff59d;" title="Yellow"></button>
+            <button class="hl-swatch" data-color="green" style="background:#a5d6a7;" title="Green"></button>
+            <button class="hl-swatch" data-color="red" style="background:#ef9a9a;" title="Red"></button>
+            <button class="hl-swatch" data-color="blue" style="background:#90caf9;" title="Blue"></button>
+            <button class="hl-swatch" data-color="orange" style="background:#ffcc80;" title="Orange"></button>
+        </div>
+        <button class="btn btn-primary" id="highlightMainBtn"><i class="fas fa-highlighter"></i> Highlight</button>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
         import {
@@ -1743,6 +1867,9 @@
             let appInitialized = false;
             let editingNoteId = null;
             let currentNoteId = null;
+            let highlights = {};
+            let selectedHighlightEl = null;
+            let selectedHighlightKey = null;
 
             const container = document.getElementById('leadsContainer');
             const todoContainer = document.getElementById('todoContainer');
@@ -1848,6 +1975,84 @@
                 const words = countWords(noteContentInput.value);
                 noteInputWordCount.textContent = `${words} / 5000 words`;
                 noteInputWordCount.style.color = words > 5000 ? '#b22222' : '#6d28d9';
+            }
+
+            // ===== HIGHLIGHT FEATURE =====
+            function loadHighlights() {
+                try {
+                    const stored = localStorage.getItem('webswan_highlights');
+                    highlights = stored ? JSON.parse(stored) : {};
+                    if (typeof highlights !== 'object' || highlights === null || Array.isArray(highlights)) {
+                        highlights = {};
+                    }
+                } catch (e) {
+                    highlights = {};
+                }
+            }
+
+            function saveHighlightsToStorage() {
+                localStorage.setItem('webswan_highlights', JSON.stringify(highlights));
+            }
+
+            function applyHighlightToElement(el, color) {
+                if (!el) return;
+                if (color) {
+                    el.setAttribute('data-highlight', color);
+                } else {
+                    el.removeAttribute('data-highlight');
+                }
+            }
+
+            function applyAllHighlights() {
+                document.querySelectorAll('[data-hlkey]').forEach(el => {
+                    const key = el.dataset.hlkey;
+                    applyHighlightToElement(el, highlights[key] || null);
+                });
+            }
+
+            function clearHighlightSelection() {
+                if (selectedHighlightEl) selectedHighlightEl.classList.remove('hl-selecting');
+                selectedHighlightEl = null;
+                selectedHighlightKey = null;
+                const picker = document.getElementById('highlightColorPicker');
+                if (picker) picker.classList.remove('show');
+            }
+
+            // ===== LEAD SEARCH =====
+            function filterLeadsBySearch() {
+                const searchInput = document.getElementById('leadSearchInput');
+                const clearBtn = document.getElementById('leadSearchClearBtn');
+                const countLabel = document.getElementById('leadSearchCount');
+                if (!searchInput || !container) return;
+
+                const query = searchInput.value.trim().toLowerCase();
+                const cards = container.querySelectorAll('.lead-card');
+
+                if (!query) {
+                    cards.forEach(card => { card.style.display = ''; });
+                    if (clearBtn) clearBtn.style.display = 'none';
+                    if (countLabel) countLabel.textContent = '';
+                    return;
+                }
+
+                if (clearBtn) clearBtn.style.display = 'inline-flex';
+                let matches = 0;
+                let firstMatch = null;
+                cards.forEach(card => {
+                    const leadId = parseInt(card.dataset.leadId);
+                    const lead = leads.find(l => l.id === leadId);
+                    const name = (lead && lead.name ? lead.name : '').toLowerCase();
+                    if (name.includes(query)) {
+                        card.style.display = '';
+                        matches++;
+                        if (!firstMatch) firstMatch = card;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+                if (countLabel) {
+                    countLabel.textContent = matches === 0 ? 'No matches' : `${matches} match${matches === 1 ? '' : 'es'} found`;
+                }
             }
 
             function readStoredArrayForReport(key) {
@@ -2835,6 +3040,32 @@
                 }
             }
 
+            const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwfAVJ2lzemCMFroJCEZHJLJ45VXpoMoLbL6EOZK2cPlBxg5PlANoLObLD2p3k4AEVAsA/exec';
+
+            async function sendLeadToAppsScript(lead) {
+                try {
+                    const response = await fetch(APPS_SCRIPT_URL, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            name: lead.name,
+                            phone: lead.phone,
+                            email: lead.email,
+                            url: lead.url,
+                            comment: lead.comment
+                        }),
+                        mode: 'no-cors'
+                    });
+
+                    showToast('✅ Lead saved to Calendar, Tasks, and Sheets!', 'success');
+                } catch (error) {
+                    console.error('Error sending lead to Apps Script:', error);
+                    showToast('Error saving lead: ' + error.message, 'error');
+                }
+            }
+
             async function sendLeadToGoogleTasks() {
                 const lead = getLeadFormData();
                 if (!hasLeadFormData(lead)) {
@@ -2842,36 +3073,17 @@
                     return;
                 }
 
-                const taskText = `Follow up with ${lead.name || 'new lead'}\n\n${buildLeadDetails(lead)}`;
-                window.open(GOOGLE_TASKS_URL, '_blank', 'noopener,noreferrer');
-                await copyTextSafely(taskText);
-                showToast('Lead copied. Paste it into the new Google Task.', 'success');
+                await sendLeadToAppsScript(lead);
             }
 
-            function formatGoogleCalendarDate(date) {
-                const pad = value => String(value).padStart(2, '0');
-                return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}T${pad(date.getHours())}${pad(date.getMinutes())}00`;
-            }
-
-            function sendLeadToGoogleCalendar() {
+            async function sendLeadToGoogleCalendar() {
                 const lead = getLeadFormData();
                 if (!hasLeadFormData(lead)) {
                     showToast('Please fill in at least one lead field first.', 'error');
                     return;
                 }
 
-                const start = new Date();
-                start.setDate(start.getDate() + 1);
-                start.setHours(9, 0, 0, 0);
-                const end = new Date(start.getTime() + 30 * 60 * 1000);
-                const params = new URLSearchParams({
-                    action: 'TEMPLATE',
-                    text: `Follow up with ${lead.name || 'new lead'}`,
-                    dates: `${formatGoogleCalendarDate(start)}/${formatGoogleCalendarDate(end)}`,
-                    details: buildLeadDetails(lead)
-                });
-                window.open(`https://calendar.google.com/calendar/u/0/r/eventedit?${params.toString()}`, '_blank', 'noopener,noreferrer');
-                showToast('Google Calendar opened with the lead details.', 'success');
+                await sendLeadToAppsScript(lead);
             }
 
             async function sendLeadToGoogleSheet() {
@@ -2881,17 +3093,20 @@
                     return;
                 }
 
-                const row = [
-                    new Date().toLocaleString(),
-                    lead.name,
-                    lead.phone,
-                    lead.email,
-                    lead.url,
-                    lead.comment
-                ].join('\t');
-                window.open(GOOGLE_SHEET_URL, '_blank', 'noopener,noreferrer');
-                await copyTextSafely(row);
-                showToast('Lead row copied. Paste it into the next empty Sheet row.', 'success');
+                await sendLeadToAppsScript(lead);
+            }
+
+            function openCRM() {
+                const lead = getLeadFormData();
+                if (!hasLeadFormData(lead)) {
+                    showToast('Please fill in at least one lead field first.', 'error');
+                    return;
+                }
+
+                const crmUrl = 'https://taniad2169.github.io/WebSwan-CRM-GoogleSheet/';
+                const leadData = `?name=${encodeURIComponent(lead.name)}&phone=${encodeURIComponent(lead.phone)}&email=${encodeURIComponent(lead.email)}&url=${encodeURIComponent(lead.url)}&comment=${encodeURIComponent(lead.comment)}`;
+                window.open(crmUrl + leadData, '_blank', 'noopener,noreferrer');
+                showToast('Opening CRM... Remember to mark as "Hot Lead" before saving! 🔥', 'success');
             }
 
             function submitLeadForm() {
@@ -3472,10 +3687,12 @@
                 loadFromStorage();
                 loadGeneralComment();
                 loadNotesFromStorage();
+                loadHighlights();
                 renderLeads();
                 renderTodos();
                 renderCompleted();
                 renderNotesDropdown();
+                applyAllHighlights();
                 updateBriefingWordCounter();
                 updateAIChatWordCounter();
                 updateLessonContentWordCounter();
@@ -3513,6 +3730,7 @@
                 document.getElementById('googleTaskBtn').addEventListener('click', sendLeadToGoogleTasks);
                 document.getElementById('googleCalendarBtn').addEventListener('click', sendLeadToGoogleCalendar);
                 document.getElementById('googleSheetBtn').addEventListener('click', sendLeadToGoogleSheet);
+                document.getElementById('crmBtn').addEventListener('click', openCRM);
                 document.getElementById('clearFormBtn').addEventListener('click', clearLeadForm);
 
                 copyLinkBtn.addEventListener('click', copyLink);
@@ -3631,6 +3849,79 @@
                 });
 
                 updateTodoWordCounter();
+
+                // ===== LEAD SEARCH WIRING =====
+                const leadSearchInput = document.getElementById('leadSearchInput');
+                const leadSearchClearBtn = document.getElementById('leadSearchClearBtn');
+                if (leadSearchInput) {
+                    leadSearchInput.addEventListener('input', filterLeadsBySearch);
+                }
+                if (leadSearchClearBtn) {
+                    leadSearchClearBtn.addEventListener('click', () => {
+                        if (leadSearchInput) leadSearchInput.value = '';
+                        filterLeadsBySearch();
+                        if (leadSearchInput) leadSearchInput.focus();
+                    });
+                }
+
+                // ===== HIGHLIGHT WIRING =====
+                // Selecting content: click any element carrying data-hlkey to
+                // mark it selected (dashed outline). Clicking elsewhere clears
+                // the selection. Clicks inside the highlight toolbar itself are
+                // ignored here so they don't fight with the toolbar's own logic.
+                document.addEventListener('click', function(e) {
+                    const toolbar = document.getElementById('highlightToolbar');
+                    if (toolbar && toolbar.contains(e.target)) return;
+
+                    const target = e.target.closest('[data-hlkey]');
+                    if (target) {
+                        if (selectedHighlightEl && selectedHighlightEl !== target) {
+                            selectedHighlightEl.classList.remove('hl-selecting');
+                        }
+                        selectedHighlightEl = target;
+                        selectedHighlightKey = target.dataset.hlkey;
+                        target.classList.add('hl-selecting');
+                        const picker = document.getElementById('highlightColorPicker');
+                        if (picker) picker.classList.remove('show');
+                    } else {
+                        clearHighlightSelection();
+                    }
+                });
+
+                const highlightMainBtn = document.getElementById('highlightMainBtn');
+                if (highlightMainBtn) {
+                    highlightMainBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        if (!selectedHighlightEl || !selectedHighlightKey) {
+                            showToast('👆 Click a name, comment, or field first, then press Highlight.', 'error');
+                            return;
+                        }
+                        const key = selectedHighlightKey;
+                        if (highlights[key]) {
+                            delete highlights[key];
+                            applyHighlightToElement(selectedHighlightEl, null);
+                            saveHighlightsToStorage();
+                            showToast('✅ Highlight removed', 'success');
+                            clearHighlightSelection();
+                        } else {
+                            const picker = document.getElementById('highlightColorPicker');
+                            if (picker) picker.classList.add('show');
+                        }
+                    });
+                }
+
+                document.querySelectorAll('.hl-swatch').forEach(swatch => {
+                    swatch.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        if (!selectedHighlightEl || !selectedHighlightKey) return;
+                        const color = this.dataset.color;
+                        highlights[selectedHighlightKey] = color;
+                        applyHighlightToElement(selectedHighlightEl, color);
+                        saveHighlightsToStorage();
+                        showToast(`🖍️ Highlighted ${color}!`, 'success');
+                        clearHighlightSelection();
+                    });
+                });
 
                 const existingFirebaseUser = window.dailyFirebase && window.dailyFirebase.currentUser
                     ? window.dailyFirebase.currentUser()
