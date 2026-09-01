@@ -1280,7 +1280,8 @@
             transition: background 0.2s ease, box-shadow 0.2s ease;
         }
         .field-group[data-highlight],
-        .todo-item[data-highlight] {
+        .todo-item[data-highlight],
+        .briefing-section[data-highlight] {
             padding: 8px;
             margin: -8px -8px 6px -8px;
         }
@@ -1452,7 +1453,7 @@
                 </div>
 
                 <!-- ===== BRIEFING SECTION ===== -->
-                <div class="briefing-section">
+                <div class="briefing-section" data-hlkey="briefing">
                     <h3><i class="fas fa-clipboard-list" style="color:#0077b6;"></i> Briefing <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(5000 words max - stretches as you type)</span></h3>
                     <textarea id="briefingText" placeholder="Write your detailed briefing here... This container stretches as you type!" maxlength="30000" style="min-height:150px;"></textarea>
                     <div class="word-counter" id="briefingWordCount">0 / 5000 words</div>
@@ -1639,7 +1640,7 @@
                     </div>
 
                     <div id="noteInputArea" style="display:none; margin-bottom: 1rem; transition: all 0.4s ease;">
-                        <div class="field-group">
+                        <div class="field-group" data-hlkey="noteEditor">
                             <label><i class="fas fa-pen"></i> Note Content (5000 words max - stretches)</label>
                             <textarea id="noteContentInput" placeholder="Write your note content here..." maxlength="30000" style="min-height:150px;resize:vertical;"></textarea>
                             <div class="notes-word-counter" id="noteInputWordCount">0 / 5000 words</div>
@@ -3186,13 +3187,14 @@
                     const grid = document.createElement('div');
                     grid.className = 'lead-grid';
 
-                    grid.appendChild(createField('Name', 'text', lead.name, (val) => { lead.name = val; saveToStorage(); }));
-                    grid.appendChild(createField('Phone', 'tel', lead.phone, (val) => { lead.phone = val; saveToStorage(); }));
-                    grid.appendChild(createField('Email', 'email', lead.email, (val) => { lead.email = val; saveToStorage(); }));
-                    grid.appendChild(createField('URL', 'url', lead.url, (val) => { lead.url = val; saveToStorage(); }));
+                    grid.appendChild(createField('Name', 'text', lead.name, (val) => { lead.name = val; saveToStorage(); }, `lead-${lead.id}-name`));
+                    grid.appendChild(createField('Phone', 'tel', lead.phone, (val) => { lead.phone = val; saveToStorage(); }, `lead-${lead.id}-phone`));
+                    grid.appendChild(createField('Email', 'email', lead.email, (val) => { lead.email = val; saveToStorage(); }, `lead-${lead.id}-email`));
+                    grid.appendChild(createField('URL', 'url', lead.url, (val) => { lead.url = val; saveToStorage(); }, `lead-${lead.id}-url`));
 
                     const comboWrapper = document.createElement('div');
                     comboWrapper.className = 'field-group';
+                    comboWrapper.dataset.hlkey = `lead-${lead.id}-action`;
                     const combo = document.createElement('div');
                     combo.style.display = 'flex';
                     combo.style.flexDirection = 'column';
@@ -3235,6 +3237,7 @@
 
                     const commentGroup = document.createElement('div');
                     commentGroup.className = 'field-group comment-box';
+                    commentGroup.dataset.hlkey = `lead-${lead.id}-comment`;
                     const commentLabel = document.createElement('label');
                     commentLabel.innerHTML = '<i class="fas fa-comment"></i> Lead comment (200 words)';
                     const textarea = document.createElement('textarea');
@@ -3347,9 +3350,10 @@
                 showToast('🗑️ Lead deleted!', 'success');
             }
 
-            function createField(labelText, type, value, onChange) {
+            function createField(labelText, type, value, onChange, hlkey) {
                 const div = document.createElement('div');
                 div.className = 'field-group';
+                if (hlkey) div.dataset.hlkey = hlkey;
                 const label = document.createElement('label');
                 label.textContent = labelText;
                 const input = document.createElement('input');
@@ -3400,6 +3404,7 @@
                 todos.forEach((todo) => {
                     const div = document.createElement('div');
                     div.className = 'todo-item';
+                    div.dataset.hlkey = `todo-${todo.id}`;
                     if (todo.completed) div.classList.add('completed-todo');
 
                     const checkbox = document.createElement('input');
