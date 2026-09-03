@@ -1335,6 +1335,79 @@
             border-radius: 50px;
             box-shadow: 0 8px 20px rgba(0,60,110,0.3);
         }
+        #highlightModeBtn {
+            border-radius: 50px;
+            background: white;
+            white-space: nowrap;
+        }
+        #highlightModeBtn.text-mode {
+            background: #0077b6;
+            color: white;
+        }
+        #highlightModeBtn.text-mode i {
+            color: white;
+        }
+        .hl-mode-hint {
+            display: none;
+            position: fixed;
+            bottom: 78px;
+            right: 24px;
+            z-index: 9998;
+            background: #0a1e2f;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 14px;
+            font-size: 0.78rem;
+            max-width: 220px;
+            text-align: right;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+        }
+        .hl-mode-hint.show {
+            display: block;
+        }
+        /* ===== TEXT-LEVEL (partial) HIGHLIGHTING ===== */
+        .hl-text-wrap {
+            position: relative;
+        }
+        .hl-text-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            border: 1.5px solid transparent;
+            border-radius: 20px;
+            padding: 0.6rem 1rem;
+            font-size: 0.9rem;
+            font-family: inherit;
+            line-height: normal;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            overflow: hidden;
+            color: transparent;
+            pointer-events: none;
+            box-sizing: border-box;
+        }
+        .hl-text-wrap textarea,
+        .hl-text-wrap input {
+            position: relative;
+            background: transparent !important;
+        }
+        .hl-text-overlay mark {
+            border-radius: 2px;
+            color: transparent;
+            padding: 0;
+        }
+        .hl-text-overlay mark[data-color="yellow"] { background: #fff59d; }
+        .hl-text-overlay mark[data-color="green"]  { background: #a5d6a7; }
+        .hl-text-overlay mark[data-color="red"]    { background: #ef9a9a; }
+        .hl-text-overlay mark[data-color="blue"]   { background: #90caf9; }
+        .hl-text-overlay mark[data-color="orange"] { background: #ffcc80; }
+        [data-hlmode-active="true"] {
+            outline: 2px dashed #0077b6 !important;
+            outline-offset: 2px;
+        }
         @media (max-width: 640px) {
             #highlightToolbar {
                 bottom: 16px;
@@ -1668,8 +1741,10 @@
             <button class="hl-swatch" data-color="blue" style="background:#90caf9;" title="Blue"></button>
             <button class="hl-swatch" data-color="orange" style="background:#ffcc80;" title="Orange"></button>
         </div>
+        <button class="btn btn-outline" id="highlightModeBtn" style="border-color:#0077b6;" title="Switch between highlighting a whole field or just the text you select inside it"><i class="fas fa-toggle-off"></i> Whole Field</button>
         <button class="btn btn-primary" id="highlightMainBtn"><i class="fas fa-highlighter"></i> Highlight</button>
     </div>
+    <div id="highlightModeHint" class="hl-mode-hint">Text mode: click into a field, select the words you want, then press Highlight.</div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
@@ -1871,6 +1946,9 @@
             let highlights = {};
             let selectedHighlightEl = null;
             let selectedHighlightKey = null;
+            let highlightMode = 'field'; // 'field' = highlight the whole box, 'text' = highlight just the selected words
+            let textHighlights = {}; // { fieldKey: [{start, end, color}, ...] }
+            let activeTextField = null; // the input/textarea the user is currently working in, in text mode
 
             const container = document.getElementById('leadsContainer');
             const todoContainer = document.getElementById('todoContainer');
@@ -1989,10 +2067,23 @@
                 } catch (e) {
                     highlights = {};
                 }
+                try {
+                    const storedText = localStorage.getItem('webswan_text_highlights');
+                    textHighlights = storedText ? JSON.parse(storedText) : {};
+                    if (typeof textHighlights !== 'object' || textHighlights === null || Array.isArray(textHighlights)) {
+                        textHighlights = {};
+                    }
+                } catch (e) {
+                    textHighlights = {};
+                }
             }
 
             function saveHighlightsToStorage() {
                 localStorage.setItem('webswan_highlights', JSON.stringify(highlights));
+            }
+
+            function saveTextHighlightsToStorage() {
+                localStorage.setItem('webswan_text_highlights', JSON.stringify(textHighlights));
             }
 
             function applyHighlightToElement(el, color) {
@@ -2009,6 +2100,99 @@
                     const key = el.dataset.hlkey;
                     applyHighlightToElement(el, highlights[key] || null);
                 });
+            }
+
+            // ===== TEXT-LEVEL (partial) HIGHLIGHTING =====
+            // Finds the actual input/textarea inside a [data-hlkey] field-group,
+            // since that's what the user actually types and selects text in.
+            function getFieldControl(fieldGroupEl) {
+                if (!fieldGroupEl) return null;
+                return fieldGroupEl.querySelector('textarea, input[type="text"], input[type="email"], input[type="tel"], input[type="url"]');
+            }
+
+            function escapeHtmlForOverlay(v) {
+                return String(v).replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
+            }
+
+            // Builds/refreshes the colored overlay sitting behind a field so
+            // specific highlighted words show through, without turning the
+            // field itself into something that can't still be typed in.
+            function renderTextOverlayForField(fieldKey) {
+                const fieldGroup = document.querySelector(`[data-hlkey="${CSS.escape(fieldKey)}"]`);
+                const control = getFieldControl(fieldGroup);
+                if (!control) return;
+
+                const ranges = (textHighlights[fieldKey] || []).slice().sort((a, b) => a.start - b.start);
+                let wrap = control.parentElement;
+                if (!wrap || !wrap.classList.contains('hl-text-wrap')) {
+                    wrap = document.createElement('div');
+                    wrap.className = 'hl-text-wrap';
+                    control.parentNode.insertBefore(wrap, control);
+                    wrap.appendChild(control);
+                }
+
+                let overlay = wrap.querySelector('.hl-text-overlay');
+                if (!ranges.length) {
+                    if (overlay) overlay.remove();
+                    return;
+                }
+                if (!overlay) {
+                    overlay = document.createElement('div');
+                    overlay.className = 'hl-text-overlay';
+                    wrap.insertBefore(overlay, control);
+                }
+
+                const text = control.value || '';
+                let html = '';
+                let cursor = 0;
+                ranges.forEach(r => {
+                    const start = Math.max(0, Math.min(r.start, text.length));
+                    const end = Math.max(start, Math.min(r.end, text.length));
+                    if (start > cursor) html += escapeHtmlForOverlay(text.slice(cursor, start));
+                    if (end > start) html += `<mark data-color="${r.color}">${escapeHtmlForOverlay(text.slice(start, end))}</mark>`;
+                    cursor = Math.max(cursor, end);
+                });
+                html += escapeHtmlForOverlay(text.slice(cursor));
+                overlay.innerHTML = html;
+            }
+
+            function renderAllTextHighlights() {
+                Object.keys(textHighlights).forEach(key => {
+                    if (textHighlights[key] && textHighlights[key].length) renderTextOverlayForField(key);
+                });
+            }
+
+            // A field's saved highlight ranges are character positions. If the
+            // user edits that field's text, old positions would point at the
+            // wrong words - so on edit we drop that field's text highlights
+            // rather than show a misaligned, confusing overlay.
+            function clearTextHighlightsForField(fieldKey) {
+                if (textHighlights[fieldKey]) {
+                    delete textHighlights[fieldKey];
+                    saveTextHighlightsToStorage();
+                    renderTextOverlayForField(fieldKey);
+                }
+            }
+
+            function setHighlightMode(mode) {
+                highlightMode = mode;
+                const btn = document.getElementById('highlightModeBtn');
+                const hint = document.getElementById('highlightModeHint');
+                clearHighlightSelection();
+                activeTextField = null;
+                if (mode === 'text') {
+                    if (btn) {
+                        btn.classList.add('text-mode');
+                        btn.innerHTML = '<i class="fas fa-toggle-on"></i> Text Selection';
+                    }
+                    if (hint) hint.classList.add('show');
+                } else {
+                    if (btn) {
+                        btn.classList.remove('text-mode');
+                        btn.innerHTML = '<i class="fas fa-toggle-off"></i> Whole Field';
+                    }
+                    if (hint) hint.classList.remove('show');
+                }
             }
 
             function clearHighlightSelection() {
@@ -2717,6 +2901,8 @@
                 renderTodos();
                 renderCompleted();
                 renderNotesDropdown();
+                applyAllHighlights();
+                renderAllTextHighlights();
                 updateBriefingWordCounter();
                 updateAIChatWordCounter();
                 updateLessonContentWordCounter();
@@ -3339,6 +3525,11 @@
                     card.appendChild(actions);
                     container.appendChild(card);
                 });
+                // Re-render is a full DOM rebuild, so previously-attached
+                // highlight overlays are gone - rebuild them here every time
+                // so highlights never silently disappear after any edit.
+                applyAllHighlights();
+                renderAllTextHighlights();
             }
 
             function deleteLead(leadId) {
@@ -3431,6 +3622,7 @@
                     div.appendChild(deleteBtn);
                     todoContainer.appendChild(div);
                 });
+                applyAllHighlights();
             }
 
             function toggleTodoComplete(todoId) {
@@ -3698,6 +3890,7 @@
                 renderCompleted();
                 renderNotesDropdown();
                 applyAllHighlights();
+                renderAllTextHighlights();
                 updateBriefingWordCounter();
                 updateAIChatWordCounter();
                 updateLessonContentWordCounter();
@@ -3877,6 +4070,15 @@
                 document.addEventListener('click', function(e) {
                     const toolbar = document.getElementById('highlightToolbar');
                     if (toolbar && toolbar.contains(e.target)) return;
+                    if (document.getElementById('highlightModeHint')?.contains(e.target)) return;
+
+                    if (highlightMode === 'text') {
+                        // In text mode, selection is driven by which words the
+                        // user drags over inside a field (see the selectionchange
+                        // listener below) - a plain click just clears any stale
+                        // "whole field" selection state from field mode.
+                        return;
+                    }
 
                     const target = e.target.closest('[data-hlkey]');
                     if (target) {
@@ -3893,10 +4095,42 @@
                     }
                 });
 
+                // Text mode: track selected text inside whichever field the
+                // user is dragging over, so the Highlight button knows exactly
+                // which characters to mark once a color is chosen.
+                document.addEventListener('selectionchange', function() {
+                    if (highlightMode !== 'text') return;
+                    const el = document.activeElement;
+                    if (!el || !(el.tagName === 'TEXTAREA' || el.tagName === 'INPUT')) return;
+                    if (el.selectionStart === el.selectionEnd) return;
+                    const fieldGroup = el.closest('[data-hlkey]');
+                    if (!fieldGroup) return;
+                    activeTextField = { el, fieldKey: fieldGroup.dataset.hlkey, start: el.selectionStart, end: el.selectionEnd };
+                });
+
+                const highlightModeBtn = document.getElementById('highlightModeBtn');
+                if (highlightModeBtn) {
+                    highlightModeBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        setHighlightMode(highlightMode === 'field' ? 'text' : 'field');
+                    });
+                }
+
                 const highlightMainBtn = document.getElementById('highlightMainBtn');
                 if (highlightMainBtn) {
                     highlightMainBtn.addEventListener('click', function(e) {
                         e.stopPropagation();
+
+                        if (highlightMode === 'text') {
+                            if (!activeTextField || activeTextField.start === activeTextField.end) {
+                                showToast('👆 Click into a field and select some words first, then press Highlight.', 'error');
+                                return;
+                            }
+                            const picker = document.getElementById('highlightColorPicker');
+                            if (picker) picker.classList.add('show');
+                            return;
+                        }
+
                         if (!selectedHighlightEl || !selectedHighlightKey) {
                             showToast('👆 Click a name, comment, or field first, then press Highlight.', 'error');
                             return;
@@ -3918,14 +4152,40 @@
                 document.querySelectorAll('.hl-swatch').forEach(swatch => {
                     swatch.addEventListener('click', function(e) {
                         e.stopPropagation();
-                        if (!selectedHighlightEl || !selectedHighlightKey) return;
                         const color = this.dataset.color;
+
+                        if (highlightMode === 'text') {
+                            if (!activeTextField || activeTextField.start === activeTextField.end) return;
+                            const { fieldKey, start, end } = activeTextField;
+                            if (!textHighlights[fieldKey]) textHighlights[fieldKey] = [];
+                            textHighlights[fieldKey].push({ start, end, color });
+                            saveTextHighlightsToStorage();
+                            renderTextOverlayForField(fieldKey);
+                            showToast(`🖍️ Highlighted ${color}!`, 'success');
+                            const picker = document.getElementById('highlightColorPicker');
+                            if (picker) picker.classList.remove('show');
+                            activeTextField = null;
+                            return;
+                        }
+
+                        if (!selectedHighlightEl || !selectedHighlightKey) return;
                         highlights[selectedHighlightKey] = color;
                         applyHighlightToElement(selectedHighlightEl, color);
                         saveHighlightsToStorage();
                         showToast(`🖍️ Highlighted ${color}!`, 'success');
                         clearHighlightSelection();
                     });
+                });
+
+                // If a highlighted field's text is edited, its saved character
+                // positions would point at the wrong words - drop that field's
+                // text highlights on edit rather than show a garbled overlay.
+                document.addEventListener('input', function(e) {
+                    const el = e.target;
+                    if (!(el.tagName === 'TEXTAREA' || el.tagName === 'INPUT')) return;
+                    const fieldGroup = el.closest('[data-hlkey]');
+                    if (!fieldGroup) return;
+                    clearTextHighlightsForField(fieldGroup.dataset.hlkey);
                 });
 
                 const existingFirebaseUser = window.dailyFirebase && window.dailyFirebase.currentUser
