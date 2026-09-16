@@ -148,6 +148,45 @@
             color: #00b4d8;
             font-size: 1.8rem;
         }
+        #highlightCheatSheet {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 14px;
+            background: #f5faff;
+            border: 1.5px solid #d4eaf5;
+            border-radius: 20px;
+            padding: 10px 16px;
+            margin-bottom: 1.5rem;
+            font-size: 0.78rem;
+        }
+        #highlightCheatSheet .cheat-title {
+            font-weight: 700;
+            color: #023e8a;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        #highlightCheatSheet .cheat-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #2c4b66;
+            font-weight: 600;
+        }
+        #highlightCheatSheet .cheat-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 0 1.5px rgba(0,0,0,0.12) inset;
+        }
+        @media (max-width: 640px) {
+            #highlightCheatSheet {
+                gap: 8px 12px;
+                font-size: 0.72rem;
+            }
+        }
         .header-actions {
             display: flex;
             gap: 10px;
@@ -621,6 +660,28 @@
             color: #dc3545;
             background: #fff5f5;
         }
+        .completed-send-dropdown {
+            display: inline-flex;
+        }
+        .completed-send-btn {
+            background: #eef7ff;
+            border: 1.5px solid #b9ddf5;
+            color: #0077b6;
+            cursor: pointer;
+            font-size: 0.85rem;
+            padding: 5px 9px;
+            border-radius: 20px;
+            transition: 0.2s;
+        }
+        .completed-send-btn:hover {
+            background: #0077b6;
+            color: white;
+        }
+        .completed-send-dropdown .edit-dropdown-content .send-option i {
+            color: #0077b6;
+            margin-right: 6px;
+            width: 14px;
+        }
         .completed-empty {
             color: #a0aec0;
             font-style: italic;
@@ -814,7 +875,7 @@
             color: #0077b6;
             margin-right: 8px;
         }
- 
+
         .notes-section {
             background: white;
             border-radius: 28px;
@@ -844,7 +905,7 @@
             padding: 0.4rem 1rem;
             font-size: 0.8rem;
         }
- 
+
         .notes-dropdown-container {
             position: relative;
             display: inline-block;
@@ -927,7 +988,7 @@
             color: #dc3545;
             background: #fff5f5;
         }
- 
+
         .notes-textarea {
             width: 100%;
             min-height: 200px;
@@ -1045,7 +1106,7 @@
             background: #fef3c7;
             color: #d97706;
         }
- 
+
         .current-note-indicator {
             display: none;
             padding: 8px 14px;
@@ -1068,7 +1129,7 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
- 
+
         @media (max-width: 640px) {
             .app-container {
                 padding: 1rem;
@@ -1237,7 +1298,7 @@
             background: #28a745;
             border-color: #28a745;
         }
- 
+
         /* ===== LEAD SEARCH BAR ===== */
         .lead-search-bar {
             display: flex;
@@ -1273,7 +1334,7 @@
             border-color: #e74c3c;
             color: #e74c3c;
         }
- 
+
         /* ===== HIGHLIGHT FEATURE ===== */
         [data-highlight] {
             border-radius: 14px;
@@ -1296,13 +1357,13 @@
         [data-highlight="blue"] input, [data-highlight="blue"] textarea, [data-highlight="blue"] label { color: #ffffff !important; background: rgba(255,255,255,0.15) !important; }
         [data-highlight="green"] input, [data-highlight="green"] textarea,
         [data-highlight="blue"] input, [data-highlight="blue"] textarea { color: #0a1e2f !important; background: rgba(255,255,255,0.92) !important; }
- 
+
         .hl-selecting {
             outline: 2px dashed #0077b6 !important;
             outline-offset: 3px;
             border-radius: 12px;
         }
- 
+
         #highlightToolbar {
             position: fixed;
             bottom: 24px;
@@ -1420,7 +1481,7 @@
                 right: 16px;
             }
         }
- 
+
         /* ===== CALENDAR + TIME PICKER MODAL ===== */
         #calendarModalOverlay {
             display: none;
@@ -1583,9 +1644,9 @@
     </style>
 </head>
 <body>
- 
+
     <div id="toast" class="toast"></div>
- 
+
     <!-- ===== LOCK SCREEN ===== -->
     <div id="lockScreen">
         <div class="lock-container">
@@ -1605,7 +1666,7 @@
             </div>
         </div>
     </div>
- 
+
     <!-- ===== APP CONTENT ===== -->
     <div id="appContent">
         <div class="app-container">
@@ -1623,17 +1684,27 @@
                     <button class="btn btn-outline" id="lockAppBtn" style="border-color:#0077b6;"><i class="fas fa-lock"></i> Lock</button>
                 </div>
             </div>
- 
+
+            <!-- ===== HIGHLIGHT COLOR CHEAT SHEET ===== -->
+            <div id="highlightCheatSheet">
+                <span class="cheat-title"><i class="fas fa-highlighter"></i> Highlight Key:</span>
+                <span class="cheat-item"><span class="cheat-dot" style="background:#f57c00;"></span>Hot Lead</span>
+                <span class="cheat-item"><span class="cheat-dot" style="background:#1565c0;"></span>Initial Email/Report Sent</span>
+                <span class="cheat-item"><span class="cheat-dot" style="background:#2e7d32;"></span>Phone Follow-up</span>
+                <span class="cheat-item"><span class="cheat-dot" style="background:#ffd600;"></span>Continue Phone Follow-up</span>
+                <span class="cheat-item"><span class="cheat-dot" style="background:#ef9a9a;"></span>Future Call</span>
+            </div>
+
             <!-- Page Navigation -->
             <div class="page-nav">
                 <button class="btn btn-primary page-btn active" data-page="tasks"><i class="fas fa-tasks"></i> Tasks</button>
                 <button class="btn btn-purple page-btn" data-page="lessons"><i class="fas fa-graduation-cap"></i> Lessons</button>
                 <button class="btn btn-notes page-btn" data-page="notes"><i class="fas fa-sticky-note"></i> Notes</button>
             </div>
- 
+
             <!-- ===== PAGE 1: TASKS ===== -->
             <div id="page-tasks" class="page active">
- 
+
                 <!-- ===== LEAD FORM ===== -->
                 <div class="lead-form">
                     <h3><i class="fas fa-leaf" style="color:#0077b6;"></i> Lead Form</h3>
@@ -1669,7 +1740,7 @@
                         <button class="btn btn-outline" id="clearFormBtn"><i class="fas fa-undo"></i> Clear Form</button>
                     </div>
                 </div>
- 
+
                 <!-- ===== LEAD SEARCH BAR ===== -->
                 <div class="lead-search-bar">
                     <i class="fas fa-search"></i>
@@ -1677,10 +1748,10 @@
                     <span class="lead-search-count" id="leadSearchCount"></span>
                     <button class="btn btn-outline lead-search-clear" id="leadSearchClearBtn"><i class="fas fa-times"></i></button>
                 </div>
- 
+
                 <!-- ===== LEADS CONTAINER (saved leads) ===== -->
                 <div id="leadsContainer"></div>
- 
+
                 <div class="todo-section">
                     <h3><i class="fas fa-tasks" style="color:#0077b6;"></i> Personal To-Do <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(250 words max)</span></h3>
                     <div id="todoContainer"></div>
@@ -1690,14 +1761,14 @@
                     </div>
                     <div class="word-counter" id="todoWordCount">0 / 250 words</div>
                 </div>
- 
+
                 <!-- ===== BRIEFING SECTION ===== -->
                 <div class="briefing-section" data-hlkey="briefing">
                     <h3><i class="fas fa-clipboard-list" style="color:#0077b6;"></i> Briefing <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(5000 words max - stretches as you type)</span></h3>
                     <textarea id="briefingText" placeholder="Write your detailed briefing here... This container stretches as you type!" maxlength="30000" style="min-height:150px;"></textarea>
                     <div class="word-counter" id="briefingWordCount">0 / 5000 words</div>
                 </div>
- 
+
                 <!-- ===== AI CHAT SECTION ===== -->
                 <div class="ai-chat-section">
                     <h3><i class="fas fa-robot" style="color:#6f42c1;"></i> AI Chat <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">- Select AI to chat with</span></h3>
@@ -1722,7 +1793,7 @@
                         <a href="#" id="aiChatLinkBtn" class="ai-link-btn chatgpt" target="_blank"><i class="fas fa-external-link-alt"></i> Open AI Chat</a>
                     </div>
                 </div>
- 
+
                 <!-- ===== COMPLETED TASKS ===== -->
                 <div class="completed-section">
                     <h3><i class="fas fa-check-circle"></i> Completed Tasks</h3>
@@ -1730,13 +1801,13 @@
                         <div class="completed-empty">No completed tasks yet. Submit a lead or complete a to-do to see them here! ✅</div>
                     </div>
                 </div>
- 
+
                 <div class="general-comment" id="generalCommentBox">
                     <label><i class="fas fa-sticky-note" style="color:#0077b6;"></i> Daily general comment <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(max 500 words)</span></label>
                     <textarea id="generalComment" placeholder="Write your daily summary, notes, or anything..." maxlength="3000"></textarea>
                     <div class="word-counter" id="generalWordCount">0 / 500 words</div>
                 </div>
- 
+
                 <!-- ===== COPY LINK SECTION ===== -->
                 <div class="copy-link-section">
                     <div class="link-display">
@@ -1745,7 +1816,7 @@
                     <button class="btn btn-copy" id="copyLinkBtn"><i class="fas fa-copy"></i> Copy Link</button>
                     <button class="btn btn-outline" id="shareLinkBtn" style="border-color:#1da1f2;color:#1da1f2;"><i class="fas fa-share-alt"></i> Share</button>
                 </div>
- 
+
                 <div class="footer-bar">
                     <button class="btn btn-primary" id="globalSaveBtn"><i class="fas fa-save"></i> Save all</button>
                     <button class="btn btn-success" id="exportDataBtn"><i class="fas fa-download"></i> Backup Data</button>
@@ -1755,12 +1826,12 @@
                     <button class="btn btn-outline" id="clearDataBtn" style="border-color:#e74c3c;color:#e74c3c;"><i class="fas fa-trash"></i> Clear</button>
                 </div>
             </div>
- 
+
             <!-- ===== PAGE 2: LESSONS ===== -->
             <div id="page-lessons" class="page">
                 <div class="lessons-container">
                     <h2><i class="fas fa-graduation-cap" style="color:#6f42c1;"></i> WebSwan Lessons</h2>
- 
+
                     <div class="lesson-card">
                         <h4><i class="fas fa-code" style="color:#0077b6;"></i> Coding Lessons <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(1000 words max - stretches)</span></h4>
                         <div class="lesson-grid">
@@ -1809,7 +1880,7 @@
                             <button class="btn btn-purple" id="codingSubmitBtn"><i class="fas fa-paper-plane"></i> Submit Lesson</button>
                         </div>
                     </div>
- 
+
                     <div class="lesson-card">
                         <h4><i class="fas fa-brain" style="color:#6f42c1;"></i> AI Prompts & Instructions <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(1000 words max - stretches)</span></h4>
                         <div class="field-group" style="margin-bottom: 1rem;">
@@ -1831,7 +1902,7 @@
                             <button class="btn btn-purple" id="promptSubmitBtn"><i class="fas fa-paper-plane"></i> Submit Prompt</button>
                         </div>
                     </div>
- 
+
                     <div class="lesson-card">
                         <h4><i class="fas fa-sticky-note" style="color:#6f42c1;"></i> Lesson Notes <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(500 words max - stretches)</span></h4>
                         <div class="field-group">
@@ -1843,21 +1914,21 @@
                             <button class="btn btn-purple" id="notesSubmitBtn"><i class="fas fa-save"></i> Save Notes</button>
                         </div>
                     </div>
- 
+
                     <div class="footer-bar" style="margin-top:1.5rem;">
                         <button class="btn btn-sms" id="lessonsSmsBtn"><i class="fas fa-sms"></i> Send Lessons to 415-877-0687</button>
                     </div>
                 </div>
             </div>
- 
+
             <!-- ===== PAGE 3: NOTES ===== -->
             <div id="page-notes" class="page">
                 <div class="notes-section">
                     <h3><i class="fas fa-sticky-note"></i> 📝 Notes <span style="font-weight:400;font-size:0.75rem;color:#6d28d9;">(5000 words max per note - all saved)</span></h3>
- 
+
                     <div class="notes-controls">
                         <button class="btn btn-notes" id="addNoteBtn"><i class="fas fa-plus"></i> New Note</button>
- 
+
                         <div class="notes-dropdown-container">
                             <button class="btn notes-dropdown-btn" id="notesDropdownBtn">
                                 <i class="fas fa-folder-open"></i> Saved Notes <span id="notesCountBadge" style="background:rgba(255,255,255,0.2);padding:0 8px;border-radius:10px;font-size:0.7rem;">0</span>
@@ -1866,18 +1937,18 @@
                                 <div class="notes-dropdown-empty">No saved notes yet.</div>
                             </div>
                         </div>
- 
+
                         <button class="btn btn-outline" id="clearAllNotesBtn" style="border-color:#e74c3c;color:#e74c3c;"><i class="fas fa-trash"></i> Clear All</button>
                         <span class="notes-save-indicator saved" id="notesSaveIndicator"><i class="fas fa-check"></i> Saved</span>
                     </div>
- 
+
                     <div class="current-note-indicator" id="currentNoteIndicator">
                         <i class="fas fa-pen"></i>
                         <span>Editing: </span>
                         <span class="note-title-display" id="currentNoteTitle">Untitled</span>
                         <button class="btn btn-outline" id="closeNoteBtn" style="padding:2px 10px;font-size:0.7rem;border-color:#e74c3c;color:#e74c3c;margin-left:auto;"><i class="fas fa-times"></i> Close</button>
                     </div>
- 
+
                     <div id="noteInputArea" style="display:none; margin-bottom: 1rem; transition: all 0.4s ease;">
                         <div class="field-group" data-hlkey="noteEditor">
                             <label><i class="fas fa-pen"></i> Note Content (5000 words max - stretches)</label>
@@ -1889,7 +1960,7 @@
                             <button class="btn btn-outline" id="cancelNoteBtn"><i class="fas fa-times"></i> Cancel</button>
                         </div>
                     </div>
- 
+
                     <div class="notes-list" id="notesListContainer">
                         <div class="notes-empty">No notes yet. Click "New Note" to create your first note! 📝</div>
                     </div>
@@ -1897,7 +1968,7 @@
             </div>
         </div>
     </div>
- 
+
     <!-- ===== HIGHLIGHT TOOLBAR ===== -->
     <div id="highlightToolbar">
         <div id="highlightColorPicker">
@@ -1911,7 +1982,7 @@
         <button class="btn btn-primary" id="highlightMainBtn"><i class="fas fa-highlighter"></i> Highlight</button>
     </div>
     <div id="highlightModeHint" class="hl-mode-hint">Text mode: click into a field, select the words you want, then press Highlight.</div>
- 
+
     <!-- ===== CALENDAR + TIME PICKER MODAL ===== -->
     <div id="calendarModalOverlay">
         <div class="cal-modal-box">
@@ -1935,7 +2006,7 @@
             </div>
         </div>
     </div>
- 
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
         import {
@@ -1952,7 +2023,7 @@
             setDoc,
             serverTimestamp
         } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
- 
+
         const firebaseConfig = {
             apiKey: "AIzaSyBxuPZnF8rSZPkmoeqNR_9PQtFUJNKU3JM",
             authDomain: "webswan-gigoia-task.firebaseapp.com",
@@ -1962,13 +2033,13 @@
             appId: "1:970866236717:web:63ddb5c2557d083b8bc7a4",
             measurementId: "G-YQ70H661LZ"
         };
- 
+
         const firebaseApp = initializeApp(firebaseConfig);
         const auth = getAuth(firebaseApp);
         const db = getFirestore(firebaseApp);
         const googleProvider = new GoogleAuthProvider();
         googleProvider.setCustomParameters({ prompt: 'select_account' });
- 
+
         window.dailyFirebase = {
             signIn: () => signInWithPopup(auth, googleProvider),
             signOut: () => signOut(auth),
@@ -1986,7 +2057,7 @@
                 }, { merge: true });
             }
         };
- 
+
         onAuthStateChanged(auth, (user) => {
             window.dispatchEvent(new CustomEvent('daily-auth-changed', {
                 detail: user ? {
@@ -1996,10 +2067,10 @@
                 } : null
             }));
         });
- 
+
         window.dispatchEvent(new Event('daily-firebase-ready'));
     </script>
- 
+
     <script>
         (function() {
             // ===== TOAST SYSTEM =====
@@ -2011,7 +2082,7 @@
                     toast.classList.remove('show');
                 }, 3500);
             }
- 
+
             // ===== PAGE NAVIGATION =====
             const pageBtns = document.querySelectorAll('.page-btn');
             const pages = {
@@ -2019,7 +2090,7 @@
                 lessons: document.getElementById('page-lessons'),
                 notes: document.getElementById('page-notes')
             };
- 
+
             pageBtns.forEach(btn => {
                 btn.addEventListener('click', function() {
                     const page = this.dataset.page;
@@ -2032,16 +2103,16 @@
                     localStorage.setItem('webswan_page', page);
                 });
             });
- 
+
             const lastPage = localStorage.getItem('webswan_page') || 'tasks';
             document.querySelector(`.page-btn[data-page="${lastPage}"]`)?.click();
- 
+
             // ===== LOCK SYSTEM =====
             let firstLockCount = 0;
             let secondLockCount = 0;
             let firstLockDone = false;
             let isUnlocked = false;
- 
+
             const lockScreen = document.getElementById('lockScreen');
             const appContent = document.getElementById('appContent');
             const firstLockContainer = document.getElementById('firstLockContainer');
@@ -2050,7 +2121,7 @@
             const secondLockEmoji = document.getElementById('secondLockEmoji');
             const firstLockStatus = document.getElementById('firstLockStatus');
             const secondLockStatus = document.getElementById('secondLockStatus');
- 
+
             function resetLocks() {
                 firstLockCount = 0;
                 secondLockCount = 0;
@@ -2064,25 +2135,25 @@
                 secondLockContainer.classList.remove('show');
                 secondLockContainer.style.display = 'none';
             }
- 
+
             firstLockEmoji.addEventListener('click', function(e) {
                 e.stopPropagation();
                 if (isUnlocked) return;
                 if (firstLockDone) return;
- 
+
                 firstLockCount++;
- 
+
                 if (firstLockCount < 7) {
                     firstLockStatus.textContent = '🔐';
                     firstLockStatus.style.color = '#ffd700';
                 }
- 
+
                 if (firstLockCount >= 7) {
                     firstLockDone = true;
                     firstLockStatus.textContent = '✅';
                     firstLockStatus.style.color = '#00ff88';
                     firstLockStatus.style.fontWeight = 'bold';
- 
+
                     setTimeout(function() {
                         firstLockContainer.style.display = 'none';
                         secondLockContainer.classList.add('show');
@@ -2093,25 +2164,25 @@
                     }, 400);
                 }
             });
- 
+
             secondLockEmoji.addEventListener('click', function(e) {
                 e.stopPropagation();
                 if (isUnlocked) return;
                 if (!firstLockDone) return;
- 
+
                 secondLockCount++;
- 
+
                 if (secondLockCount < 3) {
                     secondLockStatus.textContent = '🗝️';
                     secondLockStatus.style.color = '#ffd700';
                 }
- 
+
                 if (secondLockCount >= 3) {
                     secondLockStatus.textContent = '🔓';
                     secondLockStatus.style.color = '#00ff88';
                     secondLockStatus.style.fontWeight = 'bold';
                     secondLockEmoji.classList.add('pulse');
- 
+
                     setTimeout(function() {
                         isUnlocked = true;
                         lockScreen.classList.add('hidden');
@@ -2121,7 +2192,7 @@
                     }, 500);
                 }
             });
- 
+
             // ===== APP LOGIC =====
             let leads = [];
             let todos = [];
@@ -2142,7 +2213,7 @@
             let calSelectedDate = null; // {year, month, day}
             let calSelectedTime = null; // e.g. "6:00 AM"
             let calViewYear, calViewMonth; // 0-indexed month for the visible calendar page
- 
+
             const container = document.getElementById('leadsContainer');
             const todoContainer = document.getElementById('todoContainer');
             const completedContainer = document.getElementById('completedContainer');
@@ -2150,21 +2221,21 @@
             const generalWordCount = document.getElementById('generalWordCount');
             const todoInput = document.getElementById('todoInput');
             const todoWordCount = document.getElementById('todoWordCount');
- 
+
             const leadFormName = document.getElementById('leadFormName');
             const leadFormPhone = document.getElementById('leadFormPhone');
             const leadFormEmail = document.getElementById('leadFormEmail');
             const leadFormUrl = document.getElementById('leadFormUrl');
             const leadFormComment = document.getElementById('leadFormComment');
             const leadFormWordCount = document.getElementById('leadFormWordCount');
- 
+
             const copyLinkBtn = document.getElementById('copyLinkBtn');
             const shareLinkBtn = document.getElementById('shareLinkBtn');
             const shareLinkText = document.getElementById('shareLinkText');
             const APP_URL = 'https://taniad2169.github.io/Daily-task/';
             const GOOGLE_TASKS_URL = 'https://tasks.google.com/tasks/?utm_source=OGB&utm_medium=app';
             const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1kNq7gwY_hW7HAFP4UAnCpW30ntYj7rXXD5L_O5NpH_I/edit?usp=drivesdk';
- 
+
             const briefingText = document.getElementById('briefingText');
             const briefingWordCount = document.getElementById('briefingWordCount');
             const aiChatMessage = document.getElementById('aiChatMessage');
@@ -2177,7 +2248,7 @@
             const promptWordCount = document.getElementById('promptWordCount');
             const lessonNotes = document.getElementById('lessonNotes');
             const notesWordCount = document.getElementById('notesWordCount');
- 
+
             const noteContentInput = document.getElementById('noteContentInput');
             const noteInputWordCount = document.getElementById('noteInputWordCount');
             const notesListContainer = document.getElementById('notesListContainer');
@@ -2189,66 +2260,66 @@
             const currentNoteIndicator = document.getElementById('currentNoteIndicator');
             const currentNoteTitle = document.getElementById('currentNoteTitle');
             const closeNoteBtn = document.getElementById('closeNoteBtn');
- 
+
             function countWords(text) {
                 if (!text) return 0;
                 return text.trim().split(/\s+/).filter(w => w.length > 0).length;
             }
- 
+
             function updateGeneralWordCounter() {
                 const words = countWords(generalCommentEl.value);
                 generalWordCount.textContent = `${words} / 500 words`;
                 generalWordCount.style.color = words > 500 ? '#b22222' : '#2c7da0';
             }
- 
+
             function updateTodoWordCounter() {
                 const words = countWords(todoInput.value);
                 todoWordCount.textContent = `${words} / 250 words`;
                 todoWordCount.style.color = words > 250 ? '#b22222' : '#2c7da0';
             }
- 
+
             function updateLeadFormWordCounter() {
                 const words = countWords(leadFormComment.value);
                 leadFormWordCount.textContent = `${words} / 200 words`;
                 leadFormWordCount.style.color = words > 200 ? '#b22222' : '#2c7da0';
             }
- 
+
             function updateBriefingWordCounter() {
                 const words = countWords(briefingText.value);
                 briefingWordCount.textContent = `${words} / 5000 words`;
                 briefingWordCount.style.color = words > 5000 ? '#b22222' : '#2c7da0';
             }
- 
+
             function updateAIChatWordCounter() {
                 const words = countWords(aiChatMessage.value);
                 aiChatWordCount.textContent = `${words} / 1000 words`;
                 aiChatWordCount.style.color = words > 1000 ? '#b22222' : '#2c7da0';
             }
- 
+
             function updateLessonContentWordCounter() {
                 const words = countWords(lessonContent.value);
                 lessonContentWordCount.textContent = `${words} / 1000 words`;
                 lessonContentWordCount.style.color = words > 1000 ? '#b22222' : '#2c7da0';
             }
- 
+
             function updatePromptWordCounter() {
                 const words = countWords(customPrompt.value);
                 promptWordCount.textContent = `${words} / 1000 words`;
                 promptWordCount.style.color = words > 1000 ? '#b22222' : '#2c7da0';
             }
- 
+
             function updateNotesWordCounter() {
                 const words = countWords(lessonNotes.value);
                 notesWordCount.textContent = `${words} / 500 words`;
                 notesWordCount.style.color = words > 500 ? '#b22222' : '#2c7da0';
             }
- 
+
             function updateNoteInputWordCounter() {
                 const words = countWords(noteContentInput.value);
                 noteInputWordCount.textContent = `${words} / 5000 words`;
                 noteInputWordCount.style.color = words > 5000 ? '#b22222' : '#6d28d9';
             }
- 
+
             // ===== HIGHLIGHT FEATURE =====
             function loadHighlights() {
                 try {
@@ -2270,15 +2341,15 @@
                     textHighlights = {};
                 }
             }
- 
+
             function saveHighlightsToStorage() {
                 localStorage.setItem('webswan_highlights', JSON.stringify(highlights));
             }
- 
+
             function saveTextHighlightsToStorage() {
                 localStorage.setItem('webswan_text_highlights', JSON.stringify(textHighlights));
             }
- 
+
             function applyHighlightToElement(el, color) {
                 if (!el) return;
                 if (color) {
@@ -2287,14 +2358,14 @@
                     el.removeAttribute('data-highlight');
                 }
             }
- 
+
             function applyAllHighlights() {
                 document.querySelectorAll('[data-hlkey]').forEach(el => {
                     const key = el.dataset.hlkey;
                     applyHighlightToElement(el, highlights[key] || null);
                 });
             }
- 
+
             // ===== TEXT-LEVEL (partial) HIGHLIGHTING =====
             // Finds the actual input/textarea inside a [data-hlkey] field-group,
             // since that's what the user actually types and selects text in.
@@ -2302,11 +2373,11 @@
                 if (!fieldGroupEl) return null;
                 return fieldGroupEl.querySelector('textarea, input[type="text"], input[type="email"], input[type="tel"], input[type="url"]');
             }
- 
+
             function escapeHtmlForOverlay(v) {
                 return String(v).replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
             }
- 
+
             // Builds/refreshes the colored overlay sitting behind a field so
             // specific highlighted words show through, without turning the
             // field itself into something that can't still be typed in.
@@ -2314,7 +2385,7 @@
                 const fieldGroup = document.querySelector(`[data-hlkey="${CSS.escape(fieldKey)}"]`);
                 const control = getFieldControl(fieldGroup);
                 if (!control) return;
- 
+
                 const ranges = (textHighlights[fieldKey] || []).slice().sort((a, b) => a.start - b.start);
                 let wrap = control.parentElement;
                 if (!wrap || !wrap.classList.contains('hl-text-wrap')) {
@@ -2323,7 +2394,7 @@
                     control.parentNode.insertBefore(wrap, control);
                     wrap.appendChild(control);
                 }
- 
+
                 let overlay = wrap.querySelector('.hl-text-overlay');
                 if (!ranges.length) {
                     if (overlay) overlay.remove();
@@ -2334,7 +2405,7 @@
                     overlay.className = 'hl-text-overlay';
                     wrap.insertBefore(overlay, control);
                 }
- 
+
                 const text = control.value || '';
                 let html = '';
                 let cursor = 0;
@@ -2348,13 +2419,13 @@
                 html += escapeHtmlForOverlay(text.slice(cursor));
                 overlay.innerHTML = html;
             }
- 
+
             function renderAllTextHighlights() {
                 Object.keys(textHighlights).forEach(key => {
                     if (textHighlights[key] && textHighlights[key].length) renderTextOverlayForField(key);
                 });
             }
- 
+
             // A field's saved highlight ranges are character positions. If the
             // user edits that field's text, old positions would point at the
             // wrong words - so on edit we drop that field's text highlights
@@ -2366,7 +2437,7 @@
                     renderTextOverlayForField(fieldKey);
                 }
             }
- 
+
             function setHighlightMode(mode) {
                 highlightMode = mode;
                 const btn = document.getElementById('highlightModeBtn');
@@ -2387,7 +2458,7 @@
                     if (hint) hint.classList.remove('show');
                 }
             }
- 
+
             function clearHighlightSelection() {
                 if (selectedHighlightEl) selectedHighlightEl.classList.remove('hl-selecting');
                 selectedHighlightEl = null;
@@ -2395,24 +2466,24 @@
                 const picker = document.getElementById('highlightColorPicker');
                 if (picker) picker.classList.remove('show');
             }
- 
+
             // ===== LEAD SEARCH =====
             function filterLeadsBySearch() {
                 const searchInput = document.getElementById('leadSearchInput');
                 const clearBtn = document.getElementById('leadSearchClearBtn');
                 const countLabel = document.getElementById('leadSearchCount');
                 if (!searchInput || !container) return;
- 
+
                 const query = searchInput.value.trim().toLowerCase();
                 const cards = container.querySelectorAll('.lead-card');
- 
+
                 if (!query) {
                     cards.forEach(card => { card.style.display = ''; });
                     if (clearBtn) clearBtn.style.display = 'none';
                     if (countLabel) countLabel.textContent = '';
                     return;
                 }
- 
+
                 if (clearBtn) clearBtn.style.display = 'inline-flex';
                 let matches = 0;
                 let firstMatch = null;
@@ -2432,7 +2503,7 @@
                     countLabel.textContent = matches === 0 ? 'No matches' : `${matches} match${matches === 1 ? '' : 'es'} found`;
                 }
             }
- 
+
             function readStoredArrayForReport(key) {
                 try {
                     const value = JSON.parse(localStorage.getItem(key) || '[]');
@@ -2441,7 +2512,7 @@
                     return [];
                 }
             }
- 
+
             function readLeadCardFromScreen(card) {
                 const record = {};
                 card.querySelectorAll('.field-group').forEach((group) => {
@@ -2458,14 +2529,14 @@
                 });
                 return record;
             }
- 
+
             // ===== BUILD STRICT CLIENT REPORT =====
             // This is an explicit whitelist: only filled lead-form fields,
             // lead comments, and the Briefing field may leave the suite.
             // The Notes page and every other section are never read here.
             function buildCompleteReport() {
                 let message = '📋 *WebSwan Client Activity Report* 📋\n\n';
- 
+
                 const currentForm = {
                     name: leadFormName.value.trim(),
                     phone: leadFormPhone.value.trim(),
@@ -2481,7 +2552,7 @@
                     message += `   URL: ${currentForm.url || 'Not entered'}\n`;
                     message += `   Comments: ${currentForm.comment || 'None'}\n\n`;
                 }
- 
+
                 message += '📌 *LEADS*\n';
                 const storedLeadsForReport = readStoredArrayForReport('webswan_leads');
                 const reportLeads = leads.length ? leads : storedLeadsForReport;
@@ -2507,18 +2578,18 @@
                         });
                     });
                 }
- 
+
                 if (briefingText.value.trim()) {
                     message += '\n📋 *BRIEFING*\n';
                     message += briefingText.value;
                 }
- 
+
                 message += '\n\n📅 ' + new Date().toLocaleString();
                 message += '\n📱 Sent via WebSwan Suite';
- 
+
                 return message;
             }
- 
+
             async function copyCompleteReport(message) {
                 try {
                     await navigator.clipboard.writeText(message);
@@ -2536,7 +2607,7 @@
                     return copied;
                 }
             }
- 
+
             function openAIWithCompleteReport(url, name, icon) {
                 const message = buildCompleteReport();
                 const aiWindow = window.open(url, '_blank', 'noopener,noreferrer');
@@ -2550,27 +2621,27 @@
                 });
                 if (!aiWindow) window.location.href = url;
             }
- 
+
             // ===== SEND TO CHATGPT =====
             function sendToChatGPT() {
                 openAIWithCompleteReport('https://chatgpt.com/', 'ChatGPT', '💬');
             }
- 
+
             // ===== SEND TO GEMINI =====
             function sendToGemini() {
                 openAIWithCompleteReport('https://gemini.google.com/app', 'Gemini', '🤖');
             }
- 
+
             // ===== SEND TO CLAUDE =====
             function sendToClaude() {
                 openAIWithCompleteReport('https://claude.ai/new', 'Claude', '🧠');
             }
- 
+
             // ===== SEND TO WHATSAPP =====
             async function sendWhatsApp() {
                 const message = buildCompleteReport();
                 const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
- 
+
                 // On Android/iPhone, the native share sheet passes the complete
                 // report directly to WhatsApp without putting a long report in a URL.
                 if (isMobileDevice && navigator.share) {
@@ -2589,7 +2660,7 @@
                         // Continue to the WhatsApp web fallback below.
                     }
                 }
- 
+
                 // Windows/Desktop: begin copying while the click is still an
                 // active user gesture, then launch the installed app with a
                 // short command. Passing the full report through the protocol
@@ -2605,14 +2676,14 @@
                     );
                 });
             }
- 
+
             // ===== SEND SMS =====
             function sendSMS() {
                 const message = buildCompleteReport();
                 const encoded = encodeURIComponent(message);
                 const phoneNumber = '4158770687';
                 const smsUrl = `sms:${phoneNumber}?body=${encoded}`;
- 
+
                 try {
                     window.location.href = smsUrl;
                     showToast(`📱 Opening SMS to ${phoneNumber}...`, 'success');
@@ -2624,9 +2695,9 @@
                     });
                 }
             }
- 
+
             // ===== NOTES FUNCTIONS =====
- 
+
             function getNoteTitle(content) {
                 if (!content) return 'Untitled';
                 const lines = content.split('\n').filter(line => line.trim().length > 0);
@@ -2634,33 +2705,33 @@
                 const firstLine = lines[0].trim();
                 return firstLine.length > 50 ? firstLine.substring(0, 50) + '...' : firstLine;
             }
- 
+
             function renderNotesDropdown() {
                 if (!notesDropdownContent) return;
- 
+
                 notesDropdownContent.innerHTML = '';
- 
+
                 if (notes.length === 0) {
                     notesDropdownContent.innerHTML = '<div class="notes-dropdown-empty">No saved notes yet. 📝</div>';
                     notesCountBadge.textContent = '0';
                     return;
                 }
- 
+
                 notesCountBadge.textContent = notes.length;
- 
+
                 const sorted = [...notes].reverse();
                 sorted.forEach(note => {
                     const item = document.createElement('div');
                     item.className = 'notes-dropdown-item';
- 
+
                     const title = document.createElement('span');
                     title.className = 'note-title';
                     title.textContent = getNoteTitle(note.content);
- 
+
                     const status = document.createElement('span');
                     status.className = 'note-status' + (note.completed ? ' completed' : '');
                     status.textContent = note.completed ? '✅' : '📝';
- 
+
                     const deleteBtn = document.createElement('button');
                     deleteBtn.className = 'delete-note-dropdown';
                     deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
@@ -2678,41 +2749,41 @@
                             showToast('🗑️ Note deleted!', 'success');
                         }
                     });
- 
+
                     item.appendChild(status);
                     item.appendChild(title);
                     item.appendChild(deleteBtn);
- 
+
                     item.addEventListener('click', function() {
                         openNote(note.id);
                         notesDropdownContent.classList.remove('show');
                     });
- 
+
                     notesDropdownContent.appendChild(item);
                 });
             }
- 
+
             function openNote(noteId) {
                 const note = notes.find(n => n.id === noteId);
                 if (!note) {
                     showToast('Note not found.', 'error');
                     return;
                 }
- 
+
                 currentNoteId = noteId;
                 editingNoteId = noteId;
                 noteContentInput.value = note.content;
                 updateNoteInputWordCounter();
- 
+
                 noteInputArea.style.display = 'block';
                 currentNoteIndicator.classList.add('visible');
                 currentNoteTitle.textContent = getNoteTitle(note.content);
                 document.getElementById('saveNoteBtn').textContent = '<i class="fas fa-save"></i> Update Note';
- 
+
                 noteInputArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 showToast('📖 Note loaded: ' + getNoteTitle(note.content), 'success');
             }
- 
+
             function closeCurrentNote() {
                 currentNoteId = null;
                 editingNoteId = null;
@@ -2722,7 +2793,7 @@
                 currentNoteIndicator.classList.remove('visible');
                 document.getElementById('saveNoteBtn').textContent = '<i class="fas fa-save"></i> Save Note';
             }
- 
+
             function saveNote() {
                 const content = noteContentInput.value.trim();
                 if (!content) {
@@ -2733,7 +2804,7 @@
                     showToast('Note exceeds 5000 words limit!', 'error');
                     return;
                 }
- 
+
                 if (editingNoteId !== null) {
                     const note = notes.find(n => n.id === editingNoteId);
                     if (note) {
@@ -2756,7 +2827,7 @@
                     renderNotesDropdown();
                     showToast('✅ New note saved!', 'success');
                 }
- 
+
                 noteContentInput.value = '';
                 updateNoteInputWordCounter();
                 noteInputArea.style.display = 'none';
@@ -2765,7 +2836,7 @@
                 editingNoteId = null;
                 document.getElementById('saveNoteBtn').textContent = '<i class="fas fa-save"></i> Save Note';
             }
- 
+
             function cancelNote() {
                 noteContentInput.value = '';
                 updateNoteInputWordCounter();
@@ -2776,7 +2847,7 @@
                 document.getElementById('saveNoteBtn').textContent = '<i class="fas fa-save"></i> Save Note';
                 showToast('✖️ Cancelled', 'success');
             }
- 
+
             function clearAllNotes() {
                 if (notes.length === 0) {
                     showToast('No notes to clear.', 'error');
@@ -2790,14 +2861,14 @@
                     showToast('🗑️ All notes cleared!', 'success');
                 }
             }
- 
+
             function saveNotesToStorage() {
                 localStorage.setItem('webswan_saved_notes', JSON.stringify(notes));
                 updateSaveIndicator(true);
                 notesCountBadge.textContent = notes.length;
                 scheduleFirebaseAutoSave();
             }
- 
+
             function loadNotesFromStorage() {
                 try {
                     let stored = localStorage.getItem('webswan_saved_notes');
@@ -2830,7 +2901,7 @@
                 renderNotesDropdown();
                 notesCountBadge.textContent = notes.length;
             }
- 
+
             function updateSaveIndicator(saved = true) {
                 if (notesSaveIndicator) {
                     if (saved) {
@@ -2842,18 +2913,18 @@
                     }
                 }
             }
- 
+
             function toggleNotesDropdown() {
                 notesDropdownContent.classList.toggle('show');
             }
- 
+
             document.addEventListener('click', function(e) {
                 const container = document.querySelector('.notes-dropdown-container');
                 if (container && !container.contains(e.target)) {
                     notesDropdownContent.classList.remove('show');
                 }
             });
- 
+
             // ===== AI CHAT LINKS =====
             function updateAILink() {
                 const selected = aiChatSelect.value;
@@ -2883,10 +2954,10 @@
                 }
                 aiChatLinkBtn.href = url;
             }
- 
+
             aiChatSelect.addEventListener('change', updateAILink);
             aiChatMessage.addEventListener('input', updateAILink);
- 
+
             function sendAIChat() {
                 const message = aiChatMessage.value.trim();
                 if (!message) {
@@ -2900,7 +2971,7 @@
                 aiChatLinkBtn.click();
                 showToast(`📤 Sending to ${aiChatSelect.options[aiChatSelect.selectedIndex].text}...`, 'success');
             }
- 
+
             // ===== COPY LINK =====
             function copyLink() {
                 const link = APP_URL;
@@ -2920,7 +2991,7 @@
                     fallbackCopyLink(link);
                 }
             }
- 
+
             function fallbackCopyLink(link) {
                 const textarea = document.createElement('textarea');
                 textarea.value = link;
@@ -2942,7 +3013,7 @@
                 }
                 document.body.removeChild(textarea);
             }
- 
+
             function shareLink() {
                 const link = APP_URL;
                 if (navigator.share) {
@@ -2960,7 +3031,7 @@
                     showToast('📋 Link copied! Share it anywhere.', 'success');
                 }
             }
- 
+
             // ----- COMPLETE DATA BACKUP / RESTORE -----
             // These are every storage key used by current and older Daily Task versions.
             const DAILY_TASK_STORAGE_KEYS = [
@@ -2977,11 +3048,11 @@
                 'webswan_saved_notes',
                 'webswan_notes'
             ];
- 
+
             let firebaseUser = null;
             let firebaseSyncBusy = false;
             let firebaseAutoSaveTimer = null;
- 
+
             function collectStoredDailyTaskData() {
                 const data = {};
                 DAILY_TASK_STORAGE_KEYS.forEach((key) => {
@@ -2990,14 +3061,14 @@
                 });
                 return data;
             }
- 
+
             function hasMeaningfulDailyTaskData(data) {
                 return Object.entries(data).some(([key, value]) => {
                     if (key === 'webswan_page' || value === '' || value === '[]' || value === '{}') return false;
                     return true;
                 });
             }
- 
+
             function applyStoredDailyTaskData(data) {
                 DAILY_TASK_STORAGE_KEYS.forEach((key) => {
                     if (Object.prototype.hasOwnProperty.call(data, key)) {
@@ -3007,7 +3078,7 @@
                     }
                 });
             }
- 
+
             // ----- NON-DESTRUCTIVE MERGE HELPERS -----
             // The old sync logic could pick ONE side (local OR remote) and
             // wholesale overwrite the other with it. If Firebase hadn't been
@@ -3039,7 +3110,7 @@
                 ingest(safeRemote);
                 return order.map(id => byId.get(id));
             }
- 
+
             function mergeJsonArrayStrings(localJson, remoteJson) {
                 let localArr = [];
                 let remoteArr = [];
@@ -3049,7 +3120,7 @@
                 if (!Array.isArray(remoteArr)) remoteArr = [];
                 return JSON.stringify(mergeRecordArrays(localArr, remoteArr));
             }
- 
+
             // For freeform text fields there is no reliable way to "merge" two
             // edited paragraphs, so the rule is: never let a non-empty value be
             // replaced by an emptier one. Prefer whichever side has MORE text,
@@ -3062,11 +3133,11 @@
                 if (!r) return l;
                 return l.length >= r.length ? l : r;
             }
- 
+
             const ARRAY_STORAGE_KEYS = new Set([
                 'webswan_leads', 'webswan_todos', 'webswan_completed', 'webswan_saved_notes'
             ]);
- 
+
             function mergeDailyTaskData(localData, remoteData) {
                 const merged = {};
                 const allKeys = new Set([...Object.keys(localData || {}), ...Object.keys(remoteData || {})]);
@@ -3085,7 +3156,7 @@
                 });
                 return merged;
             }
- 
+
             function refreshDailyTaskFromStorage() {
                 loadFromStorage();
                 loadGeneralComment();
@@ -3104,7 +3175,7 @@
                 updateLeadFormWordCounter();
                 updateNoteInputWordCounter();
             }
- 
+
             function updateFirebaseControls(message, connected = false) {
                 const button = document.getElementById('firebaseAuthBtn');
                 const status = document.getElementById('firebaseSyncStatus');
@@ -3115,7 +3186,7 @@
                 status.textContent = message || (firebaseUser ? 'Firebase connected' : 'Local backup active');
                 status.classList.toggle('connected', connected);
             }
- 
+
             async function saveDailyTaskToFirebase(showSuccess = true) {
                 if (!firebaseUser || !window.dailyFirebase || firebaseSyncBusy) return false;
                 firebaseSyncBusy = true;
@@ -3135,7 +3206,7 @@
                     firebaseSyncBusy = false;
                 }
             }
- 
+
             // Auto-push to Firebase a couple seconds after any local edit, so the
             // cloud copy almost never lags far behind what's on screen. This is
             // what keeps the merge-on-reconnect step above from ever having to
@@ -3148,7 +3219,7 @@
                     saveDailyTaskToFirebase(false);
                 }, 2000);
             }
- 
+
             async function synchronizeDailyTaskAfterSignIn() {
                 if (!firebaseUser || !window.dailyFirebase || !appInitialized || firebaseSyncBusy) return;
                 firebaseSyncBusy = true; updateFirebaseControls('Checking Firebase…', true);
@@ -3159,7 +3230,7 @@
                     const remoteRecord = await window.dailyFirebase.load(firebaseUser.uid);
                     const remoteData = remoteRecord && remoteRecord.storage ? remoteRecord.storage : null;
                     const remoteHasData = remoteData && hasMeaningfulDailyTaskData(remoteData);
- 
+
                     if (!remoteData || !remoteHasData) {
                         // Nothing usable in Firebase yet - just push what's here.
                         if (localHasData) {
@@ -3170,12 +3241,12 @@
                         }
                         return;
                     }
- 
+
                     if (JSON.stringify(remoteData) === JSON.stringify(localData)) {
                         updateFirebaseControls('Firebase synced', true);
                         return;
                     }
- 
+
                     // Both sides have something and they differ: merge them together
                     // (union of leads/todos/notes, longer text wins) instead of
                     // picking one side and discarding the other. Nothing the user
@@ -3189,7 +3260,7 @@
                 } catch (error) { console.error('Firebase synchronization failed:', error); updateFirebaseControls('Firebase connection failed', false); showToast('❌ Firebase could not synchronize. Your local data is still safe.', 'error'); }
                 finally { firebaseSyncBusy = false; }
             }
- 
+
             async function toggleFirebaseAuthentication() {
                 if (!window.dailyFirebase) {
                     showToast('Firebase is still loading. Please try again.', 'error');
@@ -3210,7 +3281,7 @@
                     showToast('❌ ' + message, 'error');
                 }
             }
- 
+
             window.addEventListener('daily-auth-changed', (event) => {
                 firebaseUser = event.detail;
                 if (firebaseUser) {
@@ -3220,24 +3291,24 @@
                     updateFirebaseControls('Local backup active', false);
                 }
             });
- 
+
             function exportAllData() {
                 // Capture anything currently typed on screen before making the backup.
                 saveToStorage();
- 
+
                 const storedData = {};
                 DAILY_TASK_STORAGE_KEYS.forEach((key) => {
                     const value = localStorage.getItem(key);
                     if (value !== null) storedData[key] = value;
                 });
- 
+
                 const backup = {
                     app: 'WebSwan Daily Task',
                     version: 2,
                     exportedAt: new Date().toISOString(),
                     data: storedData
                 };
- 
+
                 const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
                 const link = document.createElement('a');
@@ -3250,11 +3321,11 @@
                 URL.revokeObjectURL(url);
                 showToast('✅ Complete Daily Task backup downloaded!', 'success');
             }
- 
+
             function importAllData(event) {
                 const file = event.target.files && event.target.files[0];
                 if (!file) return;
- 
+
                 const reader = new FileReader();
                 reader.onload = function() {
                     try {
@@ -3262,12 +3333,12 @@
                         if (!backup || backup.app !== 'WebSwan Daily Task' || !backup.data) {
                             throw new Error('Invalid Daily Task backup');
                         }
- 
+
                         if (!confirm('Restore this Daily Task backup? It will replace the data currently saved in this browser.')) {
                             event.target.value = '';
                             return;
                         }
- 
+
                         DAILY_TASK_STORAGE_KEYS.forEach((key) => {
                             if (Object.prototype.hasOwnProperty.call(backup.data, key)) {
                                 localStorage.setItem(key, backup.data[key]);
@@ -3275,7 +3346,7 @@
                                 localStorage.removeItem(key);
                             }
                         });
- 
+
                         showToast('✅ Backup restored! Reloading your information...', 'success');
                         setTimeout(() => window.location.reload(), 900);
                     } catch (error) {
@@ -3289,7 +3360,7 @@
                 };
                 reader.readAsText(file);
             }
- 
+
             // ----- STORAGE -----
             function loadFromStorage() {
                 try {
@@ -3304,7 +3375,7 @@
                         nextId = 1;
                     }
                     leads = leads.map(l => ({ ...l, customDropdown: l.customDropdown || '', completed: l.completed || false }));
- 
+
                     const storedTodos = localStorage.getItem('webswan_todos');
                     if (storedTodos) {
                         todos = JSON.parse(storedTodos);
@@ -3315,26 +3386,26 @@
                         todos = [];
                         nextTodoId = 1;
                     }
- 
+
                     const storedCompleted = localStorage.getItem('webswan_completed');
                     if (storedCompleted) {
                         completedItems = JSON.parse(storedCompleted);
                     } else {
                         completedItems = [];
                     }
- 
+
                     const savedBriefing = localStorage.getItem('webswan_briefing');
                     if (savedBriefing) briefingText.value = savedBriefing;
- 
+
                     const savedAIChat = localStorage.getItem('webswan_aichat');
                     if (savedAIChat) aiChatMessage.value = savedAIChat;
- 
+
                     const savedLessonContent = localStorage.getItem('webswan_lessoncontent');
                     if (savedLessonContent) lessonContent.value = savedLessonContent;
- 
+
                     const savedPrompt = localStorage.getItem('webswan_prompt');
                     if (savedPrompt) customPrompt.value = savedPrompt;
- 
+
                     let savedLessonNotes = localStorage.getItem('webswan_lessonnotes');
                     // Preserve lesson text saved by an older version when possible.
                     if (!savedLessonNotes) {
@@ -3348,14 +3419,14 @@
                         }
                     }
                     if (savedLessonNotes) lessonNotes.value = savedLessonNotes;
- 
+
                 } catch(e) {
                     leads = [];
                     todos = [];
                     completedItems = [];
                 }
             }
- 
+
             function saveToStorage() {
                 localStorage.setItem('webswan_leads', JSON.stringify(leads));
                 localStorage.setItem('webswan_todos', JSON.stringify(todos));
@@ -3369,7 +3440,7 @@
                 saveNotesToStorage();
                 scheduleFirebaseAutoSave();
             }
- 
+
             function loadGeneralComment() {
                 const saved = localStorage.getItem('webswan_general');
                 if (saved !== null) {
@@ -3377,7 +3448,7 @@
                 }
                 updateGeneralWordCounter();
             }
- 
+
             // ===== SUBMIT LEAD FORM =====
             function getLeadFormData() {
                 return {
@@ -3388,11 +3459,11 @@
                     comment: leadFormComment.value.trim()
                 };
             }
- 
+
             function hasLeadFormData(lead) {
                 return Object.values(lead).some(value => value);
             }
- 
+
             function buildLeadDetails(lead) {
                 return [
                     `Name: ${lead.name || 'No name'}`,
@@ -3402,7 +3473,7 @@
                     `Notes: ${lead.comment || 'No notes'}`
                 ].join('\n');
             }
- 
+
             async function copyTextSafely(text) {
                 try {
                     await navigator.clipboard.writeText(text);
@@ -3419,9 +3490,9 @@
                     return copied;
                 }
             }
- 
+
             const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyn54LXL4CegLgAz9BHYeARUdCyNT8IokummRB4ekURrHaHA3tmlafCCguDE3-jf9_-/exec';
- 
+
             async function sendLeadToAppsScript(lead) {
                 try {
                     const response = await fetch(APPS_SCRIPT_URL, {
@@ -3440,24 +3511,24 @@
                         }),
                         mode: 'no-cors'
                     });
- 
+
                     showToast('✅ Lead saved to Calendar, Tasks, and Sheets!', 'success');
                 } catch (error) {
                     console.error('Error sending lead to Apps Script:', error);
                     showToast('Error saving lead: ' + error.message, 'error');
                 }
             }
- 
+
             async function sendLeadToGoogleTasks() {
                 const lead = getLeadFormData();
                 if (!hasLeadFormData(lead)) {
                     showToast('Please fill in at least one lead field first.', 'error');
                     return;
                 }
- 
+
                 await sendLeadToAppsScript(lead);
             }
- 
+
             // ===== CALENDAR + TIME PICKER (for Google Calendar button) =====
             // This modal collects a date + time and sends them along in the
             // "eventDate" / "eventTime" fields of the same request your Apps
@@ -3472,10 +3543,10 @@
             const calTimeGrid = document.getElementById('calTimeGrid');
             const calSelectedSummary = document.getElementById('calSelectedSummary');
             const calConfirmBtn = document.getElementById('calConfirmBtn');
- 
+
             const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
             const DAY_LABELS = ['S','M','T','W','T','F','S'];
- 
+
             function buildTimeSlots() {
                 // 6:00 AM through 9:00 PM, 30-minute increments.
                 const slots = [];
@@ -3489,18 +3560,18 @@
                 }
                 return slots;
             }
- 
+
             function renderCalDayLabels() {
                 calDayLabels.innerHTML = DAY_LABELS.map(d => `<div class="cal-daylabel">${d}</div>`).join('');
             }
- 
+
             function renderCalDays() {
                 calMonthLabel.textContent = `${MONTH_NAMES[calViewMonth]} ${calViewYear}`;
                 const firstDay = new Date(calViewYear, calViewMonth, 1).getDay();
                 const daysInMonth = new Date(calViewYear, calViewMonth + 1, 0).getDate();
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
- 
+
                 let html = '';
                 for (let i = 0; i < firstDay; i++) {
                     html += `<div class="cal-day empty"></div>`;
@@ -3512,7 +3583,7 @@
                     html += `<div class="cal-day${isPast ? ' past' : ''}${isSelected ? ' selected' : ''}" data-day="${day}">${day}</div>`;
                 }
                 calDaysGrid.innerHTML = html;
- 
+
                 calDaysGrid.querySelectorAll('.cal-day:not(.empty):not(.past)').forEach(el => {
                     el.addEventListener('click', function() {
                         calSelectedDate = { year: calViewYear, month: calViewMonth, day: parseInt(this.dataset.day) };
@@ -3522,7 +3593,7 @@
                     });
                 });
             }
- 
+
             function renderCalTimeSlots() {
                 const slots = buildTimeSlots();
                 calTimeGrid.innerHTML = slots.map(slot =>
@@ -3536,7 +3607,7 @@
                     });
                 });
             }
- 
+
             function updateCalSummary() {
                 if (calSelectedDate && calSelectedTime) {
                     const dateLabel = `${MONTH_NAMES[calSelectedDate.month]} ${calSelectedDate.day}, ${calSelectedDate.year}`;
@@ -3548,7 +3619,7 @@
                     calConfirmBtn.disabled = true;
                 }
             }
- 
+
             function openCalendarModal() {
                 const now = new Date();
                 calViewYear = now.getFullYear();
@@ -3562,11 +3633,11 @@
                 updateCalSummary();
                 calOverlay.classList.add('show');
             }
- 
+
             function closeCalendarModal() {
                 calOverlay.classList.remove('show');
             }
- 
+
             document.getElementById('calPrevMonthBtn').addEventListener('click', () => {
                 calViewMonth--;
                 if (calViewMonth < 0) { calViewMonth = 11; calViewYear--; }
@@ -3582,7 +3653,7 @@
             calOverlay.addEventListener('click', (e) => {
                 if (e.target === calOverlay) closeCalendarModal();
             });
- 
+
             async function sendLeadToGoogleCalendar() {
                 const lead = getLeadFormData();
                 if (!hasLeadFormData(lead)) {
@@ -3591,56 +3662,76 @@
                 }
                 openCalendarModal();
                 calConfirmBtn.dataset.pendingLead = JSON.stringify(lead);
+                delete calConfirmBtn.dataset.pendingCompletedId;
             }
- 
+
             calConfirmBtn.addEventListener('click', async () => {
                 if (!calSelectedDate || !calSelectedTime) return;
                 let lead = {};
                 try { lead = JSON.parse(calConfirmBtn.dataset.pendingLead || '{}'); } catch (e) { lead = {}; }
- 
+
                 const dateLabel = `${MONTH_NAMES[calSelectedDate.month]} ${calSelectedDate.day}, ${calSelectedDate.year}`;
                 lead.eventDate = dateLabel;
                 lead.eventTime = calSelectedTime;
- 
+
+                const pendingCompletedId = calConfirmBtn.dataset.pendingCompletedId;
                 closeCalendarModal();
                 await sendLeadToAppsScript(lead);
+
+                // Only present when this came from the Completed Tasks send
+                // dropdown - clears that one entry, leaves the full lead
+                // record in the leads list untouched.
+                if (pendingCompletedId) {
+                    completedItems = completedItems.filter(ci => String(ci.id) !== String(pendingCompletedId));
+                    saveToStorage();
+                    renderCompleted();
+                    delete calConfirmBtn.dataset.pendingCompletedId;
+                }
             });
- 
+
             async function sendLeadToGoogleSheet() {
                 const lead = getLeadFormData();
                 if (!hasLeadFormData(lead)) {
                     showToast('Please fill in at least one lead field first.', 'error');
                     return;
                 }
- 
+
                 await sendLeadToAppsScript(lead);
             }
- 
+
             function openCRM() {
                 const lead = getLeadFormData();
                 if (!hasLeadFormData(lead)) {
                     showToast('Please fill in at least one lead field first.', 'error');
                     return;
                 }
- 
-                const crmUrl = 'https://taniad2169.github.io/WebSwan-CRM-GoogleSheet/';
-                const leadData = `?name=${encodeURIComponent(lead.name)}&phone=${encodeURIComponent(lead.phone)}&email=${encodeURIComponent(lead.email)}&url=${encodeURIComponent(lead.url)}&comment=${encodeURIComponent(lead.comment)}`;
-                window.open(crmUrl + leadData, '_blank', 'noopener,noreferrer');
+                openLeadInCRM(lead);
+            }
+
+            // WEBSWAN_CRM_URL: update this if Tania gives a different live
+            // CRM link. Only the lead's own fields (name/phone/email/url/
+            // comment) are passed through the URL - nothing else in the CRM
+            // is touched, so this only ever lands in the CRM's lead field.
+            const WEBSWAN_CRM_URL = 'https://taniad2169.github.io/WebSwan-CRM-GoogleSheet/';
+
+            function openLeadInCRM(lead) {
+                const leadData = `?name=${encodeURIComponent(lead.name || '')}&phone=${encodeURIComponent(lead.phone || '')}&email=${encodeURIComponent(lead.email || '')}&url=${encodeURIComponent(lead.url || '')}&comment=${encodeURIComponent(lead.comment || '')}`;
+                window.open(WEBSWAN_CRM_URL + leadData, '_blank', 'noopener,noreferrer');
                 showToast('Opening CRM... Remember to mark as "Hot Lead" before saving! 🔥', 'success');
             }
- 
+
             function submitLeadForm() {
                 const name = leadFormName.value.trim();
                 const phone = leadFormPhone.value.trim();
                 const email = leadFormEmail.value.trim();
                 const url = leadFormUrl.value.trim();
                 const comment = leadFormComment.value.trim();
- 
+
                 if (!name && !phone && !email && !url && !comment) {
                     showToast('Please fill in at least one field.', 'error');
                     return;
                 }
- 
+
                 const newLead = {
                     id: nextId++,
                     name: name || 'No name',
@@ -3652,9 +3743,9 @@
                     customDropdown: '',
                     completed: true
                 };
- 
+
                 leads.push(newLead);
- 
+
                 const displayText = `${name || 'No name'} - ${phone || 'No phone'} (${email || 'No email'})`;
                 completedItems.push({
                     id: Date.now(),
@@ -3663,22 +3754,22 @@
                     leadId: newLead.id,
                     timestamp: new Date().toLocaleString()
                 });
- 
+
                 saveToStorage();
                 renderLeads();
                 renderCompleted();
                 renderTodos();
- 
+
                 leadFormName.value = '';
                 leadFormPhone.value = '';
                 leadFormEmail.value = '';
                 leadFormUrl.value = '';
                 leadFormComment.value = '';
                 updateLeadFormWordCounter();
- 
+
                 showToast('✅ Lead submitted and completed!', 'success');
             }
- 
+
             function clearLeadForm() {
                 leadFormName.value = '';
                 leadFormPhone.value = '';
@@ -3688,7 +3779,7 @@
                 updateLeadFormWordCounter();
                 showToast('🧹 Form cleared!', 'success');
             }
- 
+
             // ----- RENDER LEADS -----
             function renderLeads() {
                 if (!container) return;
@@ -3702,15 +3793,15 @@
                     card.className = 'lead-card';
                     if (lead.completed) card.classList.add('completed');
                     card.dataset.leadId = lead.id;
- 
+
                     const grid = document.createElement('div');
                     grid.className = 'lead-grid';
- 
+
                     grid.appendChild(createField('Name', 'text', lead.name, (val) => { lead.name = val; saveToStorage(); }, `lead-${lead.id}-name`));
                     grid.appendChild(createField('Phone', 'tel', lead.phone, (val) => { lead.phone = val; saveToStorage(); }, `lead-${lead.id}-phone`));
                     grid.appendChild(createField('Email', 'email', lead.email, (val) => { lead.email = val; saveToStorage(); }, `lead-${lead.id}-email`));
                     grid.appendChild(createField('URL', 'url', lead.url, (val) => { lead.url = val; saveToStorage(); }, `lead-${lead.id}-url`));
- 
+
                     const comboWrapper = document.createElement('div');
                     comboWrapper.className = 'field-group';
                     comboWrapper.dataset.hlkey = `lead-${lead.id}-action`;
@@ -3718,7 +3809,7 @@
                     combo.style.display = 'flex';
                     combo.style.flexDirection = 'column';
                     combo.style.gap = '6px';
- 
+
                     const label = document.createElement('label');
                     label.innerHTML = '<i class="fas fa-caret-down"></i> Action';
                     const select = document.createElement('select');
@@ -3734,7 +3825,7 @@
                         lead.dropdown = e.target.value;
                         saveToStorage();
                     });
- 
+
                     const customLabel = document.createElement('label');
                     customLabel.innerHTML = '<i class="fas fa-edit"></i> Custom (50)';
                     const customInput = document.createElement('input');
@@ -3746,14 +3837,14 @@
                         lead.customDropdown = e.target.value.slice(0, 50);
                         saveToStorage();
                     });
- 
+
                     combo.appendChild(label);
                     combo.appendChild(select);
                     combo.appendChild(customLabel);
                     combo.appendChild(customInput);
                     comboWrapper.appendChild(combo);
                     grid.appendChild(comboWrapper);
- 
+
                     const commentGroup = document.createElement('div');
                     commentGroup.className = 'field-group comment-box';
                     commentGroup.dataset.hlkey = `lead-${lead.id}-comment`;
@@ -3765,7 +3856,7 @@
                     textarea.maxLength = 1200;
                     const wordCounter = document.createElement('div');
                     wordCounter.className = 'word-counter';
- 
+
                     function updateLeadWordCounter() {
                         const words = countWords(textarea.value);
                         wordCounter.textContent = `${words} / 200 words`;
@@ -3777,17 +3868,17 @@
                         updateLeadWordCounter();
                     });
                     updateLeadWordCounter();
- 
+
                     commentGroup.appendChild(commentLabel);
                     commentGroup.appendChild(textarea);
                     commentGroup.appendChild(wordCounter);
                     grid.appendChild(commentGroup);
- 
+
                     card.appendChild(grid);
- 
+
                     const actions = document.createElement('div');
                     actions.className = 'lead-actions';
- 
+
                     const completeBtn = document.createElement('button');
                     completeBtn.className = 'btn btn-success btn-complete';
                     completeBtn.innerHTML = lead.completed ? '<i class="fas fa-undo"></i> Undo' : '<i class="fas fa-check"></i> Complete';
@@ -3795,10 +3886,10 @@
                         e.stopPropagation();
                         toggleLeadComplete(lead.id);
                     });
- 
+
                     const dropdownContainer = document.createElement('div');
                     dropdownContainer.className = 'edit-dropdown';
- 
+
                     const dropdownBtn = document.createElement('button');
                     dropdownBtn.className = 'btn btn-outline';
                     dropdownBtn.innerHTML = '<i class="fas fa-ellipsis-v"></i> Edit';
@@ -3807,10 +3898,10 @@
                         const content = dropdownContainer.querySelector('.edit-dropdown-content');
                         content.classList.toggle('show');
                     });
- 
+
                     const dropdownContent = document.createElement('div');
                     dropdownContent.className = 'edit-dropdown-content';
- 
+
                     const editOption = document.createElement('button');
                     editOption.className = 'edit-option';
                     editOption.innerHTML = '<i class="fas fa-pen"></i> Edit Field';
@@ -3821,7 +3912,7 @@
                         dropdownContent.classList.remove('show');
                         showToast('✏️ Click any field to edit', 'success');
                     });
- 
+
                     const deleteOption = document.createElement('button');
                     deleteOption.className = 'delete-option';
                     deleteOption.innerHTML = '<i class="fas fa-trash"></i> Delete Lead';
@@ -3834,7 +3925,7 @@
                         }
                         dropdownContent.classList.remove('show');
                     });
- 
+
                     const saveOption = document.createElement('button');
                     saveOption.className = 'save-option';
                     saveOption.innerHTML = '<i class="fas fa-save"></i> Save Changes';
@@ -3846,13 +3937,13 @@
                         dropdownContent.classList.remove('show');
                         showToast('✅ Changes saved!', 'success');
                     });
- 
+
                     dropdownContent.appendChild(editOption);
                     dropdownContent.appendChild(deleteOption);
                     dropdownContent.appendChild(saveOption);
                     dropdownContainer.appendChild(dropdownBtn);
                     dropdownContainer.appendChild(dropdownContent);
- 
+
                     actions.appendChild(completeBtn);
                     actions.appendChild(dropdownContainer);
                     card.appendChild(actions);
@@ -3864,7 +3955,7 @@
                 applyAllHighlights();
                 renderAllTextHighlights();
             }
- 
+
             function deleteLead(leadId) {
                 leads = leads.filter(l => l.id !== leadId);
                 completedItems = completedItems.filter(item => item.leadId !== leadId);
@@ -3873,7 +3964,7 @@
                 renderCompleted();
                 showToast('🗑️ Lead deleted!', 'success');
             }
- 
+
             function createField(labelText, type, value, onChange, hlkey) {
                 const div = document.createElement('div');
                 div.className = 'field-group';
@@ -3890,11 +3981,11 @@
                 div.appendChild(input);
                 return div;
             }
- 
+
             function toggleLeadComplete(leadId) {
                 const lead = leads.find(l => l.id === leadId);
                 if (!lead) return;
- 
+
                 if (!lead.completed) {
                     lead.completed = true;
                     completedItems.push({
@@ -3910,13 +4001,13 @@
                     completedItems = completedItems.filter(item => item.leadId !== lead.id);
                     showToast('↩️ Lead undone', 'success');
                 }
- 
+
                 saveToStorage();
                 renderLeads();
                 renderCompleted();
                 renderTodos();
             }
- 
+
             function renderTodos() {
                 if (!todoContainer) return;
                 todoContainer.innerHTML = '';
@@ -3924,32 +4015,32 @@
                     todoContainer.innerHTML = '<div style="color:#a0aec0;font-style:italic;padding:0.5rem;">No personal tasks yet. Add one below! 📝</div>';
                     return;
                 }
- 
+
                 todos.forEach((todo) => {
                     const div = document.createElement('div');
                     div.className = 'todo-item';
                     div.dataset.hlkey = `todo-${todo.id}`;
                     if (todo.completed) div.classList.add('completed-todo');
- 
+
                     const checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
                     checkbox.checked = todo.completed || false;
                     checkbox.addEventListener('change', () => {
                         toggleTodoComplete(todo.id);
                     });
- 
+
                     const textSpan = document.createElement('span');
                     textSpan.className = 'todo-text';
                     if (todo.completed) textSpan.classList.add('done');
                     textSpan.textContent = todo.text;
- 
+
                     const deleteBtn = document.createElement('button');
                     deleteBtn.className = 'todo-delete';
                     deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
                     deleteBtn.addEventListener('click', () => {
                         deleteTodo(todo.id);
                     });
- 
+
                     div.appendChild(checkbox);
                     div.appendChild(textSpan);
                     div.appendChild(deleteBtn);
@@ -3957,11 +4048,11 @@
                 });
                 applyAllHighlights();
             }
- 
+
             function toggleTodoComplete(todoId) {
                 const todo = todos.find(t => t.id === todoId);
                 if (!todo) return;
- 
+
                 if (!todo.completed) {
                     todo.completed = true;
                     completedItems.push({
@@ -3977,12 +4068,12 @@
                     completedItems = completedItems.filter(item => item.todoId !== todo.id);
                     showToast('↩️ Task undone', 'success');
                 }
- 
+
                 saveToStorage();
                 renderTodos();
                 renderCompleted();
             }
- 
+
             function deleteTodo(todoId) {
                 const todo = todos.find(t => t.id === todoId);
                 if (todo && todo.completed) {
@@ -3994,7 +4085,7 @@
                 renderCompleted();
                 showToast('🗑️ Task deleted', 'success');
             }
- 
+
             function addTodo() {
                 const text = todoInput.value.trim();
                 if (!text) {
@@ -4005,13 +4096,13 @@
                     showToast('Task exceeds 250 words limit!', 'error');
                     return;
                 }
- 
+
                 todos.push({
                     id: nextTodoId++,
                     text: text,
                     completed: false
                 });
- 
+
                 todoInput.value = '';
                 updateTodoWordCounter();
                 saveToStorage();
@@ -4019,29 +4110,97 @@
                 renderCompleted();
                 showToast('✅ Task added!', 'success');
             }
- 
+
             function renderCompleted() {
                 if (!completedContainer) return;
                 if (completedItems.length === 0) {
                     completedContainer.innerHTML = '<div class="completed-empty">No completed tasks yet. Submit a lead or complete a to-do to see them here! ✅</div>';
                     return;
                 }
- 
+
                 completedContainer.innerHTML = '';
                 const sorted = [...completedItems].reverse();
                 sorted.forEach((item, index) => {
                     const div = document.createElement('div');
                     div.className = 'completed-item';
+                    const sendDropdownHtml = item.type === 'lead' ? `
+                        <div class="edit-dropdown completed-send-dropdown">
+                            <button class="completed-send-btn" title="Send this lead"><i class="fas fa-paper-plane"></i></button>
+                            <div class="edit-dropdown-content">
+                                <button class="send-option" data-action="task" data-index="${index}"><i class="fas fa-list-check"></i> Google Task</button>
+                                <button class="send-option" data-action="calendar" data-index="${index}"><i class="fas fa-calendar-plus"></i> Google Calendar</button>
+                                <button class="send-option" data-action="crm" data-index="${index}"><i class="fas fa-database"></i> Open in CRM</button>
+                            </div>
+                        </div>
+                    ` : '';
                     div.innerHTML = `
                         <i class="fas fa-check-circle"></i>
                         <span class="item-text">${item.text}</span>
                         <span class="item-type">${item.type === 'lead' ? '📋 Lead' : '📝 To-Do'}</span>
                         <span style="font-size:0.7rem;color:#a0aec0;">${item.timestamp || ''}</span>
+                        ${sendDropdownHtml}
                         <button class="delete-completed" data-index="${index}" title="Delete from completed list"><i class="fas fa-times-circle"></i></button>
                     `;
                     completedContainer.appendChild(div);
                 });
- 
+
+                document.querySelectorAll('.completed-send-btn').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const content = this.parentElement.querySelector('.edit-dropdown-content');
+                        document.querySelectorAll('.completed-send-dropdown .edit-dropdown-content').forEach(c => {
+                            if (c !== content) c.classList.remove('show');
+                        });
+                        content.classList.toggle('show');
+                    });
+                });
+
+                document.querySelectorAll('.send-option').forEach(btn => {
+                    btn.addEventListener('click', async function(e) {
+                        e.stopPropagation();
+                        const index = parseInt(this.dataset.index);
+                        const sortedItem = [...completedItems].reverse()[index];
+                        this.closest('.edit-dropdown-content').classList.remove('show');
+
+                        if (!sortedItem || !sortedItem.leadId) {
+                            showToast("Could not find this lead's details.", "error");
+                            return;
+                        }
+                        const lead = leads.find(l => l.id === sortedItem.leadId);
+                        if (!lead) {
+                            showToast("Could not find this lead's details.", "error");
+                            return;
+                        }
+
+                        const action = this.dataset.action;
+                        if (action === 'task') {
+                            // Task/Calendar: only clears this entry off the
+                            // Completed Tasks list - the full lead stays in
+                            // the leads form/list untouched.
+                            await sendLeadToAppsScript(lead);
+                            completedItems = completedItems.filter(ci => ci.id !== sortedItem.id);
+                            saveToStorage();
+                            renderCompleted();
+                        } else if (action === 'calendar') {
+                            // The actual removal happens in calConfirmBtn's
+                            // handler below, once the date/time is confirmed -
+                            // stash which completed entry to clear then.
+                            openCalendarModal();
+                            calConfirmBtn.dataset.pendingLead = JSON.stringify(lead);
+                            calConfirmBtn.dataset.pendingCompletedId = sortedItem.id;
+                        } else if (action === 'crm') {
+                            // CRM: the opposite - the full lead is removed
+                            // from the active leads form (it now lives in the
+                            // CRM instead), but this Completed Tasks entry
+                            // stays as a historical record.
+                            openLeadInCRM(lead);
+                            leads = leads.filter(l => l.id !== lead.id);
+                            saveToStorage();
+                            renderLeads();
+                        }
+                    });
+                });
+
                 document.querySelectorAll('.delete-completed').forEach(btn => {
                     btn.addEventListener('click', function() {
                         const index = parseInt(this.dataset.index);
@@ -4064,62 +4223,62 @@
                     });
                 });
             }
- 
+
             // ===== LESSONS FUNCTIONS =====
             function submitCodingLesson() {
                 const topic = document.getElementById('codingTopic').value;
                 const language = document.getElementById('lessonLanguage').value;
                 const ai = document.getElementById('aiAssistant').value;
                 const content = lessonContent.value.trim();
- 
+
                 if (!content) {
                     showToast('Please enter lesson content.', 'error');
                     return;
                 }
- 
+
                 if (countWords(content) > 1000) {
                     showToast('Lesson content exceeds 1000 words limit!', 'error');
                     return;
                 }
- 
+
                 completedItems.push({
                     id: Date.now(),
                     type: 'lesson',
                     text: `Lesson: ${topic} (${language}) - AI: ${ai}`,
                     timestamp: new Date().toLocaleString()
                 });
- 
+
                 saveToStorage();
                 renderCompleted();
                 showToast(`✅ Lesson submitted!`, 'success');
             }
- 
+
             function submitPrompt() {
                 const promptType = document.getElementById('promptType').value;
                 const promptText = customPrompt.value.trim();
- 
+
                 if (!promptText) {
                     showToast('Please enter a prompt.', 'error');
                     return;
                 }
- 
+
                 if (countWords(promptText) > 1000) {
                     showToast('Prompt exceeds 1000 words limit!', 'error');
                     return;
                 }
- 
+
                 completedItems.push({
                     id: Date.now(),
                     type: 'prompt',
                     text: `Prompt: ${promptType} - ${promptText.substring(0, 50)}...`,
                     timestamp: new Date().toLocaleString()
                 });
- 
+
                 saveToStorage();
                 renderCompleted();
                 showToast('✅ Prompt submitted!', 'success');
             }
- 
+
             function saveLessonNotes() {
                 const notesVal = lessonNotes.value.trim();
                 if (countWords(notesVal) > 500) {
@@ -4129,13 +4288,13 @@
                 saveToStorage();
                 showToast('✅ Notes saved!', 'success');
             }
- 
+
             function sendLessonsSMS() {
                 const message = buildCompleteReport();
                 const encoded = encodeURIComponent(message);
                 const phoneNumber = '4158770687';
                 const smsUrl = `sms:${phoneNumber}?body=${encoded}`;
- 
+
                 try {
                     window.location.href = smsUrl;
                     showToast(`📱 Opening SMS to ${phoneNumber}...`, 'success');
@@ -4147,7 +4306,7 @@
                     });
                 }
             }
- 
+
             // ===== OTHER FUNCTIONS =====
             function lockApp() {
                 if (confirm('🔒 Lock the app? You\'ll need to unlock again.')) {
@@ -4158,7 +4317,7 @@
                     showToast('🔒 App locked!', 'success');
                 }
             }
- 
+
             function clearAllData() {
                 if (confirm('⚠️ Delete ALL data? This cannot be undone!')) {
                     localStorage.removeItem('webswan_leads');
@@ -4208,12 +4367,12 @@
                     showToast('🗑️ All data cleared.', 'success');
                 }
             }
- 
+
             // ===== INIT APP =====
             function initApp() {
                 if (appInitialized) return;
                 appInitialized = true;
- 
+
                 loadFromStorage();
                 loadGeneralComment();
                 loadNotesFromStorage();
@@ -4232,7 +4391,7 @@
                 updateLeadFormWordCounter();
                 updateNoteInputWordCounter();
                 updateAILink();
- 
+
                 // Header buttons - FIXED: Use send functions
                 document.getElementById('whatsappSendBtn').addEventListener('click', sendWhatsApp);
                 document.getElementById('chatgptSendBtn').addEventListener('click', sendToChatGPT);
@@ -4263,15 +4422,15 @@
                 document.getElementById('googleSheetBtn').addEventListener('click', sendLeadToGoogleSheet);
                 document.getElementById('crmBtn').addEventListener('click', openCRM);
                 document.getElementById('clearFormBtn').addEventListener('click', clearLeadForm);
- 
+
                 copyLinkBtn.addEventListener('click', copyLink);
                 shareLinkBtn.addEventListener('click', shareLink);
- 
+
                 document.getElementById('codingSubmitBtn').addEventListener('click', submitCodingLesson);
                 document.getElementById('promptSubmitBtn').addEventListener('click', submitPrompt);
                 document.getElementById('notesSubmitBtn').addEventListener('click', saveLessonNotes);
                 document.getElementById('lessonsSmsBtn').addEventListener('click', sendLessonsSMS);
- 
+
                 document.getElementById('addNoteBtn').addEventListener('click', () => {
                     closeCurrentNote();
                     noteContentInput.value = '';
@@ -4284,17 +4443,17 @@
                     updateNoteInputWordCounter();
                     showToast('📝 Creating new note...', 'success');
                 });
- 
+
                 document.getElementById('saveNoteBtn').addEventListener('click', saveNote);
                 document.getElementById('cancelNoteBtn').addEventListener('click', cancelNote);
                 document.getElementById('clearAllNotesBtn').addEventListener('click', clearAllNotes);
                 document.getElementById('closeNoteBtn').addEventListener('click', closeCurrentNote);
- 
+
                 notesDropdownBtn.addEventListener('click', function(e) {
                     e.stopPropagation();
                     toggleNotesDropdown();
                 });
- 
+
                 noteContentInput.addEventListener('input', () => {
                     const words = countWords(noteContentInput.value);
                     if (words > 5000) {
@@ -4304,14 +4463,14 @@
                     updateNoteInputWordCounter();
                     updateSaveIndicator(false);
                 });
- 
+
                 todoInput.addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') addTodo();
                 });
                 todoInput.addEventListener('input', updateTodoWordCounter);
- 
+
                 leadFormComment.addEventListener('input', updateLeadFormWordCounter);
- 
+
                 briefingText.addEventListener('input', () => {
                     const words = countWords(briefingText.value);
                     if (words > 5000) {
@@ -4322,7 +4481,7 @@
                     localStorage.setItem('webswan_briefing', briefingText.value);
                     scheduleFirebaseAutoSave();
                 });
- 
+
                 aiChatMessage.addEventListener('input', () => {
                     const words = countWords(aiChatMessage.value);
                     if (words > 1000) {
@@ -4334,7 +4493,7 @@
                     updateAILink();
                     scheduleFirebaseAutoSave();
                 });
- 
+
                 lessonContent.addEventListener('input', () => {
                     const words = countWords(lessonContent.value);
                     if (words > 1000) {
@@ -4345,7 +4504,7 @@
                     localStorage.setItem('webswan_lessoncontent', lessonContent.value);
                     scheduleFirebaseAutoSave();
                 });
- 
+
                 customPrompt.addEventListener('input', () => {
                     const words = countWords(customPrompt.value);
                     if (words > 1000) {
@@ -4356,7 +4515,7 @@
                     localStorage.setItem('webswan_prompt', customPrompt.value);
                     scheduleFirebaseAutoSave();
                 });
- 
+
                 lessonNotes.addEventListener('input', () => {
                     const words = countWords(lessonNotes.value);
                     if (words > 500) {
@@ -4367,7 +4526,7 @@
                     localStorage.setItem('webswan_lessonnotes', lessonNotes.value);
                     scheduleFirebaseAutoSave();
                 });
- 
+
                 generalCommentEl.addEventListener('input', () => {
                     const words = countWords(generalCommentEl.value);
                     if (words > 500) {
@@ -4378,9 +4537,9 @@
                     localStorage.setItem('webswan_general', generalCommentEl.value);
                     scheduleFirebaseAutoSave();
                 });
- 
+
                 updateTodoWordCounter();
- 
+
                 // ===== LEAD SEARCH WIRING =====
                 const leadSearchInput = document.getElementById('leadSearchInput');
                 const leadSearchClearBtn = document.getElementById('leadSearchClearBtn');
@@ -4394,7 +4553,7 @@
                         if (leadSearchInput) leadSearchInput.focus();
                     });
                 }
- 
+
                 // ===== HIGHLIGHT WIRING =====
                 // Selecting content: click any element carrying data-hlkey to
                 // mark it selected (dashed outline). Clicking elsewhere clears
@@ -4404,7 +4563,7 @@
                     const toolbar = document.getElementById('highlightToolbar');
                     if (toolbar && toolbar.contains(e.target)) return;
                     if (document.getElementById('highlightModeHint')?.contains(e.target)) return;
- 
+
                     if (highlightMode === 'text') {
                         // In text mode, selection is driven by which words the
                         // user drags over inside a field (see the selectionchange
@@ -4412,7 +4571,7 @@
                         // "whole field" selection state from field mode.
                         return;
                     }
- 
+
                     const target = e.target.closest('[data-hlkey]');
                     if (target) {
                         if (selectedHighlightEl && selectedHighlightEl !== target) {
@@ -4427,7 +4586,7 @@
                         clearHighlightSelection();
                     }
                 });
- 
+
                 // Text mode: track selected text inside whichever field the
                 // user is dragging over, so the Highlight button knows exactly
                 // which characters to mark once a color is chosen.
@@ -4440,7 +4599,7 @@
                     if (!fieldGroup) return;
                     activeTextField = { el, fieldKey: fieldGroup.dataset.hlkey, start: el.selectionStart, end: el.selectionEnd };
                 });
- 
+
                 const highlightModeBtn = document.getElementById('highlightModeBtn');
                 if (highlightModeBtn) {
                     highlightModeBtn.addEventListener('click', function(e) {
@@ -4448,12 +4607,12 @@
                         setHighlightMode(highlightMode === 'field' ? 'text' : 'field');
                     });
                 }
- 
+
                 const highlightMainBtn = document.getElementById('highlightMainBtn');
                 if (highlightMainBtn) {
                     highlightMainBtn.addEventListener('click', function(e) {
                         e.stopPropagation();
- 
+
                         if (highlightMode === 'text') {
                             if (!activeTextField || activeTextField.start === activeTextField.end) {
                                 showToast('👆 Click into a field and select some words first, then press Highlight.', 'error');
@@ -4463,7 +4622,7 @@
                             if (picker) picker.classList.add('show');
                             return;
                         }
- 
+
                         if (!selectedHighlightEl || !selectedHighlightKey) {
                             showToast('👆 Click a name, comment, or field first, then press Highlight.', 'error');
                             return;
@@ -4481,12 +4640,12 @@
                         }
                     });
                 }
- 
+
                 document.querySelectorAll('.hl-swatch').forEach(swatch => {
                     swatch.addEventListener('click', function(e) {
                         e.stopPropagation();
                         const color = this.dataset.color;
- 
+
                         if (highlightMode === 'text') {
                             if (!activeTextField || activeTextField.start === activeTextField.end) return;
                             const { fieldKey, start, end } = activeTextField;
@@ -4500,7 +4659,7 @@
                             activeTextField = null;
                             return;
                         }
- 
+
                         if (!selectedHighlightEl || !selectedHighlightKey) return;
                         highlights[selectedHighlightKey] = color;
                         applyHighlightToElement(selectedHighlightEl, color);
@@ -4509,7 +4668,7 @@
                         clearHighlightSelection();
                     });
                 });
- 
+
                 // If a highlighted field's text is edited, its saved character
                 // positions would point at the wrong words - drop that field's
                 // text highlights on edit rather than show a garbled overlay.
@@ -4520,7 +4679,7 @@
                     if (!fieldGroup) return;
                     clearTextHighlightsForField(fieldGroup.dataset.hlkey);
                 });
- 
+
                 const existingFirebaseUser = window.dailyFirebase && window.dailyFirebase.currentUser
                     ? window.dailyFirebase.currentUser()
                     : null;
@@ -4536,7 +4695,7 @@
                     updateFirebaseControls('Local backup active', false);
                 }
             }
- 
+
             document.addEventListener('click', function(e) {
                 document.querySelectorAll('.edit-dropdown-content').forEach(dropdown => {
                     if (!dropdown.closest('.edit-dropdown')) {
@@ -4548,4 +4707,3 @@
     </script>
 </body>
 </html>
- 
