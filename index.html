@@ -693,6 +693,45 @@
             margin-right: 6px;
             width: 14px;
         }
+        .completed-send-dropdown .edit-dropdown-content .color-code-btn i {
+            color: #0891b2;
+            margin-right: 6px;
+            width: 14px;
+        }
+        .completed-color-swatches {
+            display: none;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 7px;
+            padding: 6px 16px 12px;
+            border-top: 1px solid #edf2f7;
+        }
+        .completed-color-swatches.show {
+            display: flex;
+        }
+        .completed-color-swatches button.completed-color-swatch {
+            width: 22px;
+            height: 22px;
+            min-width: 22px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 0 1px #cbd5e0;
+            cursor: pointer;
+            padding: 0;
+            display: inline-block;
+        }
+        .completed-color-swatches button.completed-color-swatch:hover {
+            box-shadow: 0 0 0 2px #0077b6;
+            transform: scale(1.1);
+        }
+        .completed-color-swatches button.completed-color-clear {
+            background: #f7fafc;
+            color: #a0aec0;
+            font-size: 0.65rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
         .completed-empty {
             color: #a0aec0;
             font-style: italic;
@@ -4324,6 +4363,16 @@
                                 <button class="send-option" data-action="task" data-index="${index}"><i class="fas fa-list-check"></i> Google Task</button>
                                 <button class="send-option" data-action="calendar" data-index="${index}"><i class="fas fa-calendar-plus"></i> Google Calendar</button>
                                 <button class="send-option" data-action="crm" data-index="${index}"><i class="fas fa-database"></i> Open in CRM</button>
+                                <button class="color-code-btn" data-index="${index}"><i class="fas fa-palette"></i> Color Code</button>
+                                <div class="completed-color-swatches" data-index="${index}">
+                                    <button class="completed-color-swatch" data-color="yellow" data-index="${index}" style="background:#ffd600;" title="Yellow"></button>
+                                    <button class="completed-color-swatch" data-color="green" data-index="${index}" style="background:#2e7d32;" title="Green"></button>
+                                    <button class="completed-color-swatch" data-color="red" data-index="${index}" style="background:#ef9a9a;" title="Red"></button>
+                                    <button class="completed-color-swatch" data-color="blue" data-index="${index}" style="background:#1565c0;" title="Blue"></button>
+                                    <button class="completed-color-swatch" data-color="orange" data-index="${index}" style="background:#f57c00;" title="Orange"></button>
+                                    <button class="completed-color-swatch" data-color="teal" data-index="${index}" style="background:#0891b2;" title="Teal"></button>
+                                    <button class="completed-color-swatch completed-color-clear" data-color="" data-index="${index}" title="Clear color"><i class="fas fa-ban"></i></button>
+                                </div>
                             </div>
                         </div>
                     ` : '';
@@ -4382,6 +4431,49 @@
                             saveToStorage();
                             renderLeads();
                         }
+                    });
+                });
+
+                document.querySelectorAll('.color-code-btn').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const index = this.dataset.index;
+                        const swatchRow = this.parentElement.querySelector(`.completed-color-swatches[data-index="${index}"]`);
+                        if (!swatchRow) return;
+                        document.querySelectorAll('.completed-color-swatches').forEach(row => {
+                            if (row !== swatchRow) row.classList.remove('show');
+                        });
+                        swatchRow.classList.toggle('show');
+                    });
+                });
+
+                document.querySelectorAll('.completed-color-swatch').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const index = parseInt(this.dataset.index);
+                        const sortedItem = [...completedItems].reverse()[index];
+
+                        if (!sortedItem || !sortedItem.leadId) {
+                            showToast("Could not find this lead's details.", "error");
+                            return;
+                        }
+
+                        const color = this.dataset.color || null;
+                        const key = `lead-${sortedItem.leadId}-name`;
+                        if (color) {
+                            highlights[key] = color;
+                        } else {
+                            delete highlights[key];
+                        }
+                        saveHighlightsToStorage();
+
+                        // Keep the live lead card's Name field in sync too, if it's on screen
+                        const liveNameEl = document.querySelector(`[data-hlkey="${key}"]`);
+                        if (liveNameEl) applyHighlightToElement(liveNameEl, color);
+
+                        this.closest('.edit-dropdown-content').classList.remove('show');
+                        renderCompleted();
+                        showToast(color ? `🖍️ Color coded ${color}!` : '✅ Color code cleared', 'success');
                     });
                 });
 
