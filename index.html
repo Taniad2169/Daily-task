@@ -271,6 +271,17 @@
         .btn-sms i {
             color: white;
         }
+        .btn-reminder {
+            background: #eab308;
+            color: #1a1400;
+            border: 1px solid #ca8a04;
+        }
+        .btn-reminder i {
+            color: #1a1400;
+        }
+        .btn-reminder:hover {
+            background: #ca8a04;
+        }
         .btn-purple {
             background: #6f42c1;
             color: white;
@@ -1992,6 +2003,7 @@
                     <button class="btn btn-outline" id="importDataBtn" style="border-color:#8B5CF6;color:#6d28d9;"><i class="fas fa-upload"></i> Restore Data</button>
                     <input type="file" id="importDataInput" accept="application/json,.json" hidden>
                     <button class="btn btn-sms" id="smsSendBtn"><i class="fas fa-sms"></i> Send to 415-877-0687</button>
+                    <a class="btn btn-reminder" id="reminderBtn" href="https://taniad2169.github.io/Reminder/" target="_blank" rel="noopener noreferrer"><i class="fas fa-bell"></i> Reminder</a>
                     <button class="btn btn-outline" id="clearDataBtn" style="border-color:#e74c3c;color:#e74c3c;"><i class="fas fa-trash"></i> Clear</button>
                 </div>
 
@@ -3926,7 +3938,15 @@
 
                 if (pendingCompletedId) {
                     completedItems = completedItems.filter(ci => String(ci.id) !== String(pendingCompletedId));
+                    // Same fix as the Google Task archive path - clear the lead's
+                    // checkmark too so it doesn't stay stuck "completed" with no
+                    // visible record in either list.
+                    if (lead.id) {
+                        const actualLead = leads.find(l => l.id === lead.id);
+                        if (actualLead) actualLead.completed = false;
+                    }
                     saveToStorage();
+                    renderLeads();
                     renderCompleted();
                     delete calConfirmBtn.dataset.pendingCompletedId;
                 }
@@ -4429,7 +4449,13 @@
                         if (action === 'task') {
                             await sendLeadToAppsScript(lead);
                             completedItems = completedItems.filter(ci => ci.id !== sortedItem.id);
+                            // Archiving out of Completed Tasks shouldn't leave the lead
+                            // stuck "completed" with no visible record anywhere - clear
+                            // the checkmark on the lead card too so it's a clean return
+                            // to active status.
+                            lead.completed = false;
                             saveToStorage();
+                            renderLeads();
                             renderCompleted();
                         } else if (action === 'calendar') {
                             openCalendarModal();
