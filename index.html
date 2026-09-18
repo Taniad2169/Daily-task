@@ -4680,7 +4680,62 @@
                 return chunks.length ? chunks : [text];
             }
 
+            // Common sales-call greetings, interjections and courtesy phrases,
+            // hand-checked instead of left to MyMemory's literal word-for-word
+            // lookups. Free MT is fine for a full sentence in context, but on a
+            // short standalone phrase it tends to return the dictionary-literal
+            // word instead of what a native speaker actually says - e.g. "wow"
+            // comes back "Uau" instead of the natural Brazilian "Nossa!". Only
+            // used when a whole chunk (a full sentence/segment, punctuation and
+            // case ignored) matches one of these exactly, so it never touches
+            // translation of a longer script - it only catches short, common
+            // phrases used on their own.
+            const SALES_PHRASE_OVERRIDES = {
+                'wow': { es: '¡Guau!', 'pt-BR': 'Nossa!' },
+                'hello': { es: 'Hola', 'pt-BR': 'Olá' },
+                'hi': { es: 'Hola', 'pt-BR': 'Oi' },
+                'good morning': { es: 'Buenos días', 'pt-BR': 'Bom dia' },
+                'good afternoon': { es: 'Buenas tardes', 'pt-BR': 'Boa tarde' },
+                'good evening': { es: 'Buenas noches', 'pt-BR': 'Boa noite' },
+                'please': { es: 'Por favor', 'pt-BR': 'Por favor' },
+                'thank you': { es: 'Gracias', 'pt-BR': 'Obrigado(a)' },
+                'thanks': { es: 'Gracias', 'pt-BR': 'Obrigado(a)' },
+                "thank you so much": { es: 'Muchas gracias', 'pt-BR': 'Muito obrigado(a)' },
+                "you're welcome": { es: 'De nada', 'pt-BR': 'De nada' },
+                'sorry': { es: 'Disculpe', 'pt-BR': 'Desculpe' },
+                'excuse me': { es: 'Disculpe', 'pt-BR': 'Com licença' },
+                'great': { es: '¡Genial!', 'pt-BR': 'Ótimo!' },
+                'awesome': { es: '¡Increíble!', 'pt-BR': 'Incrível!' },
+                'perfect': { es: '¡Perfecto!', 'pt-BR': 'Perfeito!' },
+                'of course': { es: 'Claro que sí', 'pt-BR': 'Claro' },
+                'no problem': { es: 'No hay problema', 'pt-BR': 'Sem problema' },
+                'how are you': { es: '¿Cómo está usted?', 'pt-BR': 'Como você está?' },
+                'nice to meet you': { es: 'Mucho gusto', 'pt-BR': 'Prazer em conhecê-lo(a)' },
+                'do you have a moment': { es: '¿Tiene un momento?', 'pt-BR': 'Você tem um momento?' },
+                'i understand': { es: 'Entiendo', 'pt-BR': 'Eu entendo' },
+                'no worries': { es: 'No se preocupe', 'pt-BR': 'Sem problemas' },
+                'sounds good': { es: 'Suena bien', 'pt-BR': 'Parece bom' },
+                "i'll call you back": { es: 'Le devuelvo la llamada', 'pt-BR': 'Eu ligo de volta' },
+                'have a nice day': { es: 'Que tenga un buen día', 'pt-BR': 'Tenha um bom dia' },
+                'take care': { es: 'Cuídese', 'pt-BR': 'Se cuida' },
+                'one moment please': { es: 'Un momento, por favor', 'pt-BR': 'Um momento, por favor' },
+                'let me check': { es: 'Déjeme revisar', 'pt-BR': 'Deixe-me verificar' },
+                'yes': { es: 'Sí', 'pt-BR': 'Sim' },
+                'no': { es: 'No', 'pt-BR': 'Não' },
+                'absolutely': { es: 'Por supuesto', 'pt-BR': 'Com certeza' }
+            };
+
+            function lookupPhraseOverride(text, targetCode) {
+                const key = (text || '').trim().toLowerCase().replace(/[!?.,]+$/g, '').replace(/\s+/g, ' ');
+                const entry = SALES_PHRASE_OVERRIDES[key];
+                if (!entry) return null;
+                const isPortuguese = targetCode === 'pt-BR';
+                return isPortuguese ? (entry['pt-BR'] || null) : (entry.es || null);
+            }
+
             async function translateChunkViaMyMemory(text, targetCode) {
+                const override = lookupPhraseOverride(text, targetCode);
+                if (override) return override;
                 const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${targetCode}`;
                 const response = await fetch(url);
                 if (!response.ok) throw new Error('Translation service error');
