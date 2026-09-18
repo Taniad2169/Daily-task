@@ -634,21 +634,16 @@
             color: #28a745;
             font-size: 1.1rem;
         }
-        /* When a lead/to-do carries a highlight color, its Completed Tasks
-           row picks up a matching tinted background + left border, so a
-           quick glance down the list shows status at a glance. */
-        .completed-item[data-status-color="yellow"] { border-left-color: #f9a825; background: #fffdf0; }
-        .completed-item[data-status-color="green"]  { border-left-color: #1b5e20; background: #f0fff4; }
-        .completed-item[data-status-color="red"]    { border-left-color: #e53935; background: #fff5f5; }
-        .completed-item[data-status-color="blue"]   { border-left-color: #0d47a1; background: #eef7ff; }
-        .completed-item[data-status-color="orange"] { border-left-color: #e65100; background: #fff6ea; }
-        .completed-item[data-status-color="teal"]   { border-left-color: #155e75; background: #f0fbfd; }
-        .completed-color-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            flex-shrink: 0;
-            box-shadow: 0 0 0 1.5px rgba(0,0,0,0.12) inset;
+        /* The name text in a Completed Tasks row carries the SAME
+           data-highlight attribute/color as the field it was marked with
+           on the lead card, so it renders as the exact same solid color
+           block (via the shared [data-highlight="..."] rules below) - not
+           just a small dot. This padding/radius just keeps that block from
+           hugging the text edge-to-edge inside the row. */
+        .completed-item .item-text[data-highlight] {
+            padding: 2px 10px;
+            display: inline-block;
+            flex: 0 1 auto;
         }
         .completed-item .item-text {
             flex: 1;
@@ -4317,8 +4312,11 @@
                     const div = document.createElement('div');
                     div.className = 'completed-item';
                     const statusColor = getCompletedItemColor(item);
-                    if (statusColor) div.dataset.statusColor = statusColor;
-                    const colorDotHtml = statusColor ? `<span class="completed-color-dot" style="background:${HIGHLIGHT_COLOR_HEX[statusColor] || '#ccc'};" title="Matches the ${statusColor} highlight on this ${item.type === 'lead' ? 'lead' : 'to-do'}"></span>` : '';
+                    // Carries the same data-highlight attribute the name field
+                    // has on the lead/to-do card, so it reuses the exact same
+                    // [data-highlight="..."] color block styling - a real
+                    // highlight over the name, not a separate indicator.
+                    const highlightAttr = statusColor ? ` data-highlight="${statusColor}"` : '';
                     const sendDropdownHtml = item.type === 'lead' ? `
                         <div class="edit-dropdown completed-send-dropdown">
                             <button class="completed-send-btn" title="Send this lead"><i class="fas fa-paper-plane"></i></button>
@@ -4331,8 +4329,7 @@
                     ` : '';
                     div.innerHTML = `
                         <i class="fas fa-check-circle"></i>
-                        ${colorDotHtml}
-                        <span class="item-text">${item.text}</span>
+                        <span class="item-text"${highlightAttr}>${item.text}</span>
                         <span class="item-type">${item.type === 'lead' ? '📋 Lead' : '📝 To-Do'}</span>
                         <span style="font-size:0.7rem;color:#a0aec0;">${item.timestamp || ''}</span>
                         ${sendDropdownHtml}
