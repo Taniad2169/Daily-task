@@ -4973,6 +4973,7 @@
                             delete highlights[key];
                             applyHighlightToElement(selectedHighlightEl, null);
                             saveHighlightsToStorage();
+                            renderCompleted();
                             showToast('✅ Highlight removed', 'success');
                             clearHighlightSelection();
                         } else {
@@ -5005,6 +5006,7 @@
                         highlights[selectedHighlightKey] = color;
                         applyHighlightToElement(selectedHighlightEl, color);
                         saveHighlightsToStorage();
+                        renderCompleted();
                         showToast(`🖍️ Highlighted ${color}!`, 'success');
                         clearHighlightSelection();
                     });
