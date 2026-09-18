@@ -1507,14 +1507,17 @@
         [data-highlight="blue"]   { background: #1565c0 !important; box-shadow: inset 0 0 0 2px #0d47a1; color: #ffffff !important; }
         [data-highlight="orange"] { background: #f57c00 !important; box-shadow: inset 0 0 0 2px #e65100; color: #1a1200 !important; }
         [data-highlight="teal"] { background: #0891b2 !important; box-shadow: inset 0 0 0 2px #155e75; color: #ffffff !important; }
+        [data-highlight="indigo"] { background: #5c69f2 !important; box-shadow: inset 0 0 0 2px #3f4bd1; color: #ffffff !important; }
         [data-highlight="yellow"] input, [data-highlight="yellow"] textarea, [data-highlight="yellow"] label,
         [data-highlight="orange"] input, [data-highlight="orange"] textarea, [data-highlight="orange"] label { color: #1a1a00 !important; background: rgba(255,255,255,0.85) !important; }
         [data-highlight="green"] input, [data-highlight="green"] textarea, [data-highlight="green"] label,
         [data-highlight="blue"] input, [data-highlight="blue"] textarea, [data-highlight="blue"] label,
-        [data-highlight="teal"] input, [data-highlight="teal"] textarea, [data-highlight="teal"] label { color: #ffffff !important; background: rgba(255,255,255,0.15) !important; }
+        [data-highlight="teal"] input, [data-highlight="teal"] textarea, [data-highlight="teal"] label,
+        [data-highlight="indigo"] input, [data-highlight="indigo"] textarea, [data-highlight="indigo"] label { color: #ffffff !important; background: rgba(255,255,255,0.15) !important; }
         [data-highlight="green"] input, [data-highlight="green"] textarea,
         [data-highlight="blue"] input, [data-highlight="blue"] textarea,
-        [data-highlight="teal"] input, [data-highlight="teal"] textarea { color: #0a1e2f !important; background: rgba(255,255,255,0.92) !important; }
+        [data-highlight="teal"] input, [data-highlight="teal"] textarea,
+        [data-highlight="indigo"] input, [data-highlight="indigo"] textarea { color: #0a1e2f !important; background: rgba(255,255,255,0.92) !important; }
         .hl-selecting {
             outline: 2px dashed #0077b6 !important;
             outline-offset: 3px;
@@ -1858,6 +1861,7 @@
                 <span class="cheat-item"><span class="cheat-dot" style="background:#2e7d32;"></span>Phone Follow-up</span>
                 <span class="cheat-item"><span class="cheat-dot" style="background:#ffd600;"></span>Continue Phone Follow-up</span>
                 <span class="cheat-item"><span class="cheat-dot" style="background:#ef9a9a;"></span>Future Call</span>
+                <span class="cheat-item"><span class="cheat-dot" style="background:#5c69f2;"></span>Prepare Audit</span>
             </div>
 
             <!-- Page Navigation -->
@@ -2181,6 +2185,7 @@
             <button class="hl-swatch" data-color="blue" style="background:#1565c0;" title="Blue"></button>
             <button class="hl-swatch" data-color="orange" style="background:#f57c00;" title="Orange"></button>
             <button class="hl-swatch" data-color="teal" style="background:#0891b2;" title="Teal"></button>
+            <button class="hl-swatch" data-color="indigo" style="background:#5c69f2;" title="Prepare Audit"></button>
         </div>
         <button class="btn btn-outline" id="highlightModeBtn" style="border-color:#0077b6;" title="Switch between highlighting a whole field or just the text you select inside it"><i class="fas fa-toggle-off"></i> Whole Field</button>
         <button class="btn btn-primary" id="highlightMainBtn"><i class="fas fa-highlighter"></i> Highlight</button>
@@ -2418,7 +2423,8 @@
                 red: '#ef9a9a',
                 blue: '#1565c0',
                 orange: '#f57c00',
-                teal: '#0891b2'
+                teal: '#0891b2',
+                indigo: '#5c69f2'
             };
             let selectedHighlightEl = null;
             let selectedHighlightKey = null;
@@ -2700,7 +2706,10 @@
                 yellow: 'yellow',
                 futurecall: 'red',
                 future: 'red',
-                red: 'red'
+                red: 'red',
+                prepareaudit: 'indigo',
+                audit: 'indigo',
+                indigo: 'indigo'
             };
 
             function normalizeSearchTerm(str) {
@@ -4371,6 +4380,7 @@
                                     <button class="completed-color-swatch" data-color="blue" data-index="${index}" style="background:#1565c0;" title="Blue"></button>
                                     <button class="completed-color-swatch" data-color="orange" data-index="${index}" style="background:#f57c00;" title="Orange"></button>
                                     <button class="completed-color-swatch" data-color="teal" data-index="${index}" style="background:#0891b2;" title="Teal"></button>
+                                    <button class="completed-color-swatch" data-color="indigo" data-index="${index}" style="background:#5c69f2;" title="Prepare Audit"></button>
                                     <button class="completed-color-swatch completed-color-clear" data-color="" data-index="${index}" title="Clear color"><i class="fas fa-ban"></i></button>
                                 </div>
                             </div>
