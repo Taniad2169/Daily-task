@@ -1342,12 +1342,15 @@
         [data-highlight="red"]    { background: #ffebee !important; box-shadow: inset 0 0 0 2px #e53935; }
         [data-highlight="blue"]   { background: #1565c0 !important; box-shadow: inset 0 0 0 2px #0d47a1; color: #ffffff !important; }
         [data-highlight="orange"] { background: #f57c00 !important; box-shadow: inset 0 0 0 2px #e65100; color: #1a1200 !important; }
+        [data-highlight="teal"] { background: #0891b2 !important; box-shadow: inset 0 0 0 2px #155e75; color: #ffffff !important; }
         [data-highlight="yellow"] input, [data-highlight="yellow"] textarea, [data-highlight="yellow"] label,
         [data-highlight="orange"] input, [data-highlight="orange"] textarea, [data-highlight="orange"] label { color: #1a1a00 !important; background: rgba(255,255,255,0.85) !important; }
         [data-highlight="green"] input, [data-highlight="green"] textarea, [data-highlight="green"] label,
-        [data-highlight="blue"] input, [data-highlight="blue"] textarea, [data-highlight="blue"] label { color: #ffffff !important; background: rgba(255,255,255,0.15) !important; }
+        [data-highlight="blue"] input, [data-highlight="blue"] textarea, [data-highlight="blue"] label,
+        [data-highlight="teal"] input, [data-highlight="teal"] textarea, [data-highlight="teal"] label { color: #ffffff !important; background: rgba(255,255,255,0.15) !important; }
         [data-highlight="green"] input, [data-highlight="green"] textarea,
-        [data-highlight="blue"] input, [data-highlight="blue"] textarea { color: #0a1e2f !important; background: rgba(255,255,255,0.92) !important; }
+        [data-highlight="blue"] input, [data-highlight="blue"] textarea,
+        [data-highlight="teal"] input, [data-highlight="teal"] textarea { color: #0a1e2f !important; background: rgba(255,255,255,0.92) !important; }
         .hl-selecting {
             outline: 2px dashed #0077b6 !important;
             outline-offset: 3px;
@@ -1459,6 +1462,7 @@
         .hl-text-overlay mark[data-color="red"]    { background: #ef9a9a; }
         .hl-text-overlay mark[data-color="blue"]   { background: #1565c0; }
         .hl-text-overlay mark[data-color="orange"] { background: #f57c00; }
+        .hl-text-overlay mark[data-color="teal"] { background: #0891b2; }
         [data-hlmode-active="true"] {
             outline: 2px dashed #0077b6 !important;
             outline-offset: 2px;
@@ -1685,6 +1689,7 @@
             <div id="highlightCheatSheet">
                 <span class="cheat-title"><i class="fas fa-highlighter"></i> Highlight Key:</span>
                 <span class="cheat-item"><span class="cheat-dot" style="background:#f57c00;"></span>Hot Lead</span>
+                <span class="cheat-item"><span class="cheat-dot" style="background:#0891b2;"></span>New Lead</span>
                 <span class="cheat-item"><span class="cheat-dot" style="background:#1565c0;"></span>Initial Email/Report Sent</span>
                 <span class="cheat-item"><span class="cheat-dot" style="background:#2e7d32;"></span>Phone Follow-up</span>
                 <span class="cheat-item"><span class="cheat-dot" style="background:#ffd600;"></span>Continue Phone Follow-up</span>
@@ -1740,7 +1745,7 @@
                 <!-- ===== LEAD SEARCH BAR ===== -->
                 <div class="lead-search-bar">
                     <i class="fas fa-search"></i>
-                    <input type="text" id="leadSearchInput" placeholder="Search leads by name..." />
+                    <input type="text" id="leadSearchInput" placeholder="Search leads by name, or type a status like hotlead, newlead, followup..." />
                     <span class="lead-search-count" id="leadSearchCount"></span>
                     <button class="btn btn-outline lead-search-clear" id="leadSearchClearBtn"><i class="fas fa-times"></i></button>
                 </div>
@@ -1973,6 +1978,7 @@
             <button class="hl-swatch" data-color="red" style="background:#ef9a9a;" title="Red"></button>
             <button class="hl-swatch" data-color="blue" style="background:#1565c0;" title="Blue"></button>
             <button class="hl-swatch" data-color="orange" style="background:#f57c00;" title="Orange"></button>
+            <button class="hl-swatch" data-color="teal" style="background:#0891b2;" title="Teal"></button>
         </div>
         <button class="btn btn-outline" id="highlightModeBtn" style="border-color:#0077b6;" title="Switch between highlighting a whole field or just the text you select inside it"><i class="fas fa-toggle-off"></i> Whole Field</button>
         <button class="btn btn-primary" id="highlightMainBtn"><i class="fas fa-highlighter"></i> Highlight</button>
@@ -2455,30 +2461,84 @@
             }
 
             // ===== LEAD SEARCH =====
+            // Maps a typed status keyword (spaces/punctuation ignored) to the
+            // highlight color it stands for, so searching "hotlead" finds every
+            // lead card that has an orange highlight on it, matching the
+            // Highlight Key legend above the lead list.
+            const COLOR_SEARCH_MAP = {
+                hotlead: 'orange',
+                hot: 'orange',
+                orange: 'orange',
+                newlead: 'teal',
+                newleads: 'teal',
+                new: 'teal',
+                teal: 'teal',
+                initialemail: 'blue',
+                initialemailreportsent: 'blue',
+                reportsent: 'blue',
+                emailsent: 'blue',
+                blue: 'blue',
+                phonefollowup: 'green',
+                followup: 'green',
+                green: 'green',
+                continuephonefollowup: 'yellow',
+                continuefollowup: 'yellow',
+                continue: 'yellow',
+                yellow: 'yellow',
+                futurecall: 'red',
+                future: 'red',
+                red: 'red'
+            };
+
+            function normalizeSearchTerm(str) {
+                return (str || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+            }
+
+            // A lead's fields (name/phone/email/url/action/comment) each carry
+            // their own data-hlkey, so a lead "is" whichever color(s) any of
+            // its fields have been highlighted with.
+            function getLeadHighlightColors(leadId) {
+                const prefix = `lead-${leadId}-`;
+                const colors = new Set();
+                Object.keys(highlights).forEach(key => {
+                    if (key.indexOf(prefix) === 0 && highlights[key]) colors.add(highlights[key]);
+                });
+                return colors;
+            }
+
             function filterLeadsBySearch() {
                 const searchInput = document.getElementById('leadSearchInput');
                 const clearBtn = document.getElementById('leadSearchClearBtn');
                 const countLabel = document.getElementById('leadSearchCount');
                 if (!searchInput || !container) return;
 
-                const query = searchInput.value.trim().toLowerCase();
+                const rawQuery = searchInput.value.trim();
                 const cards = container.querySelectorAll('.lead-card');
 
-                if (!query) {
+                if (!rawQuery) {
                     cards.forEach(card => { card.style.display = ''; });
                     if (clearBtn) clearBtn.style.display = 'none';
                     if (countLabel) countLabel.textContent = '';
                     return;
                 }
 
+                const query = rawQuery.toLowerCase();
+                const colorMatch = COLOR_SEARCH_MAP[normalizeSearchTerm(rawQuery)];
+
                 if (clearBtn) clearBtn.style.display = 'inline-flex';
                 let matches = 0;
                 let firstMatch = null;
                 cards.forEach(card => {
                     const leadId = parseInt(card.dataset.leadId);
-                    const lead = leads.find(l => l.id === leadId);
-                    const name = (lead && lead.name ? lead.name : '').toLowerCase();
-                    if (name.includes(query)) {
+                    let isMatch;
+                    if (colorMatch) {
+                        isMatch = getLeadHighlightColors(leadId).has(colorMatch);
+                    } else {
+                        const lead = leads.find(l => l.id === leadId);
+                        const name = (lead && lead.name ? lead.name : '').toLowerCase();
+                        isMatch = name.includes(query);
+                    }
+                    if (isMatch) {
                         card.style.display = '';
                         matches++;
                         if (!firstMatch) firstMatch = card;
@@ -2487,7 +2547,8 @@
                     }
                 });
                 if (countLabel) {
-                    countLabel.textContent = matches === 0 ? 'No matches' : `${matches} match${matches === 1 ? '' : 'es'} found`;
+                    const label = colorMatch ? ` (${colorMatch} highlight)` : '';
+                    countLabel.textContent = matches === 0 ? 'No matches' : `${matches} match${matches === 1 ? '' : 'es'} found${label}`;
                 }
             }
 
