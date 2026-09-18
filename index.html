@@ -875,7 +875,6 @@
             color: #0077b6;
             margin-right: 8px;
         }
-
         .notes-section {
             background: white;
             border-radius: 28px;
@@ -905,7 +904,6 @@
             padding: 0.4rem 1rem;
             font-size: 0.8rem;
         }
-
         .notes-dropdown-container {
             position: relative;
             display: inline-block;
@@ -988,7 +986,6 @@
             color: #dc3545;
             background: #fff5f5;
         }
-
         .notes-textarea {
             width: 100%;
             min-height: 200px;
@@ -1106,7 +1103,6 @@
             background: #fef3c7;
             color: #d97706;
         }
-
         .current-note-indicator {
             display: none;
             padding: 8px 14px;
@@ -1129,7 +1125,6 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-
         @media (max-width: 640px) {
             .app-container {
                 padding: 1rem;
@@ -1298,8 +1293,6 @@
             background: #28a745;
             border-color: #28a745;
         }
-
-        /* ===== LEAD SEARCH BAR ===== */
         .lead-search-bar {
             display: flex;
             align-items: center;
@@ -1334,8 +1327,6 @@
             border-color: #e74c3c;
             color: #e74c3c;
         }
-
-        /* ===== HIGHLIGHT FEATURE ===== */
         [data-highlight] {
             border-radius: 14px;
             transition: background 0.2s ease, box-shadow 0.2s ease;
@@ -1357,13 +1348,11 @@
         [data-highlight="blue"] input, [data-highlight="blue"] textarea, [data-highlight="blue"] label { color: #ffffff !important; background: rgba(255,255,255,0.15) !important; }
         [data-highlight="green"] input, [data-highlight="green"] textarea,
         [data-highlight="blue"] input, [data-highlight="blue"] textarea { color: #0a1e2f !important; background: rgba(255,255,255,0.92) !important; }
-
         .hl-selecting {
             outline: 2px dashed #0077b6 !important;
             outline-offset: 3px;
             border-radius: 12px;
         }
-
         #highlightToolbar {
             position: fixed;
             bottom: 24px;
@@ -1432,7 +1421,6 @@
         .hl-mode-hint.show {
             display: block;
         }
-        /* ===== TEXT-LEVEL (partial) HIGHLIGHTING ===== */
         .hl-text-wrap {
             position: relative;
         }
@@ -1481,8 +1469,6 @@
                 right: 16px;
             }
         }
-
-        /* ===== CALENDAR + TIME PICKER MODAL ===== */
         #calendarModalOverlay {
             display: none;
             position: fixed;
@@ -1492,6 +1478,7 @@
             align-items: center;
             justify-content: center;
             padding: 1rem;
+            overflow-y: auto;
         }
         #calendarModalOverlay.show {
             display: flex;
@@ -1503,6 +1490,10 @@
             max-width: 360px;
             width: 100%;
             box-shadow: 0 30px 60px rgba(0,0,0,0.35);
+            max-height: 90vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            margin: auto;
         }
         .cal-modal-box h3 {
             color: #023e8a;
@@ -1640,6 +1631,11 @@
             display: flex;
             gap: 10px;
             justify-content: flex-end;
+            position: sticky;
+            bottom: -1.5rem;
+            background: white;
+            margin: 0 -1.5rem -1.5rem;
+            padding: 0.75rem 1.5rem 1.5rem;
         }
     </style>
 </head>
@@ -1882,7 +1878,7 @@
                     </div>
 
                     <div class="lesson-card">
-                        <h4><i class="fas fa-brain" style="color:#6f42c1;"></i> AI Prompts & Instructions <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(1000 words max - stretches)</span></h4>
+                        <h4><i class="fas fa-brain" style="color:#6f42c1;"></i> AI Prompts &amp; Instructions <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(1000 words max - stretches)</span></h4>
                         <div class="field-group" style="margin-bottom: 1rem;">
                             <label><i class="fas fa-list-dropdown"></i> Prompt Type</label>
                             <select id="promptType">
@@ -2002,7 +1998,7 @@
             <div class="cal-selected-summary" id="calSelectedSummary"></div>
             <div class="cal-modal-actions">
                 <button class="btn btn-outline" id="calCancelBtn">Cancel</button>
-                <button class="btn btn-google-calendar" id="calConfirmBtn" disabled><i class="fas fa-check"></i> Confirm & Send</button>
+                <button class="btn btn-google-calendar" id="calConfirmBtn" disabled><i class="fas fa-check"></i> Confirm &amp; Send</button>
             </div>
         </div>
     </div>
@@ -2367,8 +2363,6 @@
             }
 
             // ===== TEXT-LEVEL (partial) HIGHLIGHTING =====
-            // Finds the actual input/textarea inside a [data-hlkey] field-group,
-            // since that's what the user actually types and selects text in.
             function getFieldControl(fieldGroupEl) {
                 if (!fieldGroupEl) return null;
                 return fieldGroupEl.querySelector('textarea, input[type="text"], input[type="email"], input[type="tel"], input[type="url"]');
@@ -2378,9 +2372,6 @@
                 return String(v).replace(/[&<>'"]/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch]));
             }
 
-            // Builds/refreshes the colored overlay sitting behind a field so
-            // specific highlighted words show through, without turning the
-            // field itself into something that can't still be typed in.
             function renderTextOverlayForField(fieldKey) {
                 const fieldGroup = document.querySelector(`[data-hlkey="${CSS.escape(fieldKey)}"]`);
                 const control = getFieldControl(fieldGroup);
@@ -2426,10 +2417,6 @@
                 });
             }
 
-            // A field's saved highlight ranges are character positions. If the
-            // user edits that field's text, old positions would point at the
-            // wrong words - so on edit we drop that field's text highlights
-            // rather than show a misaligned, confusing overlay.
             function clearTextHighlightsForField(fieldKey) {
                 if (textHighlights[fieldKey]) {
                     delete textHighlights[fieldKey];
@@ -2531,9 +2518,6 @@
             }
 
             // ===== BUILD STRICT CLIENT REPORT =====
-            // This is an explicit whitelist: only filled lead-form fields,
-            // lead comments, and the Briefing field may leave the suite.
-            // The Notes page and every other section are never read here.
             function buildCompleteReport() {
                 let message = '📋 *WebSwan Client Activity Report* 📋\n\n';
 
@@ -2622,28 +2606,22 @@
                 if (!aiWindow) window.location.href = url;
             }
 
-            // ===== SEND TO CHATGPT =====
             function sendToChatGPT() {
                 openAIWithCompleteReport('https://chatgpt.com/', 'ChatGPT', '💬');
             }
 
-            // ===== SEND TO GEMINI =====
             function sendToGemini() {
                 openAIWithCompleteReport('https://gemini.google.com/app', 'Gemini', '🤖');
             }
 
-            // ===== SEND TO CLAUDE =====
             function sendToClaude() {
                 openAIWithCompleteReport('https://claude.ai/new', 'Claude', '🧠');
             }
 
-            // ===== SEND TO WHATSAPP =====
             async function sendWhatsApp() {
                 const message = buildCompleteReport();
                 const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-                // On Android/iPhone, the native share sheet passes the complete
-                // report directly to WhatsApp without putting a long report in a URL.
                 if (isMobileDevice && navigator.share) {
                     try {
                         await navigator.share({
@@ -2657,14 +2635,9 @@
                             showToast('Share cancelled.', 'error');
                             return;
                         }
-                        // Continue to the WhatsApp web fallback below.
                     }
                 }
 
-                // Windows/Desktop: begin copying while the click is still an
-                // active user gesture, then launch the installed app with a
-                // short command. Passing the full report through the protocol
-                // can exceed Windows' URL limit and prevent WhatsApp opening.
                 const copyPromise = copyCompleteReport(message);
                 window.location.href = 'whatsapp://send';
                 copyPromise.then((copied) => {
@@ -2677,7 +2650,6 @@
                 });
             }
 
-            // ===== SEND SMS =====
             function sendSMS() {
                 const message = buildCompleteReport();
                 const encoded = encodeURIComponent(message);
@@ -2872,8 +2844,6 @@
             function loadNotesFromStorage() {
                 try {
                     let stored = localStorage.getItem('webswan_saved_notes');
-                    // One-time migration from older versions that shared one key
-                    // between saved notes and lesson notes.
                     if (!stored) {
                         const legacyStored = localStorage.getItem('webswan_notes');
                         if (legacyStored) {
@@ -3033,7 +3003,6 @@
             }
 
             // ----- COMPLETE DATA BACKUP / RESTORE -----
-            // These are every storage key used by current and older Daily Task versions.
             const DAILY_TASK_STORAGE_KEYS = [
                 'webswan_page',
                 'webswan_leads',
@@ -3079,15 +3048,6 @@
                 });
             }
 
-            // ----- NON-DESTRUCTIVE MERGE HELPERS -----
-            // The old sync logic could pick ONE side (local OR remote) and
-            // wholesale overwrite the other with it. If Firebase hadn't been
-            // pushed to in a while (it only pushed on a manual "Save all"
-            // click), the Firestore copy was routinely older/thinner than
-            // what was sitting in the browser - and reopening the app could
-            // silently replace fresh local entries with that stale backup.
-            // These helpers instead combine both sides so nothing already
-            // saved (locally or in Firebase) is ever thrown away.
             function mergeRecordArrays(localArr, remoteArr) {
                 const safeLocal = Array.isArray(localArr) ? localArr : [];
                 const safeRemote = Array.isArray(remoteArr) ? remoteArr : [];
@@ -3099,9 +3059,6 @@
                         if (!byId.has(item.id)) order.push(item.id);
                         const existing = byId.get(item.id);
                         if (!existing) { byId.set(item.id, item); return; }
-                        // Keep whichever version of this record has more filled-in
-                        // fields (a rough "more complete" heuristic), so neither
-                        // side's edits get silently dropped.
                         const scoreOf = (rec) => Object.values(rec).filter(v => v !== '' && v !== null && v !== undefined).length;
                         byId.set(item.id, scoreOf(item) >= scoreOf(existing) ? item : existing);
                     });
@@ -3121,10 +3078,6 @@
                 return JSON.stringify(mergeRecordArrays(localArr, remoteArr));
             }
 
-            // For freeform text fields there is no reliable way to "merge" two
-            // edited paragraphs, so the rule is: never let a non-empty value be
-            // replaced by an emptier one. Prefer whichever side has MORE text,
-            // since that is the version least likely to have lost content.
             function mergeTextValue(localVal, remoteVal) {
                 const l = localVal || '';
                 const r = remoteVal || '';
@@ -3207,10 +3160,6 @@
                 }
             }
 
-            // Auto-push to Firebase a couple seconds after any local edit, so the
-            // cloud copy almost never lags far behind what's on screen. This is
-            // what keeps the merge-on-reconnect step above from ever having to
-            // reconcile two very different copies in the first place.
             function scheduleFirebaseAutoSave() {
                 if (!firebaseUser || !window.dailyFirebase) return;
                 if (firebaseAutoSaveTimer) clearTimeout(firebaseAutoSaveTimer);
@@ -3232,7 +3181,6 @@
                     const remoteHasData = remoteData && hasMeaningfulDailyTaskData(remoteData);
 
                     if (!remoteData || !remoteHasData) {
-                        // Nothing usable in Firebase yet - just push what's here.
                         if (localHasData) {
                             await window.dailyFirebase.save(firebaseUser.uid, localData);
                             updateFirebaseControls('Firebase backup created', true);
@@ -3247,10 +3195,6 @@
                         return;
                     }
 
-                    // Both sides have something and they differ: merge them together
-                    // (union of leads/todos/notes, longer text wins) instead of
-                    // picking one side and discarding the other. Nothing the user
-                    // already saved - locally or in the cloud - is ever dropped.
                     const merged = mergeDailyTaskData(localData, remoteData);
                     applyStoredDailyTaskData(merged);
                     refreshDailyTaskFromStorage();
@@ -3293,7 +3237,6 @@
             });
 
             function exportAllData() {
-                // Capture anything currently typed on screen before making the backup.
                 saveToStorage();
 
                 const storedData = {};
@@ -3407,7 +3350,6 @@
                     if (savedPrompt) customPrompt.value = savedPrompt;
 
                     let savedLessonNotes = localStorage.getItem('webswan_lessonnotes');
-                    // Preserve lesson text saved by an older version when possible.
                     if (!savedLessonNotes) {
                         const legacyNotes = localStorage.getItem('webswan_notes');
                         if (legacyNotes) {
@@ -3530,11 +3472,6 @@
             }
 
             // ===== CALENDAR + TIME PICKER (for Google Calendar button) =====
-            // This modal collects a date + time and sends them along in the
-            // "eventDate" / "eventTime" fields of the same request your Apps
-            // Script already receives - the script uses these to create a
-            // real event on your Google Calendar (see the script's own
-            // comments for how that part works).
             const calOverlay = document.getElementById('calendarModalOverlay');
             const calMonthLabel = document.getElementById('calMonthLabel');
             const calDayLabels = document.getElementById('calDayLabels');
@@ -3548,7 +3485,6 @@
             const DAY_LABELS = ['S','M','T','W','T','F','S'];
 
             function buildTimeSlots() {
-                // 6:00 AM through 9:00 PM, 30-minute increments.
                 const slots = [];
                 for (let totalMinutes = 6 * 60; totalMinutes <= 21 * 60; totalMinutes += 30) {
                     const h24 = Math.floor(totalMinutes / 60);
@@ -3632,6 +3568,7 @@
                 renderCalTimeSlots();
                 updateCalSummary();
                 calOverlay.classList.add('show');
+                calOverlay.querySelector('.cal-modal-box').scrollTop = 0;
             }
 
             function closeCalendarModal() {
@@ -3678,9 +3615,6 @@
                 closeCalendarModal();
                 await sendLeadToAppsScript(lead);
 
-                // Only present when this came from the Completed Tasks send
-                // dropdown - clears that one entry, leaves the full lead
-                // record in the leads list untouched.
                 if (pendingCompletedId) {
                     completedItems = completedItems.filter(ci => String(ci.id) !== String(pendingCompletedId));
                     saveToStorage();
@@ -3708,10 +3642,6 @@
                 openLeadInCRM(lead);
             }
 
-            // WEBSWAN_CRM_URL: update this if Tania gives a different live
-            // CRM link. Only the lead's own fields (name/phone/email/url/
-            // comment) are passed through the URL - nothing else in the CRM
-            // is touched, so this only ever lands in the CRM's lead field.
             const WEBSWAN_CRM_URL = 'https://taniad2169.github.io/WebSwan-CRM-GoogleSheet/';
 
             function openLeadInCRM(lead) {
@@ -3949,9 +3879,6 @@
                     card.appendChild(actions);
                     container.appendChild(card);
                 });
-                // Re-render is a full DOM rebuild, so previously-attached
-                // highlight overlays are gone - rebuild them here every time
-                // so highlights never silently disappear after any edit.
                 applyAllHighlights();
                 renderAllTextHighlights();
             }
@@ -4174,25 +4101,15 @@
 
                         const action = this.dataset.action;
                         if (action === 'task') {
-                            // Task/Calendar: only clears this entry off the
-                            // Completed Tasks list - the full lead stays in
-                            // the leads form/list untouched.
                             await sendLeadToAppsScript(lead);
                             completedItems = completedItems.filter(ci => ci.id !== sortedItem.id);
                             saveToStorage();
                             renderCompleted();
                         } else if (action === 'calendar') {
-                            // The actual removal happens in calConfirmBtn's
-                            // handler below, once the date/time is confirmed -
-                            // stash which completed entry to clear then.
                             openCalendarModal();
                             calConfirmBtn.dataset.pendingLead = JSON.stringify(lead);
                             calConfirmBtn.dataset.pendingCompletedId = sortedItem.id;
                         } else if (action === 'crm') {
-                            // CRM: the opposite - the full lead is removed
-                            // from the active leads form (it now lives in the
-                            // CRM instead), but this Completed Tasks entry
-                            // stays as a historical record.
                             openLeadInCRM(lead);
                             leads = leads.filter(l => l.id !== lead.id);
                             saveToStorage();
@@ -4392,7 +4309,6 @@
                 updateNoteInputWordCounter();
                 updateAILink();
 
-                // Header buttons - FIXED: Use send functions
                 document.getElementById('whatsappSendBtn').addEventListener('click', sendWhatsApp);
                 document.getElementById('chatgptSendBtn').addEventListener('click', sendToChatGPT);
                 document.getElementById('geminiSendBtn').addEventListener('click', sendToGemini);
@@ -4555,20 +4471,12 @@
                 }
 
                 // ===== HIGHLIGHT WIRING =====
-                // Selecting content: click any element carrying data-hlkey to
-                // mark it selected (dashed outline). Clicking elsewhere clears
-                // the selection. Clicks inside the highlight toolbar itself are
-                // ignored here so they don't fight with the toolbar's own logic.
                 document.addEventListener('click', function(e) {
                     const toolbar = document.getElementById('highlightToolbar');
                     if (toolbar && toolbar.contains(e.target)) return;
                     if (document.getElementById('highlightModeHint')?.contains(e.target)) return;
 
                     if (highlightMode === 'text') {
-                        // In text mode, selection is driven by which words the
-                        // user drags over inside a field (see the selectionchange
-                        // listener below) - a plain click just clears any stale
-                        // "whole field" selection state from field mode.
                         return;
                     }
 
@@ -4587,9 +4495,6 @@
                     }
                 });
 
-                // Text mode: track selected text inside whichever field the
-                // user is dragging over, so the Highlight button knows exactly
-                // which characters to mark once a color is chosen.
                 document.addEventListener('selectionchange', function() {
                     if (highlightMode !== 'text') return;
                     const el = document.activeElement;
@@ -4669,9 +4574,6 @@
                     });
                 });
 
-                // If a highlighted field's text is edited, its saved character
-                // positions would point at the wrong words - drop that field's
-                // text highlights on edit rather than show a garbled overlay.
                 document.addEventListener('input', function(e) {
                     const el = e.target;
                     if (!(el.tagName === 'TEXTAREA' || el.tagName === 'INPUT')) return;
