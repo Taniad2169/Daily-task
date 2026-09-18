@@ -634,6 +634,22 @@
             color: #28a745;
             font-size: 1.1rem;
         }
+        /* When a lead/to-do carries a highlight color, its Completed Tasks
+           row picks up a matching tinted background + left border, so a
+           quick glance down the list shows status at a glance. */
+        .completed-item[data-status-color="yellow"] { border-left-color: #f9a825; background: #fffdf0; }
+        .completed-item[data-status-color="green"]  { border-left-color: #1b5e20; background: #f0fff4; }
+        .completed-item[data-status-color="red"]    { border-left-color: #e53935; background: #fff5f5; }
+        .completed-item[data-status-color="blue"]   { border-left-color: #0d47a1; background: #eef7ff; }
+        .completed-item[data-status-color="orange"] { border-left-color: #e65100; background: #fff6ea; }
+        .completed-item[data-status-color="teal"]   { border-left-color: #155e75; background: #f0fbfd; }
+        .completed-color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            box-shadow: 0 0 0 1.5px rgba(0,0,0,0.12) inset;
+        }
         .completed-item .item-text {
             flex: 1;
             font-size: 0.9rem;
@@ -874,6 +890,120 @@
         .copy-link-section .link-display i {
             color: #0077b6;
             margin-right: 8px;
+        }
+
+        /* ===== SCRIPT TRANSLATOR ===== */
+        .translator-toggle-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 1.5rem;
+            background: #eef7ff;
+            border: 1.5px solid #0891b2;
+            color: #0891b2;
+            font-weight: 700;
+        }
+        .translator-toggle-link i {
+            color: #0891b2;
+        }
+        .translator-section {
+            background: white;
+            border-radius: 28px;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+            border: 2px solid #0891b2;
+            box-shadow: 0 6px 16px rgba(8, 145, 178, 0.12);
+        }
+        .translator-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 1rem;
+        }
+        .translator-section-header h3 {
+            color: #0e7490;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .translator-close-btn {
+            background: none;
+            border: none;
+            color: #a0aec0;
+            font-size: 1.1rem;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 20px;
+            transition: 0.2s;
+        }
+        .translator-close-btn:hover {
+            color: #dc3545;
+            background: #fff5f5;
+        }
+        .translator-note {
+            font-size: 0.75rem;
+            color: #64748b;
+            font-style: italic;
+            margin-bottom: 1rem;
+        }
+        .translator-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        @media (max-width: 640px) {
+            .translator-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .translator-grid textarea {
+            width: 100%;
+            min-height: 160px;
+            border: 1.5px solid #d4eaf5;
+            border-radius: 20px;
+            padding: 0.8rem 1rem;
+            font-size: 0.9rem;
+            background: #f5faff;
+            resize: vertical;
+            color: #034b77;
+        }
+        .translator-grid textarea:focus {
+            outline: 3px solid #0891b2;
+            background: white;
+            border-color: transparent;
+        }
+        #translatorOutput {
+            background: #f0fdfa;
+        }
+        .translator-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            margin: 1rem 0;
+        }
+        .translator-controls select {
+            background: #f5faff;
+            border: 1.5px solid #d4eaf5;
+            border-radius: 20px;
+            padding: 0.55rem 1rem;
+            font-size: 0.85rem;
+            color: #034b77;
+            flex: 1;
+            min-width: 220px;
+        }
+        .translator-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 0.8rem;
+            /* Left-aligned (not flex-end) on purpose: the floating "Whole
+               Field"/Highlight toolbar is pinned to the bottom-right of the
+               screen, so right-aligning these buttons put Translate right
+               behind it. Keeping this row on the left keeps every button
+               reachable. */
+            justify-content: flex-start;
         }
         .notes-section {
             background: white;
@@ -1826,6 +1956,44 @@
                     <button class="btn btn-sms" id="smsSendBtn"><i class="fas fa-sms"></i> Send to 415-877-0687</button>
                     <button class="btn btn-outline" id="clearDataBtn" style="border-color:#e74c3c;color:#e74c3c;"><i class="fas fa-trash"></i> Clear</button>
                 </div>
+
+                <!-- ===== SCRIPT TRANSLATOR (closable, like the review popup) ===== -->
+                <button class="btn translator-toggle-link" id="translatorToggleLink" style="display:none;"><i class="fas fa-language"></i> Open Script Translator</button>
+
+                <div class="translator-section" id="translatorPanel">
+                    <div class="translator-section-header">
+                        <h3><i class="fas fa-language" style="color:#0891b2;"></i> Script Translator</h3>
+                        <button class="translator-close-btn" id="translatorCloseBtn" title="Close"><i class="fas fa-times"></i></button>
+                    </div>
+                    <div class="translator-note">Free machine translation — a solid first draft for your call. Have a native speaker confirm important phrasing before big pitches.</div>
+                    <div class="field-group" style="margin-bottom:1rem;">
+                        <label><i class="fas fa-globe"></i> Translate to</label>
+                        <select id="translatorLanguage">
+                            <option value="es">Spanish (Latin American / Neutral)</option>
+                            <option value="es-MX">Spanish (Mexico)</option>
+                            <option value="es-CU">Spanish (Cuba)</option>
+                            <option value="es-DO">Spanish (Dominican Republic)</option>
+                            <option value="es-CO">Spanish (Colombia)</option>
+                            <option value="pt-BR">Portuguese (Brazil)</option>
+                        </select>
+                    </div>
+                    <div class="translator-grid">
+                        <div>
+                            <label style="font-size:0.75rem;font-weight:700;color:#026aa7;text-transform:uppercase;display:block;margin-bottom:6px;">Your Script (English, 500 words max)</label>
+                            <textarea id="translatorInput" placeholder="Paste or write your sales script here..." maxlength="4000"></textarea>
+                            <div class="word-counter" id="translatorWordCount">0 / 500 words</div>
+                        </div>
+                        <div>
+                            <label style="font-size:0.75rem;font-weight:700;color:#026aa7;text-transform:uppercase;display:block;margin-bottom:6px;">Translation</label>
+                            <textarea id="translatorOutput" placeholder="Your translated script will appear here..." readonly></textarea>
+                        </div>
+                    </div>
+                    <div class="translator-actions">
+                        <button class="btn btn-outline" id="translatorClearBtn"><i class="fas fa-undo"></i> Clear</button>
+                        <button class="btn" id="translatorTranslateBtn" style="background:#0891b2;color:white;border-color:#0891b2;"><i class="fas fa-language"></i> Translate</button>
+                        <button class="btn btn-copy" id="translatorCopyBtn"><i class="fas fa-copy"></i> Copy Translation</button>
+                    </div>
+                </div>
             </div>
 
             <!-- ===== PAGE 2: LESSONS ===== -->
@@ -2207,6 +2375,17 @@
             let editingNoteId = null;
             let currentNoteId = null;
             let highlights = {};
+            // Solid hex for each highlight color, used for small dots/borders
+            // (like the Highlight Key dots and the Completed Tasks color match)
+            // where the field-level [data-highlight] background rules don't apply.
+            const HIGHLIGHT_COLOR_HEX = {
+                yellow: '#ffd600',
+                green: '#2e7d32',
+                red: '#ef9a9a',
+                blue: '#1565c0',
+                orange: '#f57c00',
+                teal: '#0891b2'
+            };
             let selectedHighlightEl = null;
             let selectedHighlightKey = null;
             let highlightMode = 'field'; // 'field' = highlight the whole box, 'text' = highlight just the selected words
@@ -2504,6 +2683,25 @@
                     if (key.indexOf(prefix) === 0 && highlights[key]) colors.add(highlights[key]);
                 });
                 return colors;
+            }
+
+            // Picks a single "status color" for a Completed Tasks row so it
+            // visually matches whatever the person highlighted on that lead
+            // (or to-do) card - Name is checked first since that's the field
+            // most often marked, then Action, then any other highlighted field.
+            function getCompletedItemColor(item) {
+                if (item.type === 'lead' && item.leadId) {
+                    const id = item.leadId;
+                    const priorityKeys = [`lead-${id}-name`, `lead-${id}-action`, `lead-${id}-comment`, `lead-${id}-phone`, `lead-${id}-email`, `lead-${id}-url`];
+                    for (const key of priorityKeys) {
+                        if (highlights[key]) return highlights[key];
+                    }
+                    return null;
+                }
+                if (item.type === 'todo' && item.todoId) {
+                    return highlights[`todo-${item.todoId}`] || null;
+                }
+                return null;
             }
 
             function filterLeadsBySearch() {
@@ -3076,7 +3274,8 @@
                 'webswan_prompt',
                 'webswan_lessonnotes',
                 'webswan_saved_notes',
-                'webswan_notes'
+                'webswan_notes',
+                'webswan_translator_script'
             ];
 
             let firebaseUser = null;
@@ -3423,6 +3622,10 @@
                     }
                     if (savedLessonNotes) lessonNotes.value = savedLessonNotes;
 
+                    const savedTranslatorScript = localStorage.getItem('webswan_translator_script');
+                    const translatorInputEl = document.getElementById('translatorInput');
+                    if (savedTranslatorScript && translatorInputEl) translatorInputEl.value = savedTranslatorScript;
+
                 } catch(e) {
                     leads = [];
                     todos = [];
@@ -3440,6 +3643,8 @@
                 localStorage.setItem('webswan_lessoncontent', lessonContent.value);
                 localStorage.setItem('webswan_prompt', customPrompt.value);
                 localStorage.setItem('webswan_lessonnotes', lessonNotes.value);
+                const translatorInputEl = document.getElementById('translatorInput');
+                if (translatorInputEl) localStorage.setItem('webswan_translator_script', translatorInputEl.value);
                 saveNotesToStorage();
                 scheduleFirebaseAutoSave();
             }
@@ -4111,6 +4316,9 @@
                 sorted.forEach((item, index) => {
                     const div = document.createElement('div');
                     div.className = 'completed-item';
+                    const statusColor = getCompletedItemColor(item);
+                    if (statusColor) div.dataset.statusColor = statusColor;
+                    const colorDotHtml = statusColor ? `<span class="completed-color-dot" style="background:${HIGHLIGHT_COLOR_HEX[statusColor] || '#ccc'};" title="Matches the ${statusColor} highlight on this ${item.type === 'lead' ? 'lead' : 'to-do'}"></span>` : '';
                     const sendDropdownHtml = item.type === 'lead' ? `
                         <div class="edit-dropdown completed-send-dropdown">
                             <button class="completed-send-btn" title="Send this lead"><i class="fas fa-paper-plane"></i></button>
@@ -4123,6 +4331,7 @@
                     ` : '';
                     div.innerHTML = `
                         <i class="fas fa-check-circle"></i>
+                        ${colorDotHtml}
                         <span class="item-text">${item.text}</span>
                         <span class="item-type">${item.type === 'lead' ? '📋 Lead' : '📝 To-Do'}</span>
                         <span style="font-size:0.7rem;color:#a0aec0;">${item.timestamp || ''}</span>
@@ -4285,6 +4494,151 @@
                 }
             }
 
+            // ===== SCRIPT TRANSLATOR =====
+            // Free client-side translation via the MyMemory API (no key needed,
+            // CORS-friendly for a static GitHub Pages site). It's a strong first
+            // draft, not a certified professional translation - the in-panel note
+            // tells Tania to have a native speaker confirm important phrasing
+            // before a real sales call.
+            function updateTranslatorWordCounter() {
+                const inputEl = document.getElementById('translatorInput');
+                const counterEl = document.getElementById('translatorWordCount');
+                if (!inputEl || !counterEl) return;
+                const words = countWords(inputEl.value);
+                counterEl.textContent = `${words} / 500 words`;
+                counterEl.style.color = words > 500 ? '#b22222' : '#2c7da0';
+            }
+
+            function setTranslatorOpen(isOpen) {
+                const panel = document.getElementById('translatorPanel');
+                const toggleLink = document.getElementById('translatorToggleLink');
+                if (!panel || !toggleLink) return;
+                panel.style.display = isOpen ? 'block' : 'none';
+                toggleLink.style.display = isOpen ? 'none' : 'inline-flex';
+                try {
+                    localStorage.setItem('webswan_translator_open', isOpen ? '1' : '0');
+                } catch (e) {
+                    // localStorage unavailable - open/closed state just won't persist.
+                }
+            }
+
+            // Splits long text into pieces under ~450 characters at sentence (then
+            // word) boundaries, since the free translation endpoint is meant for
+            // short lookups, not a whole 500-word script in a single request.
+            function splitTextForTranslation(text, maxLen) {
+                const sentences = text.match(/[^.!?]+[.!?]*\s*/g) || [text];
+                const chunks = [];
+                let current = '';
+                sentences.forEach(sentence => {
+                    if ((current + sentence).length <= maxLen) {
+                        current += sentence;
+                        return;
+                    }
+                    if (current.trim()) chunks.push(current.trim());
+                    current = '';
+                    if (sentence.length <= maxLen) {
+                        current = sentence;
+                        return;
+                    }
+                    let piece = '';
+                    sentence.split(' ').forEach(word => {
+                        if ((piece + ' ' + word).trim().length > maxLen) {
+                            if (piece.trim()) chunks.push(piece.trim());
+                            piece = word;
+                        } else {
+                            piece = (piece + ' ' + word).trim();
+                        }
+                    });
+                    current = piece;
+                });
+                if (current.trim()) chunks.push(current.trim());
+                return chunks.length ? chunks : [text];
+            }
+
+            async function translateChunkViaMyMemory(text, targetCode) {
+                const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|${targetCode}`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Translation service error');
+                const data = await response.json();
+                if (data && data.responseData && typeof data.responseData.translatedText === 'string') {
+                    return data.responseData.translatedText;
+                }
+                throw new Error('No translation returned');
+            }
+
+            async function translateScript() {
+                const inputEl = document.getElementById('translatorInput');
+                const outputEl = document.getElementById('translatorOutput');
+                const targetSelect = document.getElementById('translatorLanguage');
+                const translateBtn = document.getElementById('translatorTranslateBtn');
+                if (!inputEl || !outputEl || !targetSelect || !translateBtn) return;
+
+                const text = inputEl.value.trim();
+                if (!text) {
+                    showToast('Write or paste your script first.', 'error');
+                    return;
+                }
+                if (countWords(text) > 500) {
+                    showToast('Script exceeds 500 words - trim it down first.', 'error');
+                    return;
+                }
+
+                const targetCode = targetSelect.value;
+                const chunks = splitTextForTranslation(text, 450);
+                const originalLabel = translateBtn.innerHTML;
+                translateBtn.disabled = true;
+                outputEl.value = '';
+
+                try {
+                    const translatedParts = [];
+                    for (let i = 0; i < chunks.length; i++) {
+                        translateBtn.innerHTML = chunks.length > 1
+                            ? `<i class="fas fa-spinner fa-spin"></i> Translating (${i + 1}/${chunks.length})...`
+                            : '<i class="fas fa-spinner fa-spin"></i> Translating...';
+                        const translated = await translateChunkViaMyMemory(chunks[i], targetCode);
+                        translatedParts.push(translated);
+                    }
+                    outputEl.value = translatedParts.join(' ');
+                    showToast('✅ Translated! Have a native speaker confirm before big calls.', 'success');
+                } catch (error) {
+                    console.error('Translation failed:', error);
+                    showToast('❌ Translation failed - check your connection and try again.', 'error');
+                } finally {
+                    translateBtn.disabled = false;
+                    translateBtn.innerHTML = originalLabel;
+                }
+            }
+
+            function clearTranslator() {
+                const inputEl = document.getElementById('translatorInput');
+                const outputEl = document.getElementById('translatorOutput');
+                if (inputEl) inputEl.value = '';
+                if (outputEl) outputEl.value = '';
+                updateTranslatorWordCounter();
+                localStorage.removeItem('webswan_translator_script');
+                showToast('🧹 Translator cleared!', 'success');
+            }
+
+            async function copyTranslation() {
+                const outputEl = document.getElementById('translatorOutput');
+                const copyBtn = document.getElementById('translatorCopyBtn');
+                if (!outputEl || !outputEl.value.trim()) {
+                    showToast('Nothing to copy yet - translate your script first.', 'error');
+                    return;
+                }
+                const copied = await copyTextSafely(outputEl.value);
+                if (copyBtn) {
+                    const original = copyBtn.innerHTML;
+                    copyBtn.innerHTML = copied ? '<i class="fas fa-check"></i> Copied!' : original;
+                    if (copied) copyBtn.classList.add('copied');
+                    setTimeout(() => {
+                        copyBtn.innerHTML = original;
+                        copyBtn.classList.remove('copied');
+                    }, 2000);
+                }
+                showToast(copied ? '✅ Translation copied!' : '❌ Could not copy - select and copy manually.', copied ? 'success' : 'error');
+            }
+
             // ===== OTHER FUNCTIONS =====
             function lockApp() {
                 if (confirm('🔒 Lock the app? You\'ll need to unlock again.')) {
@@ -4309,6 +4663,7 @@
                     localStorage.removeItem('webswan_saved_notes');
                     localStorage.removeItem('webswan_lessonnotes');
                     localStorage.removeItem('webswan_notes');
+                    localStorage.removeItem('webswan_translator_script');
                     leads = [];
                     todos = [];
                     completedItems = [];
@@ -4329,6 +4684,11 @@
                     leadFormComment.value = '';
                     noteContentInput.value = '';
                     closeCurrentNote();
+                    const translatorInputElClear = document.getElementById('translatorInput');
+                    const translatorOutputElClear = document.getElementById('translatorOutput');
+                    if (translatorInputElClear) translatorInputElClear.value = '';
+                    if (translatorOutputElClear) translatorOutputElClear.value = '';
+                    updateTranslatorWordCounter();
                     saveToStorage();
                     renderLeads();
                     renderTodos();
@@ -4369,6 +4729,9 @@
                 updateLeadFormWordCounter();
                 updateNoteInputWordCounter();
                 updateAILink();
+                updateTranslatorWordCounter();
+                const savedTranslatorOpen = localStorage.getItem('webswan_translator_open');
+                setTranslatorOpen(savedTranslatorOpen === null ? true : savedTranslatorOpen === '1');
 
                 document.getElementById('whatsappSendBtn').addEventListener('click', sendWhatsApp);
                 document.getElementById('chatgptSendBtn').addEventListener('click', sendToChatGPT);
@@ -4390,6 +4753,21 @@
                 document.getElementById('importDataInput').addEventListener('change', importAllData);
                 document.getElementById('clearDataBtn').addEventListener('click', clearAllData);
                 document.getElementById('lockAppBtn').addEventListener('click', lockApp);
+                document.getElementById('translatorToggleLink').addEventListener('click', () => setTranslatorOpen(true));
+                document.getElementById('translatorCloseBtn').addEventListener('click', () => setTranslatorOpen(false));
+                document.getElementById('translatorTranslateBtn').addEventListener('click', translateScript);
+                document.getElementById('translatorClearBtn').addEventListener('click', clearTranslator);
+                document.getElementById('translatorCopyBtn').addEventListener('click', copyTranslation);
+                document.getElementById('translatorInput').addEventListener('input', () => {
+                    const inputEl = document.getElementById('translatorInput');
+                    const words = countWords(inputEl.value);
+                    if (words > 500) {
+                        inputEl.value = inputEl.value.split(/\s+/).slice(0, 500).join(' ');
+                    }
+                    updateTranslatorWordCounter();
+                    localStorage.setItem('webswan_translator_script', inputEl.value);
+                    scheduleFirebaseAutoSave();
+                });
                 document.getElementById('addTodoBtn').addEventListener('click', addTodo);
                 document.getElementById('smsSendBtn').addEventListener('click', sendSMS);
                 document.getElementById('aiChatSendBtn').addEventListener('click', sendAIChat);
