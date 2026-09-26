@@ -1819,6 +1819,27 @@
             margin: 0 -1.5rem -1.5rem;
             padding: 0.75rem 1.5rem 1.5rem;
         }
+                [data-highlight="pink"] { background: #f8bbd0 !important; box-shadow: inset 0 0 0 2px #ec407a; color: #6a1b4d !important; }
+        #tmLeadModalOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 30, 47, 0.55);
+            z-index: 10001;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        #tmLeadModalOverlay.show {
+            display: flex;
+        }
+        .tm-lead-row {
+            cursor: pointer;
+        }
+        .tm-lead-row:hover {
+            border-color: #ec407a;
+        }
     </style>
 </head>
 <body>
@@ -1873,6 +1894,7 @@
                 <span class="cheat-item"><span class="cheat-dot" style="background:#ffd600;"></span>Continue Phone Follow-up</span>
                 <span class="cheat-item"><span class="cheat-dot" style="background:#ef9a9a;"></span>Future Call</span>
                 <span class="cheat-item"><span class="cheat-dot" style="background:#5c69f2;"></span>Prepare Audit</span>
+                                <span class="cheat-item"><span class="cheat-dot" style="background:#f8bbd0;"></span>Telemarketing Call</span>
             </div>
 
             <!-- Page Navigation -->
@@ -1977,6 +1999,7 @@
                 <!-- ===== COMPLETED TASKS ===== -->
                 <div class="completed-section">
                     <h3><i class="fas fa-check-circle"></i> Completed Tasks</h3>
+                                    <div id="telemarketingLeadsContainer" style="margin-bottom:1rem;"></div>
                     <div id="completedContainer">
                         <div class="completed-empty">No completed tasks yet. Submit a lead or complete a to-do to see them here! ✅</div>
                     </div>
@@ -2227,6 +2250,13 @@
             </div>
         </div>
     </div>
+        <div id="tmLeadModalOverlay">
+            <div class="cal-modal-box" style="max-width:420px;">
+                <button class="cal-modal-close" id="tmLeadModalCloseBtn"><i class="fas fa-times"></i></button>
+                <h3><i class="fas fa-phone-volume" style="color:#ec407a;"></i> Telemarketing Intake</h3>
+                <div id="tmLeadModalBody" style="font-size:0.9rem;color:#2d3748;line-height:1.7;"></div>
+            </div>
+        </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
@@ -2242,7 +2272,12 @@
             doc,
             getDoc,
             setDoc,
-            serverTimestamp
+            serverTimestamp,
+                collection,
+                getDocs,
+                query,
+                orderBy,
+                limit
         } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -2258,6 +2293,17 @@
         const firebaseApp = initializeApp(firebaseConfig);
         const auth = getAuth(firebaseApp);
         const db = getFirestore(firebaseApp);
+            const marketingConfig = {
+                apiKey: "AIzaSyAqhqUzWqpS7YunkODJU_udTBG3pjsJegQ",
+                authDomain: "webswan-marketing.firebaseapp.com",
+                projectId: "webswan-marketing",
+                storageBucket: "webswan-marketing.firebasestorage.app",
+                messagingSenderId: "556357112107",
+                appId: "1:556357112107:web:6c8bd74e3a7caf9a2d756e",
+                measurementId: "G-M7NDR4DTEW"
+            };
+            const marketingApp = initializeApp(marketingConfig, "telemarketingLeadsApp");
+            const marketingDb = getFirestore(marketingApp);
         const googleProvider = new GoogleAuthProvider();
         googleProvider.setCustomParameters({ prompt: 'select_account' });
 
@@ -2276,6 +2322,11 @@
                     storage,
                     updatedAt: serverTimestamp()
                 }, { merge: true });
+            },
+            async loadTelemarketingLeads() {
+                const leadsQuery = query(collection(marketingDb, 'leads'), orderBy('timestamp', 'desc'), limit(200));
+                const snapshot = await getDocs(leadsQuery);
+                return snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
             }
         };
 
@@ -2426,7 +2477,9 @@
             let editingNoteId = null;
             let currentNoteId = null;
             let highlights = {};
-            // Solid hex for each highlight color, used for small dots/borders
+            let telemarketingLeads = [];
+            let tmDismissed = [];
+                    // Solid hex for each highlight color, used for small dots/borders
             // (like the Highlight Key dots and the Completed Tasks color match)
             // where the field-level [data-highlight] background rules don't apply.
             const HIGHLIGHT_COLOR_HEX = {
@@ -4536,6 +4589,132 @@
                 });
             }
 
+            // ===== TELEMARKETING LEADS (from the WebSwan Telemarketing call form) =====
+            function categoryToEmoji(category) {
+                switch (category) {
+                    case 'Call Back': return '📞';
+                    case 'Wants an Email': return '📧';
+                    case 'Wants a Free Website Analysis': return '📧';
+                    case 'Interested/Hot Lead': return '🔥';
+                    case 'Wants a Demo': return '🎬';
+                    default: return '📋';
+                }
+            }
+
+            function loadTmDismissed() {
+                try {
+                    tmDismissed = JSON.parse(localStorage.getItem('webswan_tm_dismissed') || '[]');
+                    if (!Array.isArray(tmDismissed)) tmDismissed = [];
+                } catch (e) {
+                    tmDismissed = [];
+                }
+            }
+
+            function saveTmDismissed() {
+                localStorage.setItem('webswan_tm_dismissed', JSON.stringify(tmDismissed));
+            }
+
+            function renderTelemarketingLeads() {
+                const el = document.getElementById('telemarketingLeadsContainer');
+                if (!el) return;
+                const visible = telemarketingLeads.filter(l => !tmDismissed.includes(l.id));
+                if (!visible.length) {
+                    el.innerHTML = '';
+                    return;
+                }
+                let html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
+                    + '<span style="font-weight:700;color:#ad1457;font-size:0.85rem;"><i class="fas fa-phone-volume"></i> From Telemarketing Calls</span>'
+                    + '<button class="btn btn-outline" id="tmRefreshBtn" style="border-color:#ec407a;color:#ad1457;padding:0.3rem 0.8rem;font-size:0.75rem;"><i class="fas fa-sync"></i> Refresh</button>'
+                    + '</div>';
+                visible.forEach((lead) => {
+                    const emoji = categoryToEmoji(lead.category);
+                    const when = lead.timestamp ? new Date(lead.timestamp).toLocaleString() : '';
+                    const safeName = (lead.name || 'No name').replace(/</g, '&lt;');
+                    const safeCompany = lead.companyName ? ' — ' + lead.companyName.replace(/</g, '&lt;') : '';
+                    html += `
+                        <div class="completed-item tm-lead-row" data-tm-id="${lead.id}">
+                            <span style="font-size:1.1rem;">${emoji}</span>
+                            <span class="item-text" data-highlight="pink">${safeName}${safeCompany}</span>
+                            <span class="item-type">${(lead.category || 'Lead').replace(/</g, '&lt;')}</span>
+                            <span style="font-size:0.7rem;color:#8a4a63;">${when}</span>
+                            <button class="delete-completed tm-dismiss-btn" data-tm-id="${lead.id}" title="Dismiss"><i class="fas fa-times-circle"></i></button>
+                        </div>`;
+                });
+                el.innerHTML = html;
+
+                el.querySelectorAll('.tm-lead-row').forEach((row) => {
+                    row.addEventListener('click', (e) => {
+                        if (e.target.closest('.tm-dismiss-btn')) return;
+                        const id = row.dataset.tmId;
+                        const lead = telemarketingLeads.find(l => String(l.id) === String(id));
+                        if (lead) openTmLeadModal(lead);
+                    });
+                });
+                el.querySelectorAll('.tm-dismiss-btn').forEach((btn) => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const id = btn.dataset.tmId;
+                        if (!tmDismissed.includes(id)) {
+                            tmDismissed.push(id);
+                            saveTmDismissed();
+                        }
+                        renderTelemarketingLeads();
+                    });
+                });
+                const refreshBtn = document.getElementById('tmRefreshBtn');
+                if (refreshBtn) {
+                    refreshBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        fetchTelemarketingLeads(true);
+                    });
+                }
+            }
+
+            function openTmLeadModal(lead) {
+                const body = document.getElementById('tmLeadModalBody');
+                if (!body) return;
+                const rows = [
+                    ['Decision Maker', lead.decisionMakerName ? `${lead.decisionMakerName}${lead.decisionMakerRole ? ' (' + lead.decisionMakerRole + ')' : ''}` : ''],
+                    ['Name', lead.name],
+                    ['Phone', lead.phone],
+                    ['Email', lead.email],
+                    ['Company', lead.companyName],
+                    ['Industry', lead.industry],
+                    ['Website', lead.website],
+                    ['Service Interested', lead.serviceInterested],
+                    ['Category', lead.category],
+                    ['Calls Made Today', lead.callsMadeToday],
+                    ['Interested Leads Today', lead.interestedCountToday],
+                    ['Comment', lead.comment],
+                    ['Telemarketer', lead.telemarketerId],
+                    ['Submitted', lead.timestamp ? new Date(lead.timestamp).toLocaleString() : '']
+                ].filter(([, v]) => v);
+
+                body.innerHTML = rows.map(([label, value]) =>
+                    `<div style="margin-bottom:10px;"><span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ad1457;display:block;">${label}</span><span>${String(value).replace(/</g, '&lt;')}</span></div>`
+                ).join('');
+
+                document.getElementById('tmLeadModalOverlay').classList.add('show');
+            }
+
+            function closeTmLeadModal() {
+                const overlay = document.getElementById('tmLeadModalOverlay');
+                if (overlay) overlay.classList.remove('show');
+            }
+
+            async function fetchTelemarketingLeads(manual) {
+                if (!window.dailyFirebase || !window.dailyFirebase.loadTelemarketingLeads) return;
+                try {
+                    const docs = await window.dailyFirebase.loadTelemarketingLeads();
+                    telemarketingLeads = docs.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+                    renderTelemarketingLeads();
+                    if (manual) showToast(`📲 ${telemarketingLeads.length} telemarketing lead(s) loaded`, 'success');
+                } catch (error) {
+                    console.error('Failed to load telemarketing leads:', error);
+                    if (manual) showToast('❌ Could not load telemarketing leads.', 'error');
+                }
+            }
+
             // ===== LESSONS FUNCTIONS =====
             function submitCodingLesson() {
                 const topic = document.getElementById('codingTopic').value;
@@ -4912,6 +5091,17 @@
                 updateTranslatorWordCounter();
                 const savedTranslatorOpen = localStorage.getItem('webswan_translator_open');
                 setTranslatorOpen(savedTranslatorOpen === null ? true : savedTranslatorOpen === '1');
+
+            loadTmDismissed();
+            fetchTelemarketingLeads(false);
+            const tmModalCloseBtn = document.getElementById('tmLeadModalCloseBtn');
+            if (tmModalCloseBtn) tmModalCloseBtn.addEventListener('click', closeTmLeadModal);
+            const tmModalOverlayEl = document.getElementById('tmLeadModalOverlay');
+            if (tmModalOverlayEl) {
+                tmModalOverlayEl.addEventListener('click', (e) => {
+                    if (e.target.id === 'tmLeadModalOverlay') closeTmLeadModal();
+                });
+            }
 
                 document.getElementById('whatsappSendBtn').addEventListener('click', sendWhatsApp);
                 document.getElementById('chatgptSendBtn').addEventListener('click', sendToChatGPT);
