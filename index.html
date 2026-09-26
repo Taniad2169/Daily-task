@@ -2265,6 +2265,7 @@
             GoogleAuthProvider,
             signInWithPopup,
             signOut,
+            signInAnonymously,
             onAuthStateChanged
         } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
         import {
@@ -2304,6 +2305,8 @@
             };
             const marketingApp = initializeApp(marketingConfig, "telemarketingLeadsApp");
             const marketingDb = getFirestore(marketingApp);
+        const marketingAuth = getAuth(marketingApp);
+        const marketingAuthReady = signInAnonymously(marketingAuth).catch(function(err) { console.error('Anonymous sign-in failed (marketing):', err); });
         const googleProvider = new GoogleAuthProvider();
         googleProvider.setCustomParameters({ prompt: 'select_account' });
 
@@ -2324,6 +2327,7 @@
                 }, { merge: true });
             },
             async loadTelemarketingLeads() {
+                await marketingAuthReady;
                 const leadsQuery = query(collection(marketingDb, 'leads'), orderBy('timestamp', 'desc'), limit(200));
                 const snapshot = await getDocs(leadsQuery);
                 return snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
