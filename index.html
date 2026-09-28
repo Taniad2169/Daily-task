@@ -661,6 +661,21 @@
             font-size: 0.9rem;
             color: #2d3748;
         }
+        .completed-item .item-text-clickable {
+            cursor: pointer;
+            text-decoration: underline dotted;
+            text-underline-offset: 3px;
+        }
+        .completed-item .item-text-clickable:hover {
+            color: #0077b6;
+        }
+        @keyframes leadCardFlash {
+            0%, 100% { box-shadow: 0 6px 16px rgba(0, 60, 100, 0.08); border-color: rgba(0, 119, 182, 0.12); }
+            25%, 75% { box-shadow: 0 0 0 4px rgba(0, 119, 182, 0.35); border-color: #0077b6; }
+        }
+        .lead-card-flash {
+            animation: leadCardFlash 1.6s ease;
+        }
         .completed-item .item-type {
             font-size: 0.7rem;
             color: #718096;
@@ -1911,6 +1926,15 @@
             <!-- ===== PAGE 1: TASKS ===== -->
             <div id="page-tasks" class="page active">
 
+                <!-- ===== COMPLETED TASKS ===== -->
+                <div class="completed-section">
+                    <h3><i class="fas fa-check-circle"></i> Completed Tasks</h3>
+                                    <div id="telemarketingLeadsContainer" style="margin-bottom:1rem;"></div>
+                    <div id="completedContainer">
+                        <div class="completed-empty">No completed tasks yet. Submit a lead or complete a to-do to see them here! ✅</div>
+                    </div>
+                </div>
+
                 <!-- ===== LEAD FORM ===== -->
                 <div class="lead-form">
                     <h3><i class="fas fa-leaf" style="color:#0077b6;"></i> Lead Form</h3>
@@ -2000,14 +2024,7 @@
                     </div>
                 </div>
 
-                <!-- ===== COMPLETED TASKS ===== -->
-                <div class="completed-section">
-                    <h3><i class="fas fa-check-circle"></i> Completed Tasks</h3>
-                                    <div id="telemarketingLeadsContainer" style="margin-bottom:1rem;"></div>
-                    <div id="completedContainer">
-                        <div class="completed-empty">No completed tasks yet. Submit a lead or complete a to-do to see them here! ✅</div>
-                    </div>
-                </div>
+                <!-- ===== COMPLETED TASKS moved above Lead Form ===== -->
 
                 <div class="general-comment" id="generalCommentBox">
                     <label><i class="fas fa-sticky-note" style="color:#0077b6;"></i> Daily general comment <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(max 500 words)</span></label>
@@ -4469,13 +4486,31 @@
                     ` : '';
                     div.innerHTML = `
                         <i class="fas fa-check-circle"></i>
-                        <span class="item-text"${highlightAttr}>${item.text}</span>
+                        <span class="item-text${item.type === 'lead' && item.leadId ? ' item-text-clickable' : ''}"${highlightAttr}${item.type === 'lead' && item.leadId ? ` data-lead-id="${item.leadId}" title="Double-click to jump to this lead's form"` : ''}>${item.text}</span>
                         <span class="item-type">${item.type === 'lead' ? '📋 Lead' : '📝 To-Do'}</span>
                         <span style="font-size:0.7rem;color:#a0aec0;">${item.timestamp || ''}</span>
                         ${sendDropdownHtml}
                         <button class="delete-completed" data-index="${index}" title="Delete from completed list"><i class="fas fa-times-circle"></i></button>
                     `;
                     completedContainer.appendChild(div);
+                });
+
+                // Double-click a completed lead's name to smooth-scroll down to
+                // that same lead's card in the lead list, with a brief flash so
+                // it's obvious which card just got scrolled to.
+                document.querySelectorAll('.item-text-clickable').forEach(el => {
+                    el.addEventListener('dblclick', function(e) {
+                        e.stopPropagation();
+                        const leadId = this.dataset.leadId;
+                        const targetCard = document.querySelector(`.lead-card[data-lead-id="${leadId}"]`);
+                        if (!targetCard) {
+                            showToast('That lead is no longer in the list.', 'error');
+                            return;
+                        }
+                        targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        targetCard.classList.add('lead-card-flash');
+                        setTimeout(() => targetCard.classList.remove('lead-card-flash'), 1600);
+                    });
                 });
 
                 document.querySelectorAll('.completed-send-btn').forEach(btn => {
