@@ -2035,6 +2035,14 @@
             <!-- ===== PAGE 1: TASKS ===== -->
             <div id="page-tasks" class="page active">
 
+                <!-- ===== LEAD SEARCH BAR ===== -->
+                <div class="lead-search-bar">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="leadSearchInput" placeholder="Search leads &amp; completed tasks by name, or type a status like hotlead, newlead, followup..." />
+                    <span class="lead-search-count" id="leadSearchCount"></span>
+                    <button class="btn btn-outline lead-search-clear" id="leadSearchClearBtn"><i class="fas fa-times"></i></button>
+                </div>
+
                 <!-- ===== COMPLETED TASKS ===== -->
                 <div class="completed-section">
                     <h3><i class="fas fa-check-circle"></i> Completed Tasks</h3>
@@ -2078,14 +2086,6 @@
                         <button class="btn" id="crmBtn" style="background:#e91e63;color:white;border-color:#e91e63;"><i class="fas fa-database"></i> CRM</button>
                         <button class="btn btn-outline" id="clearFormBtn"><i class="fas fa-undo"></i> Clear Form</button>
                     </div>
-                </div>
-
-                <!-- ===== LEAD SEARCH BAR ===== -->
-                <div class="lead-search-bar">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="leadSearchInput" placeholder="Search leads by name, or type a status like hotlead, newlead, followup..." />
-                    <span class="lead-search-count" id="leadSearchCount"></span>
-                    <button class="btn btn-outline lead-search-clear" id="leadSearchClearBtn"><i class="fas fa-times"></i></button>
                 </div>
 
                 <!-- ===== LEADS CONTAINER (saved leads) ===== -->
@@ -2459,7 +2459,7 @@
             const marketingApp = initializeApp(marketingConfig, "telemarketingLeadsApp");
             const marketingDb = getFirestore(marketingApp);
         const marketingAuth = getAuth(marketingApp);
-        const marketingAuthReady = signInAnonymously(marketingAuth).catch(function(err) { console.error('Anonymous sign-in failed (marketing):', err); });
+        const marketingAuthReady = marketingAuth.authStateReady().then(function() { if (!marketingAuth.currentUser) return signInAnonymously(marketingAuth); }).catch(function(err) { console.error('Sign-in failed (marketing):', err); });
         const googleProvider = new GoogleAuthProvider();
         googleProvider.setCustomParameters({ prompt: 'select_account' });
 
@@ -2478,6 +2478,14 @@
                     storage,
                     updatedAt: serverTimestamp()
                 }, { merge: true });
+            },
+            async connectTelemarketing() {
+                // Owner-only access to telemarketing leads (Google sign-in on the webswan-marketing project)
+                return signInWithPopup(marketingAuth, googleProvider);
+            },
+            telemarketingSignedIn() {
+                const u = marketingAuth.currentUser;
+                return !!(u && !u.isAnonymous);
             },
             async loadTelemarketingLeads() {
                 await marketingAuthReady;
@@ -2972,7 +2980,24 @@
                 return null;
             }
 
+            function filterCompletedBySearch() {
+                const searchInput = document.getElementById('leadSearchInput');
+                const rawQuery = searchInput ? searchInput.value.trim() : '';
+                const rows = document.querySelectorAll('#completedContainer .completed-item, #telemarketingLeadsContainer .completed-item');
+                if (!rawQuery) { rows.forEach(r => { r.style.display = ''; }); return; }
+                const q = rawQuery.toLowerCase();
+                const colorMatch = COLOR_SEARCH_MAP[normalizeSearchTerm(rawQuery)];
+                rows.forEach(r => {
+                    const textEl = r.querySelector('.item-text');
+                    const match = colorMatch
+                        ? !!(textEl && textEl.getAttribute('data-highlight') === colorMatch)
+                        : (r.textContent || '').toLowerCase().includes(q);
+                    r.style.display = match ? '' : 'none';
+                });
+            }
+
             function filterLeadsBySearch() {
+                filterCompletedBySearch();
                 const searchInput = document.getElementById('leadSearchInput');
                 const clearBtn = document.getElementById('leadSearchClearBtn');
                 const countLabel = document.getElementById('leadSearchCount');
@@ -5011,7 +5036,8 @@
             function renderTelemarketingLeads() {
                 const el = document.getElementById('telemarketingLeadsContainer');
                 if (!el) return;
-                const visible = telemarketingLeads.filter(l => !tmDismissed.includes(l.id));
+                const tmHasInfo = (l) => ['decisionMakerName', 'name', 'companyName', 'phone', 'email', 'website', 'comment', 'serviceInterested', 'industry'].some(k => l[k] && String(l[k]).trim());
+                const visible = telemarketingLeads.filter(l => !tmDismissed.includes(l.id) && tmHasInfo(l));
                 if (!visible.length) {
                     el.innerHTML = '';
                     return;
@@ -5023,7 +5049,7 @@
                 visible.forEach((lead) => {
                     const emoji = categoryToEmoji(lead.category);
                     const when = lead.timestamp ? new Date(lead.timestamp).toLocaleString() : '';
-                    const safeName = (lead.name || 'No name').replace(/</g, '&lt;');
+                    const safeName = String(lead.decisionMakerName || lead.name || lead.companyName || lead.phone || 'No name').replace(/</g, '&lt;');
                     const safeCompany = lead.companyName ? ' — ' + lead.companyName.replace(/</g, '&lt;') : '';
                     html += `
                         <div class="completed-item tm-lead-row" data-tm-id="${lead.id}">
@@ -5096,6 +5122,28 @@
                 if (overlay) overlay.classList.remove('show');
             }
 
+            // Shown when the telemarketing database is locked to the owner's Google account
+            function renderTmConnectPrompt(error) {
+                const el = document.getElementById('telemarketingLeadsContainer');
+                if (!el) return;
+                const denied = error && (error.code === 'permission-denied' || /permission/i.test(error.message || ''));
+                if (!denied) return;
+                el.innerHTML = '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:8px;">'
+                    + '<span style="font-weight:700;color:#ad1457;font-size:0.85rem;"><i class="fas fa-lock"></i> Telemarketing leads are private</span>'
+                    + '<button class="btn btn-outline" id="tmConnectBtn" style="border-color:#ec407a;color:#ad1457;padding:0.3rem 0.8rem;font-size:0.75rem;"><i class="fab fa-google"></i> Connect Telemarketing (owner)</button>'
+                    + '</div>';
+                document.getElementById('tmConnectBtn').addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    try {
+                        await window.dailyFirebase.connectTelemarketing();
+                        fetchTelemarketingLeads(true);
+                    } catch (err) {
+                        console.error('Telemarketing sign-in failed:', err);
+                        showToast('❌ Could not connect to telemarketing leads.', 'error');
+                    }
+                });
+            }
+
             async function fetchTelemarketingLeads(manual) {
                 if (!window.dailyFirebase || !window.dailyFirebase.loadTelemarketingLeads) return;
                 try {
@@ -5105,6 +5153,7 @@
                     if (manual) showToast(`📲 ${telemarketingLeads.length} telemarketing lead(s) loaded`, 'success');
                 } catch (error) {
                     console.error('Failed to load telemarketing leads:', error);
+                    renderTmConnectPrompt(error);
                     if (manual) showToast('❌ Could not load telemarketing leads.', 'error');
                 }
             }
