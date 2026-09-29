@@ -1156,6 +1156,32 @@
         .notes-dropdown-item .note-status.completed {
             color: #28a745;
         }
+        .notes-dropdown-search {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 14px;
+            border-bottom: 1px solid #f3e8ff;
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 1;
+        }
+        .notes-dropdown-search i {
+            color: #8B5CF6;
+            font-size: 0.85rem;
+        }
+        .notes-dropdown-search input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 0.85rem;
+            background: transparent;
+            color: #4c1d95;
+        }
+        .notes-dropdown-item.note-hidden {
+            display: none;
+        }
         .notes-dropdown-empty {
             padding: 16px;
             text-align: center;
@@ -1855,6 +1881,89 @@
         .tm-lead-row:hover {
             border-color: #ec407a;
         }
+        .note-content-preview {
+            min-width: 0;
+        }
+        .note-content-preview .note-content {
+            color: #6b7280;
+            font-size: 0.82rem;
+        }
+        #noteReadModalOverlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 30, 47, 0.55);
+            z-index: 10002;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            overflow-y: auto;
+        }
+        #noteReadModalOverlay.show {
+            display: flex;
+        }
+        .note-read-box {
+            background: white;
+            border-radius: 28px;
+            padding: 1.5rem 1.75rem;
+            max-width: 680px;
+            width: 100%;
+            max-height: 88vh;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.35);
+            margin: auto;
+        }
+        .note-read-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 0.25rem;
+        }
+        .note-read-header h3 {
+            color: #6d28d9;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            word-break: break-word;
+        }
+        .note-read-meta {
+            font-size: 0.75rem;
+            color: #a0aec0;
+            margin-bottom: 1rem;
+        }
+        .note-read-content {
+            font-size: 0.98rem;
+            line-height: 1.75;
+            color: #2d3748;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .note-read-colors {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            margin: 1.25rem 0 0.5rem;
+            padding-top: 0.9rem;
+            border-top: 1px dashed #e9d5ff;
+        }
+        .note-read-colors .hl-swatch {
+            width: 26px;
+            height: 26px;
+        }
+        .note-read-colors .hl-swatch.active {
+            box-shadow: 0 0 0 3px #8B5CF6;
+        }
+        .note-read-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 1.25rem;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
     </style>
 </head>
 <body>
@@ -2197,7 +2306,13 @@
                                 <i class="fas fa-folder-open"></i> Saved Notes <span id="notesCountBadge" style="background:rgba(255,255,255,0.2);padding:0 8px;border-radius:10px;font-size:0.7rem;">0</span>
                             </button>
                             <div class="notes-dropdown-content" id="notesDropdownContent">
-                                <div class="notes-dropdown-empty">No saved notes yet.</div>
+                                <div class="notes-dropdown-search">
+                                    <i class="fas fa-search"></i>
+                                    <input type="text" id="notesSearchInput" placeholder="Search notes by title...">
+                                </div>
+                                <div id="notesDropdownList">
+                                    <div class="notes-dropdown-empty">No saved notes yet.</div>
+                                </div>
                             </div>
                         </div>
 
@@ -2213,7 +2328,7 @@
                     </div>
 
                     <div id="noteInputArea" style="display:none; margin-bottom: 1rem; transition: all 0.4s ease;">
-                        <div class="field-group" data-hlkey="noteEditor">
+                        <div class="field-group">
                             <label><i class="fas fa-pen"></i> Note Content (5000 words max - stretches)</label>
                             <textarea id="noteContentInput" placeholder="Write your note content here..." maxlength="30000" style="min-height:150px;resize:vertical;"></textarea>
                             <div class="notes-word-counter" id="noteInputWordCount">0 / 5000 words</div>
@@ -2276,6 +2391,23 @@
                 <button class="cal-modal-close" id="tmLeadModalCloseBtn"><i class="fas fa-times"></i></button>
                 <h3><i class="fas fa-phone-volume" style="color:#ec407a;"></i> Telemarketing Intake</h3>
                 <div id="tmLeadModalBody" style="font-size:0.9rem;color:#2d3748;line-height:1.7;"></div>
+            </div>
+        </div>
+
+        <!-- ===== FULL-SCREEN NOTE READER ===== -->
+        <div id="noteReadModalOverlay">
+            <div class="note-read-box">
+                <div class="note-read-header">
+                    <h3><i class="fas fa-sticky-note"></i> <span id="noteReadTitle">Untitled</span></h3>
+                    <button class="cal-modal-close" id="noteReadCloseBtn" title="Close"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="note-read-meta" id="noteReadMeta"></div>
+                <div class="note-read-content" id="noteReadContent"></div>
+                <div class="note-read-colors" id="noteReadColors"></div>
+                <div class="note-read-actions">
+                    <button class="btn btn-outline" id="noteReadDeleteBtn" style="border-color:#e74c3c;color:#e74c3c;"><i class="fas fa-trash"></i> Delete</button>
+                    <button class="btn btn-notes" id="noteReadEditBtn"><i class="fas fa-pen"></i> Edit Note</button>
+                </div>
             </div>
         </div>
 
@@ -2567,6 +2699,9 @@
             const notesSaveIndicator = document.getElementById('notesSaveIndicator');
             const notesDropdownBtn = document.getElementById('notesDropdownBtn');
             const notesDropdownContent = document.getElementById('notesDropdownContent');
+            const notesDropdownList = document.getElementById('notesDropdownList');
+            const notesSearchInput = document.getElementById('notesSearchInput');
+            let notesSearchQuery = '';
             const notesCountBadge = document.getElementById('notesCountBadge');
             const currentNoteIndicator = document.getElementById('currentNoteIndicator');
             const currentNoteTitle = document.getElementById('currentNoteTitle');
@@ -3070,13 +3205,155 @@
                 return firstLine.length > 50 ? firstLine.substring(0, 50) + '...' : firstLine;
             }
 
-            function renderNotesDropdown() {
-                if (!notesDropdownContent) return;
+            function getNotePreview(content) {
+                if (!content) return '';
+                const flat = content.replace(/\s+/g, ' ').trim();
+                return flat.length > 140 ? flat.substring(0, 140) + '…' : flat;
+            }
 
-                notesDropdownContent.innerHTML = '';
+            // Sets the color for ONE note by id only - this is a dedicated
+            // per-note field (note.color), completely separate from the
+            // shared highlights{} object the lead/task fields use, so
+            // coloring one note can never bleed into another.
+            function setNoteColor(noteId, color) {
+                const note = notes.find(n => n.id === noteId);
+                if (!note) return;
+                note.color = color || null;
+                saveNotesToStorage();
+                renderNotesDropdown();
+                renderNotesList();
+                const readOverlay = document.getElementById('noteReadModalOverlay');
+                if (readOverlay.classList.contains('show') && parseInt(readOverlay.dataset.noteId) === noteId) {
+                    renderNoteReadColorSwatches(note);
+                }
+                showToast(color ? '🎨 Note color set!' : '✅ Note color cleared', 'success');
+            }
+
+            function deleteNoteById(noteId) {
+                if (!confirm('Delete this note?')) return;
+                if (currentNoteId === noteId) closeCurrentNote();
+                notes = notes.filter(n => n.id !== noteId);
+                saveNotesToStorage();
+                renderNotesDropdown();
+                renderNotesList();
+                showToast('🗑️ Note deleted!', 'success');
+            }
+
+            function renderNoteReadColorSwatches(note) {
+                const wrap = document.getElementById('noteReadColors');
+                if (!wrap) return;
+                wrap.innerHTML = '';
+                const label = document.createElement('span');
+                label.style.cssText = 'font-size:0.75rem;font-weight:700;color:#6d28d9;text-transform:uppercase;letter-spacing:0.5px;margin-right:4px;';
+                label.textContent = 'Category:';
+                wrap.appendChild(label);
+                Object.keys(HIGHLIGHT_COLOR_HEX).forEach(color => {
+                    const btn = document.createElement('button');
+                    btn.className = 'hl-swatch' + (note.color === color ? ' active' : '');
+                    btn.style.background = HIGHLIGHT_COLOR_HEX[color];
+                    btn.title = color;
+                    btn.addEventListener('click', () => setNoteColor(note.id, color));
+                    wrap.appendChild(btn);
+                });
+                const clearBtn = document.createElement('button');
+                clearBtn.className = 'hl-swatch';
+                clearBtn.style.cssText = 'background:#f7fafc;color:#a0aec0;display:inline-flex;align-items:center;justify-content:center;font-size:0.7rem;';
+                clearBtn.title = 'Clear';
+                clearBtn.innerHTML = '<i class="fas fa-ban"></i>';
+                clearBtn.addEventListener('click', () => setNoteColor(note.id, null));
+                wrap.appendChild(clearBtn);
+            }
+
+            function openNoteFullScreen(noteId) {
+                const note = notes.find(n => n.id === noteId);
+                if (!note) {
+                    showToast('Note not found.', 'error');
+                    return;
+                }
+                document.getElementById('noteReadTitle').textContent = getNoteTitle(note.content);
+                const updated = note.updatedAt || note.createdAt;
+                document.getElementById('noteReadMeta').textContent = updated ? ('Last updated ' + new Date(updated).toLocaleString()) : '';
+                document.getElementById('noteReadContent').textContent = note.content;
+                renderNoteReadColorSwatches(note);
+                const overlay = document.getElementById('noteReadModalOverlay');
+                overlay.dataset.noteId = noteId;
+                overlay.classList.add('show');
+            }
+
+            function closeNoteReadModal() {
+                document.getElementById('noteReadModalOverlay').classList.remove('show');
+            }
+
+            // The always-visible list below the editor - a second, non-collapsing
+            // view of every note with its color bar, for "see clearly where they
+            // are organized" at a glance without opening the dropdown.
+            function renderNotesList() {
+                if (!notesListContainer) return;
+                if (notes.length === 0) {
+                    notesListContainer.innerHTML = '<div class="notes-empty">No notes yet. Click "New Note" to create your first note! 📝</div>';
+                    notesListContainer.classList.add('visible');
+                    return;
+                }
+                notesListContainer.classList.add('visible');
+                const sorted = [...notes].reverse();
+                notesListContainer.innerHTML = sorted.map(note => {
+                    const hex = note.color && HIGHLIGHT_COLOR_HEX[note.color];
+                    const borderStyle = hex ? `border-left:6px solid ${hex};` : '';
+                    return `
+                        <div class="notes-item" style="${borderStyle}">
+                            <div class="note-content-preview" data-note-id="${note.id}" style="flex:1;cursor:pointer;">
+                                <div style="font-weight:700;color:#6d28d9;margin-bottom:2px;">${note.completed ? '✅ ' : '📝 '}${escapeHtmlForOverlay(getNoteTitle(note.content))}</div>
+                                <div class="note-content">${escapeHtmlForOverlay(getNotePreview(note.content))}</div>
+                            </div>
+                            <div class="note-actions">
+                                <div class="edit-dropdown completed-send-dropdown">
+                                    <button class="note-color-toggle-btn completed-send-btn" data-note-id="${note.id}" title="Set this note's color"><i class="fas fa-palette"></i></button>
+                                    <div class="completed-color-swatches note-color-swatches" data-note-id="${note.id}">
+                                        ${Object.keys(HIGHLIGHT_COLOR_HEX).map(c => `<button class="completed-color-swatch note-color-swatch" data-color="${c}" data-note-id="${note.id}" style="background:${HIGHLIGHT_COLOR_HEX[c]};" title="${c}"></button>`).join('')}
+                                        <button class="completed-color-swatch completed-color-clear note-color-swatch" data-color="" data-note-id="${note.id}" title="Clear color"><i class="fas fa-ban"></i></button>
+                                    </div>
+                                </div>
+                                <button class="note-edit" data-note-id="${note.id}" title="Edit"><i class="fas fa-pen"></i></button>
+                                <button class="note-delete" data-note-id="${note.id}" title="Delete"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                notesListContainer.querySelectorAll('.note-content-preview').forEach(el => {
+                    el.addEventListener('click', () => openNoteFullScreen(parseInt(el.dataset.noteId)));
+                });
+                notesListContainer.querySelectorAll('.note-edit').forEach(btn => {
+                    btn.addEventListener('click', (e) => { e.stopPropagation(); openNote(parseInt(btn.dataset.noteId)); });
+                });
+                notesListContainer.querySelectorAll('.note-delete').forEach(btn => {
+                    btn.addEventListener('click', (e) => { e.stopPropagation(); deleteNoteById(parseInt(btn.dataset.noteId)); });
+                });
+                notesListContainer.querySelectorAll('.note-color-toggle-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const noteId = btn.dataset.noteId;
+                        const row = notesListContainer.querySelector(`.note-color-swatches[data-note-id="${noteId}"]`);
+                        document.querySelectorAll('.completed-color-swatches').forEach(r => { if (r !== row) r.classList.remove('show'); });
+                        if (row) row.classList.toggle('show');
+                    });
+                });
+                notesListContainer.querySelectorAll('.note-color-swatch').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        setNoteColor(parseInt(btn.dataset.noteId), btn.dataset.color || null);
+                        btn.closest('.note-color-swatches')?.classList.remove('show');
+                    });
+                });
+            }
+
+            function renderNotesDropdown() {
+                if (!notesDropdownList) return;
+
+                notesDropdownList.innerHTML = '';
 
                 if (notes.length === 0) {
-                    notesDropdownContent.innerHTML = '<div class="notes-dropdown-empty">No saved notes yet. 📝</div>';
+                    notesDropdownList.innerHTML = '<div class="notes-dropdown-empty">No saved notes yet. 📝</div>';
                     notesCountBadge.textContent = '0';
                     return;
                 }
@@ -3087,6 +3364,12 @@
                 sorted.forEach(note => {
                     const item = document.createElement('div');
                     item.className = 'notes-dropdown-item';
+                    item.dataset.noteId = note.id;
+
+                    const colorDot = document.createElement('span');
+                    const dotHex = note.color && HIGHLIGHT_COLOR_HEX[note.color];
+                    colorDot.style.cssText = 'width:10px;height:10px;border-radius:50%;flex-shrink:0;' +
+                        (dotHex ? `background:${dotHex};box-shadow:0 0 0 1px rgba(0,0,0,0.15) inset;` : 'background:transparent;box-shadow:0 0 0 1px #e2e8f0 inset;');
 
                     const title = document.createElement('span');
                     title.className = 'note-title';
@@ -3096,34 +3379,97 @@
                     status.className = 'note-status' + (note.completed ? ' completed' : '');
                     status.textContent = note.completed ? '✅' : '📝';
 
+                    // Per-note color picker - a self-contained dropdown scoped to
+                    // THIS note's id only, so setting a color here never touches
+                    // any other note (that was the bug: the old system shared a
+                    // single highlight slot across whichever note was open).
+                    const colorDropdown = document.createElement('div');
+                    colorDropdown.className = 'edit-dropdown completed-send-dropdown';
+                    const colorBtn = document.createElement('button');
+                    colorBtn.className = 'completed-send-btn';
+                    colorBtn.title = 'Set this note\'s color';
+                    colorBtn.innerHTML = '<i class="fas fa-palette"></i>';
+                    colorBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const row = colorDropdown.querySelector('.completed-color-swatches');
+                        document.querySelectorAll('.completed-color-swatches').forEach(r => { if (r !== row) r.classList.remove('show'); });
+                        row.classList.toggle('show');
+                    });
+                    const swatchRow = document.createElement('div');
+                    swatchRow.className = 'completed-color-swatches';
+                    Object.keys(HIGHLIGHT_COLOR_HEX).forEach(color => {
+                        const sw = document.createElement('button');
+                        sw.className = 'completed-color-swatch';
+                        sw.style.background = HIGHLIGHT_COLOR_HEX[color];
+                        sw.title = color;
+                        sw.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            setNoteColor(note.id, color);
+                            swatchRow.classList.remove('show');
+                        });
+                        swatchRow.appendChild(sw);
+                    });
+                    const clearSw = document.createElement('button');
+                    clearSw.className = 'completed-color-swatch completed-color-clear';
+                    clearSw.title = 'Clear color';
+                    clearSw.innerHTML = '<i class="fas fa-ban"></i>';
+                    clearSw.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        setNoteColor(note.id, null);
+                        swatchRow.classList.remove('show');
+                    });
+                    swatchRow.appendChild(clearSw);
+                    colorDropdown.appendChild(colorBtn);
+                    colorDropdown.appendChild(swatchRow);
+
+                    const editBtn = document.createElement('button');
+                    editBtn.className = 'delete-note-dropdown';
+                    editBtn.innerHTML = '<i class="fas fa-pen"></i>';
+                    editBtn.title = 'Edit note';
+                    editBtn.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        openNote(note.id);
+                        notesDropdownContent.classList.remove('show');
+                    });
+
                     const deleteBtn = document.createElement('button');
                     deleteBtn.className = 'delete-note-dropdown';
                     deleteBtn.innerHTML = '<i class="fas fa-times"></i>';
                     deleteBtn.title = 'Delete note';
                     deleteBtn.addEventListener('click', function(e) {
                         e.stopPropagation();
-                        if (confirm('Delete this note?')) {
-                            const noteId = note.id;
-                            if (currentNoteId === noteId) {
-                                closeCurrentNote();
-                            }
-                            notes = notes.filter(n => n.id !== noteId);
-                            saveNotesToStorage();
-                            renderNotesDropdown();
-                            showToast('🗑️ Note deleted!', 'success');
-                        }
+                        deleteNoteById(note.id);
                     });
 
+                    item.appendChild(colorDot);
                     item.appendChild(status);
                     item.appendChild(title);
+                    item.appendChild(colorDropdown);
+                    item.appendChild(editBtn);
                     item.appendChild(deleteBtn);
 
                     item.addEventListener('click', function() {
-                        openNote(note.id);
+                        openNoteFullScreen(note.id);
                         notesDropdownContent.classList.remove('show');
                     });
 
-                    notesDropdownContent.appendChild(item);
+                    notesDropdownList.appendChild(item);
+                });
+
+                filterNotesDropdown();
+            }
+
+            // Matches the typed search word against each note's TITLE only, per
+            // request - hides non-matching rows without touching the underlying
+            // notes array, so it's purely a display filter.
+            function filterNotesDropdown() {
+                const query = notesSearchQuery.trim().toLowerCase();
+                notesDropdownList.querySelectorAll('.notes-dropdown-item').forEach(item => {
+                    if (!query) { item.classList.remove('note-hidden'); return; }
+                    const noteId = parseInt(item.dataset.noteId);
+                    const note = notes.find(n => n.id === noteId);
+                    const title = note ? getNoteTitle(note.content).toLowerCase() : '';
+                    item.classList.toggle('note-hidden', !title.includes(query));
                 });
             }
 
@@ -3176,6 +3522,7 @@
                         note.updatedAt = new Date().toISOString();
                         saveNotesToStorage();
                         renderNotesDropdown();
+                        renderNotesList();
                         currentNoteTitle.textContent = getNoteTitle(content);
                         showToast('✅ Note updated!', 'success');
                     }
@@ -3184,11 +3531,13 @@
                         id: nextNoteId++,
                         content: content,
                         completed: false,
+                        color: null,
                         createdAt: new Date().toISOString(),
                         updatedAt: new Date().toISOString()
                     });
                     saveNotesToStorage();
                     renderNotesDropdown();
+                    renderNotesList();
                     showToast('✅ New note saved!', 'success');
                 }
 
@@ -3222,6 +3571,7 @@
                     closeCurrentNote();
                     saveNotesToStorage();
                     renderNotesDropdown();
+                    renderNotesList();
                     showToast('🗑️ All notes cleared!', 'success');
                 }
             }
@@ -3255,12 +3605,13 @@
                         notes = [];
                         nextNoteId = 1;
                     }
-                    notes = notes.map(n => ({ ...n, completed: n.completed || false }));
+                    notes = notes.map(n => ({ ...n, completed: n.completed || false, color: n.color || null }));
                 } catch(e) {
                     notes = [];
                     nextNoteId = 1;
                 }
                 renderNotesDropdown();
+                renderNotesList();
                 notesCountBadge.textContent = notes.length;
             }
 
@@ -5096,6 +5447,7 @@
                     renderTodos();
                     renderCompleted();
                     renderNotesDropdown();
+                    renderNotesList();
                     updateGeneralWordCounter();
                     updateBriefingWordCounter();
                     updateAIChatWordCounter();
@@ -5216,6 +5568,29 @@
                 document.getElementById('cancelNoteBtn').addEventListener('click', cancelNote);
                 document.getElementById('clearAllNotesBtn').addEventListener('click', clearAllNotes);
                 document.getElementById('closeNoteBtn').addEventListener('click', closeCurrentNote);
+
+                if (notesSearchInput) {
+                    notesSearchInput.addEventListener('input', () => {
+                        notesSearchQuery = notesSearchInput.value;
+                        filterNotesDropdown();
+                    });
+                    notesSearchInput.addEventListener('click', (e) => e.stopPropagation());
+                }
+
+                document.getElementById('noteReadCloseBtn').addEventListener('click', closeNoteReadModal);
+                document.getElementById('noteReadModalOverlay').addEventListener('click', (e) => {
+                    if (e.target.id === 'noteReadModalOverlay') closeNoteReadModal();
+                });
+                document.getElementById('noteReadEditBtn').addEventListener('click', () => {
+                    const noteId = parseInt(document.getElementById('noteReadModalOverlay').dataset.noteId);
+                    closeNoteReadModal();
+                    openNote(noteId);
+                });
+                document.getElementById('noteReadDeleteBtn').addEventListener('click', () => {
+                    const noteId = parseInt(document.getElementById('noteReadModalOverlay').dataset.noteId);
+                    closeNoteReadModal();
+                    deleteNoteById(noteId);
+                });
 
                 notesDropdownBtn.addEventListener('click', function(e) {
                     e.stopPropagation();
