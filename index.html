@@ -1560,6 +1560,12 @@
         [data-highlight="orange"] { background: #f57c00 !important; box-shadow: inset 0 0 0 2px #e65100; color: #1a1200 !important; }
         [data-highlight="teal"] { background: #0891b2 !important; box-shadow: inset 0 0 0 2px #155e75; color: #ffffff !important; }
         [data-highlight="indigo"] { background: #5c69f2 !important; box-shadow: inset 0 0 0 2px #3f4bd1; color: #ffffff !important; }
+        [data-highlight="charcoal"] { background: #36454f !important; box-shadow: inset 0 0 0 2px #232d33; color: #ffffff !important; }
+        [data-highlight="crimson"] { background: #911e1a !important; box-shadow: inset 0 0 0 2px #5e1411; color: #ffffff !important; }
+        [data-highlight="charcoal"] input, [data-highlight="charcoal"] textarea, [data-highlight="charcoal"] label,
+        [data-highlight="crimson"] input, [data-highlight="crimson"] textarea, [data-highlight="crimson"] label { color: #ffffff !important; background: rgba(255,255,255,0.15) !important; }
+        [data-highlight="charcoal"] input, [data-highlight="charcoal"] textarea,
+        [data-highlight="crimson"] input, [data-highlight="crimson"] textarea { color: #0a1e2f !important; background: rgba(255,255,255,0.92) !important; }
         [data-highlight="yellow"] input, [data-highlight="yellow"] textarea, [data-highlight="yellow"] label,
         [data-highlight="orange"] input, [data-highlight="orange"] textarea, [data-highlight="orange"] label { color: #1a1a00 !important; background: rgba(255,255,255,0.85) !important; }
         [data-highlight="green"] input, [data-highlight="green"] textarea, [data-highlight="green"] label,
@@ -1682,6 +1688,8 @@
         .hl-text-overlay mark[data-color="blue"]   { background: #1565c0; }
         .hl-text-overlay mark[data-color="orange"] { background: #f57c00; }
         .hl-text-overlay mark[data-color="teal"] { background: #0891b2; }
+        .hl-text-overlay mark[data-color="charcoal"] { background: #36454f; }
+        .hl-text-overlay mark[data-color="crimson"] { background: #911e1a; }
         [data-hlmode-active="true"] {
             outline: 2px dashed #0077b6 !important;
             outline-offset: 2px;
@@ -2022,6 +2030,8 @@
                 <span class="cheat-item"><span class="cheat-dot" style="background:#ffd600;"></span>Continue Phone Follow-up</span>
                 <span class="cheat-item"><span class="cheat-dot" style="background:#ef9a9a;"></span>Future Call</span>
                 <span class="cheat-item"><span class="cheat-dot" style="background:#5c69f2;"></span>Prepare Audit</span>
+                <span class="cheat-item"><span class="cheat-dot" style="background:#36454f;"></span>Charcoal Grey</span>
+                <span class="cheat-item"><span class="cheat-dot" style="background:#911e1a;"></span>Deep Red</span>
                                 <span class="cheat-item"><span class="cheat-dot" style="background:#f8bbd0;"></span>Telemarketing Call</span>
             </div>
 
@@ -2041,15 +2051,6 @@
                     <input type="text" id="leadSearchInput" placeholder="Search leads &amp; completed tasks by name, or type a status like hotlead, newlead, followup..." />
                     <span class="lead-search-count" id="leadSearchCount"></span>
                     <button class="btn btn-outline lead-search-clear" id="leadSearchClearBtn"><i class="fas fa-times"></i></button>
-                </div>
-
-                <!-- ===== COMPLETED TASKS ===== -->
-                <div class="completed-section">
-                    <h3><i class="fas fa-check-circle"></i> Completed Tasks</h3>
-                                    <div id="telemarketingLeadsContainer" style="margin-bottom:1rem;"></div>
-                    <div id="completedContainer">
-                        <div class="completed-empty">No completed tasks yet. Submit a lead or complete a to-do to see them here! ✅</div>
-                    </div>
                 </div>
 
                 <!-- ===== LEAD FORM ===== -->
@@ -2085,6 +2086,15 @@
                         <button class="btn btn-google-sheet" id="googleSheetBtn"><i class="fas fa-table"></i> Google Sheet</button>
                         <button class="btn" id="crmBtn" style="background:#e91e63;color:white;border-color:#e91e63;"><i class="fas fa-database"></i> CRM</button>
                         <button class="btn btn-outline" id="clearFormBtn"><i class="fas fa-undo"></i> Clear Form</button>
+                    </div>
+                </div>
+
+                <!-- ===== COMPLETED TASKS ===== -->
+                <div class="completed-section">
+                    <h3><i class="fas fa-check-circle"></i> Completed Tasks</h3>
+                                    <div id="telemarketingLeadsContainer" style="margin-bottom:1rem;"></div>
+                    <div id="completedContainer">
+                        <div class="completed-empty">No completed tasks yet. Submit a lead or complete a to-do to see them here! ✅</div>
                     </div>
                 </div>
 
@@ -2133,7 +2143,7 @@
                     </div>
                 </div>
 
-                <!-- ===== COMPLETED TASKS moved above Lead Form ===== -->
+                <!-- ===== Lead Form now sits above Completed Tasks ===== -->
 
                 <div class="general-comment" id="generalCommentBox">
                     <label><i class="fas fa-sticky-note" style="color:#0077b6;"></i> Daily general comment <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(max 500 words)</span></label>
@@ -2357,6 +2367,8 @@
             <button class="hl-swatch" data-color="orange" style="background:#f57c00;" title="Orange"></button>
             <button class="hl-swatch" data-color="teal" style="background:#0891b2;" title="Teal"></button>
             <button class="hl-swatch" data-color="indigo" style="background:#5c69f2;" title="Prepare Audit"></button>
+            <button class="hl-swatch" data-color="charcoal" style="background:#36454f;" title="Charcoal Grey"></button>
+            <button class="hl-swatch" data-color="crimson" style="background:#911e1a;" title="Deep Red (#911e1a)"></button>
         </div>
         <button class="btn btn-outline" id="highlightModeBtn" style="border-color:#0077b6;" title="Switch between highlighting a whole field or just the text you select inside it"><i class="fas fa-toggle-off"></i> Whole Field</button>
         <button class="btn btn-primary" id="highlightMainBtn"><i class="fas fa-highlighter"></i> Highlight</button>
@@ -2654,7 +2666,9 @@
                 blue: '#1565c0',
                 orange: '#f57c00',
                 teal: '#0891b2',
-                indigo: '#5c69f2'
+                indigo: '#5c69f2',
+                charcoal: '#36454f',
+                crimson: '#911e1a'
             };
             let selectedHighlightEl = null;
             let selectedHighlightKey = null;
@@ -2942,7 +2956,16 @@
                 red: 'red',
                 prepareaudit: 'indigo',
                 audit: 'indigo',
-                indigo: 'indigo'
+                indigo: 'indigo',
+                charcoal: 'charcoal',
+                charcoalgrey: 'charcoal',
+                charcoalgray: 'charcoal',
+                grey: 'charcoal',
+                gray: 'charcoal',
+                crimson: 'crimson',
+                deepred: 'crimson',
+                darkred: 'crimson',
+                '911e1a': 'crimson'
             };
 
             function normalizeSearchTerm(str) {
@@ -4855,6 +4878,8 @@
                                     <button class="completed-color-swatch" data-color="orange" data-index="${index}" style="background:#f57c00;" title="Orange"></button>
                                     <button class="completed-color-swatch" data-color="teal" data-index="${index}" style="background:#0891b2;" title="Teal"></button>
                                     <button class="completed-color-swatch" data-color="indigo" data-index="${index}" style="background:#5c69f2;" title="Prepare Audit"></button>
+                                    <button class="completed-color-swatch" data-color="charcoal" data-index="${index}" style="background:#36454f;" title="Charcoal Grey"></button>
+                                    <button class="completed-color-swatch" data-color="crimson" data-index="${index}" style="background:#911e1a;" title="Deep Red (#911e1a)"></button>
                                     <button class="completed-color-swatch completed-color-clear" data-color="" data-index="${index}" title="Clear color"><i class="fas fa-ban"></i></button>
                                 </div>
                             </div>
