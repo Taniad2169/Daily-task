@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes" />
-    <title>WebSwan · Secure Suite</title>
+    <title>WebSwan · WorkPilot</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
     <style>
         * {
@@ -2003,12 +2003,14 @@
         <div class="app-container">
             <!-- Header -->
             <div class="header">
-                <h1><i class="fas fa-feather-alt"></i> WebSwan <span style="font-weight:300;color:#0077b6;">·</span> Suite</h1>
+                <h1><i class="fas fa-feather-alt"></i> WebSwan <span style="font-weight:300;color:#0077b6;">·</span> WorkPilot</h1>
                 <div class="header-actions">
                     <a class="btn btn-outline" href="https://taniad2169.github.io/WebSwan-Tech-Test/" target="_blank" rel="noopener noreferrer" style="border-color:#0891b2;color:#0891b2;"><i class="fas fa-vial"></i> Tech Test</a>
                     <a class="btn btn-outline" href="https://taniad2169.github.io/Business-Audit/" target="_blank" rel="noopener noreferrer" style="border-color:#6f42c1;color:#6f42c1;"><i class="fas fa-clipboard-check"></i> Business Audit</a>
                     <a class="btn btn-outline" href="https://taniad2169.github.io/WebSwan-Compliance-English-Spanish-Ad-Campaign/" target="_blank" rel="noopener noreferrer" style="border-color:#b52d21;color:#b52d21;"><i class="fas fa-cookie-bite"></i> Cookie/ADA Test</a>
                     <a class="btn btn-outline" href="https://taniad2169.github.io/Telemarketing/" target="_blank" rel="noopener noreferrer" style="border-color:#ec407a;color:#ad1457;"><i class="fas fa-phone-volume"></i> Telemarketing Calls</a>
+                    <a class="btn btn-outline" href="https://webswan-lead-prospector.netlify.app/" target="_blank" rel="noopener noreferrer" style="border-color:#1b70c2;color:#0c3a61;"><i class="fas fa-search"></i> Lead Prospector</a>
+                    <a class="btn btn-outline" href="https://ads.webswanmedianetwork.com/" target="_blank" rel="noopener noreferrer" style="border-color:#0e7490;color:#0e7490;"><i class="fas fa-database"></i> WSMN Directory</a>
                     <button class="btn btn-whatsapp" id="whatsappSendBtn"><i class="fab fa-whatsapp"></i> WhatsApp</button>
                     <button class="btn btn-outline" id="chatgptSendBtn" style="border-color:#10a37f;color:#087d61;"><i class="fas fa-comment-dots"></i> ChatGPT</button>
                     <button class="btn btn-gemini" id="geminiSendBtn"><i class="fas fa-robot"></i> Gemini</button>
@@ -3779,8 +3781,8 @@
                 const link = APP_URL;
                 if (navigator.share) {
                     navigator.share({
-                        title: 'WebSwan Daily Task Suite',
-                        text: 'Check out my WebSwan Daily Task Suite!',
+                        title: 'WebSwan WorkPilot',
+                        text: 'Check out my WebSwan WorkPilot!',
                         url: link
                     }).then(() => {
                         showToast('✅ Shared successfully!', 'success');
@@ -4054,7 +4056,7 @@
                 link.click();
                 link.remove();
                 URL.revokeObjectURL(url);
-                showToast('✅ Complete Daily Task backup downloaded!', 'success');
+                showToast('✅ Complete WorkPilot backup downloaded!', 'success');
             }
 
             function importAllData(event) {
@@ -4069,7 +4071,7 @@
                             throw new Error('Invalid Daily Task backup');
                         }
 
-                        if (!confirm('Restore this Daily Task backup? It will replace the data currently saved in this browser.')) {
+                        if (!confirm('Restore this WorkPilot backup? It will replace the data currently saved in this browser.')) {
                             event.target.value = '';
                             return;
                         }
@@ -4085,7 +4087,7 @@
                         showToast('✅ Backup restored! Reloading your information...', 'success');
                         setTimeout(() => window.location.reload(), 900);
                     } catch (error) {
-                        showToast('❌ This is not a valid WebSwan Daily Task backup.', 'error');
+                        showToast('❌ This is not a valid WorkPilot backup.', 'error');
                         event.target.value = '';
                     }
                 };
