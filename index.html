@@ -1889,6 +1889,28 @@
         .tm-lead-row:hover {
             border-color: #ec407a;
         }
+        .tm-push-btn {
+            background: none;
+            border: none;
+            color: #0077b6;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 0 4px;
+        }
+        .tm-push-btn:hover { color: #023e8a; }
+        .tm-pushed-badge {
+            font-size: 0.65rem;
+            font-weight: 700;
+            background: #e0f2fe;
+            color: #0077b6;
+            border-radius: 10px;
+            padding: 2px 8px;
+            white-space: nowrap;
+        }
+        .lead-form.tm-flash {
+            box-shadow: 0 0 0 3px #ec407a;
+            transition: box-shadow 0.3s;
+        }
         .note-content-preview {
             min-width: 0;
         }
@@ -2405,6 +2427,9 @@
                 <button class="cal-modal-close" id="tmLeadModalCloseBtn"><i class="fas fa-times"></i></button>
                 <h3><i class="fas fa-phone-volume" style="color:#ec407a;"></i> Telemarketing Intake</h3>
                 <div id="tmLeadModalBody" style="font-size:0.9rem;color:#2d3748;line-height:1.7;"></div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;">
+                    <button class="btn" id="tmPushToFormBtn" style="background:#0077b6;color:white;border-color:#0077b6;"><i class="fas fa-share-square"></i> Push to Lead Form</button>
+                </div>
             </div>
         </div>
 
@@ -2658,6 +2683,8 @@
             let highlights = {};
             let telemarketingLeads = [];
             let tmDismissed = [];
+            let tmPushed = [];
+            let tmCurrentLead = null;
                     // Solid hex for each highlight color, used for small dots/borders
             // (like the Highlight Key dots and the Completed Tasks color match)
             // where the field-level [data-highlight] background rules don't apply.
@@ -5084,6 +5111,8 @@
                             <span class="item-text" data-highlight="pink">${safeName}${safeCompany}</span>
                             <span class="item-type">${(lead.category || 'Lead').replace(/</g, '&lt;')}</span>
                             <span style="font-size:0.7rem;color:#8a4a63;">${when}</span>
+                            ${tmPushed.includes(String(lead.id)) ? '<span class="tm-pushed-badge"><i class="fas fa-check"></i> Pushed</span>' : ''}
+                            <button class="tm-push-btn" data-tm-id="${lead.id}" title="Push to Lead Form"><i class="fas fa-share-square"></i></button>
                             <button class="delete-completed tm-dismiss-btn" data-tm-id="${lead.id}" title="Dismiss"><i class="fas fa-times-circle"></i></button>
                         </div>`;
                 });
@@ -5091,10 +5120,17 @@
 
                 el.querySelectorAll('.tm-lead-row').forEach((row) => {
                     row.addEventListener('click', (e) => {
-                        if (e.target.closest('.tm-dismiss-btn')) return;
+                        if (e.target.closest('.tm-dismiss-btn') || e.target.closest('.tm-push-btn')) return;
                         const id = row.dataset.tmId;
                         const lead = telemarketingLeads.find(l => String(l.id) === String(id));
                         if (lead) openTmLeadModal(lead);
+                    });
+                });
+                el.querySelectorAll('.tm-push-btn').forEach((btn) => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const lead = telemarketingLeads.find(l => String(l.id) === String(btn.dataset.tmId));
+                        if (lead) pushTmLeadToForm(lead);
                     });
                 });
                 el.querySelectorAll('.tm-dismiss-btn').forEach((btn) => {
@@ -5120,6 +5156,7 @@
             function openTmLeadModal(lead) {
                 const body = document.getElementById('tmLeadModalBody');
                 if (!body) return;
+                tmCurrentLead = lead;
                 const rows = [
                     ['Decision Maker', lead.decisionMakerName ? `${lead.decisionMakerName}${lead.decisionMakerRole ? ' (' + lead.decisionMakerRole + ')' : ''}` : ''],
                     ['Name', lead.name],
@@ -5142,6 +5179,65 @@
                 ).join('');
 
                 document.getElementById('tmLeadModalOverlay').classList.add('show');
+            }
+
+            // ===== PUSH TELEMARKETING LEAD -> LEAD FORM (lead stays in the telemarketing list) =====
+            function loadTmPushed() {
+                try {
+                    tmPushed = JSON.parse(localStorage.getItem('webswan_tm_pushed') || '[]');
+                    if (!Array.isArray(tmPushed)) tmPushed = [];
+                } catch (e) {
+                    tmPushed = [];
+                }
+            }
+
+            function saveTmPushed() {
+                localStorage.setItem('webswan_tm_pushed', JSON.stringify(tmPushed));
+            }
+
+            function pushTmLeadToForm(lead) {
+                if (!lead) return;
+                const hasFormData = [leadFormName, leadFormPhone, leadFormEmail, leadFormUrl, leadFormComment].some(f => f.value.trim());
+                if (hasFormData && !confirm('The Lead Form already has information in it. Replace it with this telemarketing lead?')) return;
+
+                const clean = (v) => (v === undefined || v === null) ? '' : String(v).trim();
+                let url = clean(lead.website);
+                if (url && !/^https?:\/\//i.test(url)) url = 'https://' + url;
+
+                // Everything without its own field goes into Comments, labeled
+                const notes = [];
+                if (clean(lead.decisionMakerName) && clean(lead.name) && clean(lead.name) !== clean(lead.decisionMakerName)) notes.push('Contact: ' + clean(lead.name));
+                if (clean(lead.decisionMakerRole)) notes.push('Role: ' + clean(lead.decisionMakerRole));
+                if (clean(lead.companyName)) notes.push('Company: ' + clean(lead.companyName));
+                if (clean(lead.industry)) notes.push('Industry: ' + clean(lead.industry));
+                if (clean(lead.serviceInterested)) notes.push('Service: ' + clean(lead.serviceInterested));
+                if (clean(lead.category)) notes.push('Status: ' + clean(lead.category));
+                if (clean(lead.comment)) notes.push('Notes: ' + clean(lead.comment));
+                if (clean(lead.telemarketerId)) notes.push('Telemarketer: ' + clean(lead.telemarketerId));
+                notes.push('Source: Telemarketing' + (lead.timestamp ? ' (' + new Date(lead.timestamp).toLocaleDateString() + ')' : ''));
+
+                leadFormName.value = clean(lead.decisionMakerName) || clean(lead.name) || clean(lead.companyName);
+                leadFormPhone.value = clean(lead.phone);
+                leadFormEmail.value = clean(lead.email);
+                leadFormUrl.value = url;
+                leadFormComment.value = notes.join('\n').slice(0, leadFormComment.maxLength > 0 ? leadFormComment.maxLength : 1200);
+                updateLeadFormWordCounter();
+
+                const id = String(lead.id);
+                if (!tmPushed.includes(id)) {
+                    tmPushed.push(id);
+                    saveTmPushed();
+                }
+                renderTelemarketingLeads();
+                closeTmLeadModal();
+
+                const formEl = document.querySelector('.lead-form');
+                if (formEl) {
+                    formEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    formEl.classList.add('tm-flash');
+                    setTimeout(() => formEl.classList.remove('tm-flash'), 1800);
+                }
+                showToast('📲 Lead pushed to the Lead Form — review it, then hit Submit Lead (or CRM) to save.', 'success');
             }
 
             function closeTmLeadModal() {
@@ -5564,7 +5660,10 @@
                 setTranslatorOpen(savedTranslatorOpen === null ? true : savedTranslatorOpen === '1');
 
             loadTmDismissed();
+            loadTmPushed();
             fetchTelemarketingLeads(false);
+            const tmPushToFormBtn = document.getElementById('tmPushToFormBtn');
+            if (tmPushToFormBtn) tmPushToFormBtn.addEventListener('click', () => pushTmLeadToForm(tmCurrentLead));
             const tmModalCloseBtn = document.getElementById('tmLeadModalCloseBtn');
             if (tmModalCloseBtn) tmModalCloseBtn.addEventListener('click', closeTmLeadModal);
             const tmModalOverlayEl = document.getElementById('tmLeadModalOverlay');
