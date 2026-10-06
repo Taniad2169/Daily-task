@@ -1898,6 +1898,45 @@
             padding: 0 4px;
         }
         .tm-push-btn:hover { color: #023e8a; }
+        .sheet-sync-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+            padding: 10px 12px;
+            border: 1px solid #b7e1cd;
+            background: #f1faf5;
+            border-radius: 12px;
+        }
+        .sheet-sync-bar label {
+            font-weight: 700;
+            font-size: 0.8rem;
+            color: #0b6b3a;
+        }
+        .sheet-sync-bar select {
+            flex: 1 1 200px;
+            min-width: 0;
+            padding: 0.5rem 0.6rem;
+            border: 1px solid #0f9d58;
+            border-radius: 8px;
+            font: inherit;
+            font-size: 0.85rem;
+            background: white;
+            color: #1f2937;
+        }
+        .sheet-push-btn {
+            background: #0077b6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .sheet-push-btn:hover { background: #023e8a; }
         .tm-pushed-badge {
             font-size: 0.65rem;
             font-weight: 700;
@@ -2111,11 +2150,21 @@
                         <button class="btn" id="crmBtn" style="background:#e91e63;color:white;border-color:#e91e63;"><i class="fas fa-database"></i> CRM</button>
                         <button class="btn btn-outline" id="clearFormBtn"><i class="fas fa-undo"></i> Clear Form</button>
                     </div>
+                    <!-- ===== TWO-WAY GOOGLE SHEET SYNC ===== -->
+                    <div class="sheet-sync-bar" id="sheetSyncBar">
+                        <label for="sheetTargetSelect"><i class="fas fa-table"></i> Lead sheet</label>
+                        <select id="sheetTargetSelect" aria-label="Choose which Google Sheet to use"></select>
+                        <button class="btn btn-google-sheet" id="sheetSendBtn" type="button"><i class="fas fa-arrow-up"></i> Send lead to sheet</button>
+                        <button class="btn btn-outline" id="sheetReceiveBtn" type="button" style="border-color:#0f9d58;color:#0b6b3a;"><i class="fas fa-arrow-down"></i> Get leads from sheet</button>
+                        <button class="btn btn-outline" id="sheetOpenBtn" type="button" title="Open the selected sheet"><i class="fas fa-external-link-alt"></i></button>
+                        <button class="btn btn-outline" id="sheetSetupBtn" type="button" title="Sheet connection settings"><i class="fas fa-cog"></i></button>
+                    </div>
                 </div>
 
                 <!-- ===== COMPLETED TASKS ===== -->
                 <div class="completed-section">
                     <h3><i class="fas fa-check-circle"></i> Completed Tasks</h3>
+                                    <div id="sheetLeadsContainer" style="margin-bottom:1rem;"></div>
                                     <div id="telemarketingLeadsContainer" style="margin-bottom:1rem;"></div>
                     <div id="completedContainer">
                         <div class="completed-empty">No completed tasks yet. Submit a lead or complete a to-do to see them here! ✅</div>
@@ -5214,7 +5263,7 @@
                 if (clean(lead.category)) notes.push('Status: ' + clean(lead.category));
                 if (clean(lead.comment)) notes.push('Notes: ' + clean(lead.comment));
                 if (clean(lead.telemarketerId)) notes.push('Telemarketer: ' + clean(lead.telemarketerId));
-                notes.push('Source: Telemarketing' + (lead.timestamp ? ' (' + new Date(lead.timestamp).toLocaleDateString() + ')' : ''));
+                notes.push('Source: ' + (lead.sheetLabel ? 'Google Sheet - ' + lead.sheetLabel : 'Telemarketing') + (lead.timestamp ? ' (' + new Date(lead.timestamp).toLocaleDateString() + ')' : ''));
 
                 leadFormName.value = clean(lead.decisionMakerName) || clean(lead.name) || clean(lead.companyName);
                 leadFormPhone.value = clean(lead.phone);
@@ -5229,6 +5278,7 @@
                     saveTmPushed();
                 }
                 renderTelemarketingLeads();
+                renderSheetLeads();
                 closeTmLeadModal();
 
                 const formEl = document.querySelector('.lead-form');
@@ -5279,6 +5329,211 @@
                     renderTmConnectPrompt(error);
                     if (manual) showToast('❌ Could not load telemarketing leads.', 'error');
                 }
+            }
+
+
+            // ===== TWO-WAY GOOGLE SHEET SYNC =====
+            // Daily Task <-> Google Sheets through one private Apps Script web app.
+            // The web app address is kept on this device only (never in the page code),
+            // because anyone holding it could read or add leads.
+            const SHEET_TARGETS = [
+                { key: 'stan', label: 'Stan / Eva / Solene', url: 'https://docs.google.com/spreadsheets/d/1WUhiwUkFOiViOmbS-9WOHqpherSe5kdNSs14TUDAIjs/edit' },
+                { key: 'tele', label: 'Telemarketer Leads', url: 'https://docs.google.com/spreadsheets/d/1fj_TiYWdY5S2YM7NRVc0pqPUJqjxvkJTybvVTZDayrs/edit' },
+                { key: 'ai', label: 'Claude / Gemini / ChatGPT', url: 'https://docs.google.com/spreadsheets/d/1mG-_etIYK7pPske3hhamSJxaDjyzn6V0KHs6OHYJdBA/edit' },
+                { key: 'callbacks', label: 'All Call Backs (Base44, Rachel, others)', url: 'https://docs.google.com/spreadsheets/d/1YkKk3Yb6359-QPoLChAqIXfh5GHIa0-edJMJ3ojsauo/edit' }
+            ];
+            let sheetLeads = [];
+
+            function loadSheetLeads() {
+                try {
+                    sheetLeads = JSON.parse(localStorage.getItem('webswan_sheet_leads') || '[]');
+                    if (!Array.isArray(sheetLeads)) sheetLeads = [];
+                } catch (e) {
+                    sheetLeads = [];
+                }
+            }
+
+            function saveSheetLeads() {
+                localStorage.setItem('webswan_sheet_leads', JSON.stringify(sheetLeads));
+            }
+
+            function getSelectedSheetTarget() {
+                const sel = document.getElementById('sheetTargetSelect');
+                return SHEET_TARGETS.find(t => t.key === (sel ? sel.value : '')) || SHEET_TARGETS[0];
+            }
+
+            function getSheetSyncUrl() {
+                return (localStorage.getItem('webswan_sheet_sync_url') || '').trim();
+            }
+
+            function setupSheetSync() {
+                const current = getSheetSyncUrl();
+                const entered = prompt('Paste your Sheet Sync web app address (it starts with https://script.google.com/macros/s/ and ends with /exec):', current);
+                if (entered === null) return current;
+                const value = entered.trim();
+                if (!value) {
+                    localStorage.removeItem('webswan_sheet_sync_url');
+                    showToast('Sheet connection removed from this device.', 'success');
+                    return '';
+                }
+                if (!/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(value)) {
+                    showToast('❌ That does not look like a Sheet Sync address. It must end with /exec.', 'error');
+                    return current;
+                }
+                localStorage.setItem('webswan_sheet_sync_url', value);
+                showToast('✅ Sheet connection saved on this device.', 'success');
+                return value;
+            }
+
+            function setSheetButtonsBusy(busy) {
+                ['sheetSendBtn', 'sheetReceiveBtn'].forEach((id) => {
+                    const b = document.getElementById(id);
+                    if (b) b.disabled = busy;
+                });
+            }
+
+            async function sendLeadToSelectedSheet() {
+                const lead = getLeadFormData();
+                if (!hasLeadFormData(lead)) {
+                    showToast('Please fill in at least one lead field first.', 'error');
+                    return;
+                }
+                const target = getSelectedSheetTarget();
+                const base = getSheetSyncUrl() || setupSheetSync();
+                if (!base) return;
+                setSheetButtonsBusy(true);
+                try {
+                    // text/plain keeps this a "simple" request, so the reply can be read back
+                    const response = await fetch(base, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: 'append', sheet: target.key, lead: lead })
+                    });
+                    const data = await response.json();
+                    if (!data || !data.ok) throw new Error((data && data.error) || 'The sheet did not confirm the save.');
+                    showToast(`✅ Lead saved to "${target.label}" (row ${data.row}).`, 'success');
+                } catch (error) {
+                    console.error('Send to sheet failed:', error);
+                    showToast('❌ Could not save to the sheet: ' + error.message, 'error');
+                } finally {
+                    setSheetButtonsBusy(false);
+                }
+            }
+
+            async function receiveLeadsFromSelectedSheet() {
+                const target = getSelectedSheetTarget();
+                const base = getSheetSyncUrl() || setupSheetSync();
+                if (!base) return;
+                setSheetButtonsBusy(true);
+                try {
+                    const response = await fetch(base + '?action=receive&sheet=' + encodeURIComponent(target.key));
+                    const data = await response.json();
+                    if (!data || !data.ok) throw new Error((data && data.error) || 'The sheet did not answer.');
+                    const incoming = (data.leads || []).map((r) => ({
+                        id: 'sheet-' + target.key + '-' + r.row,
+                        sheetKey: target.key,
+                        sheetLabel: target.label,
+                        name: r.name || '',
+                        companyName: r.company || '',
+                        phone: r.phone || '',
+                        email: r.email || '',
+                        website: r.url || '',
+                        comment: r.comment || '',
+                        category: 'Sheet: ' + target.label,
+                        timestamp: new Date().toISOString()
+                    }));
+                    incoming.forEach((lead) => {
+                        sheetLeads = sheetLeads.filter(l => l.id !== lead.id);
+                        sheetLeads.unshift(lead);
+                    });
+                    saveSheetLeads();
+                    renderSheetLeads();
+                    if (incoming.length) {
+                        showToast(`📥 ${incoming.length} lead(s) received from "${target.label}".`, 'success');
+                        const box = document.getElementById('sheetLeadsContainer');
+                        if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    } else {
+                        showToast(`No new leads in "${target.label}". Tick the "Send to Daily Task" box on a row in the sheet first.`, 'success');
+                    }
+                } catch (error) {
+                    console.error('Receive from sheet failed:', error);
+                    showToast('❌ Could not get leads from the sheet: ' + error.message, 'error');
+                } finally {
+                    setSheetButtonsBusy(false);
+                }
+            }
+
+            function renderSheetLeads() {
+                const el = document.getElementById('sheetLeadsContainer');
+                if (!el) return;
+                if (!sheetLeads.length) {
+                    el.innerHTML = '';
+                    return;
+                }
+                const esc = (v) => String(v === undefined || v === null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                let html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
+                    + '<span style="font-weight:700;color:#0b6b3a;font-size:0.85rem;"><i class="fas fa-table"></i> Telemarketing Calls: from Google Sheets</span>'
+                    + '</div>';
+                sheetLeads.forEach((lead) => {
+                    const title = esc(lead.name || lead.companyName || lead.phone || lead.email || 'No name');
+                    const company = lead.companyName && lead.name ? ' — ' + esc(lead.companyName) : '';
+                    const when = lead.timestamp ? new Date(lead.timestamp).toLocaleString() : '';
+                    html += `
+                        <div class="completed-item tm-lead-row" data-sheet-lead-id="${esc(lead.id)}">
+                            <span style="font-size:1.1rem;">📥</span>
+                            <span class="item-text" data-highlight="pink">${title}${company}</span>
+                            <span class="item-type">${esc(lead.sheetLabel || 'Sheet')}</span>
+                            <span style="font-size:0.7rem;color:#8a4a63;">${esc(when)}</span>
+                            ${tmPushed.includes(String(lead.id)) ? '<span class="tm-pushed-badge"><i class="fas fa-check"></i> Pushed</span>' : ''}
+                            <button class="sheet-push-btn" data-sheet-lead-id="${esc(lead.id)}" title="Push to Lead Form"><i class="fas fa-share-square"></i> Push to Lead Form</button>
+                            <button class="delete-completed sheet-dismiss-btn" data-sheet-lead-id="${esc(lead.id)}" title="Remove from this list"><i class="fas fa-times-circle"></i></button>
+                        </div>`;
+                });
+                el.innerHTML = html;
+                const findLead = (id) => sheetLeads.find(l => String(l.id) === String(id));
+                el.querySelectorAll('.tm-lead-row').forEach((row) => {
+                    row.addEventListener('click', (e) => {
+                        if (e.target.closest('.sheet-dismiss-btn') || e.target.closest('.sheet-push-btn')) return;
+                        const lead = findLead(row.dataset.sheetLeadId);
+                        if (lead) openTmLeadModal(lead);
+                    });
+                });
+                el.querySelectorAll('.sheet-push-btn').forEach((btn) => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const lead = findLead(btn.dataset.sheetLeadId);
+                        if (lead) pushTmLeadToForm(lead);
+                    });
+                });
+                el.querySelectorAll('.sheet-dismiss-btn').forEach((btn) => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        sheetLeads = sheetLeads.filter(l => String(l.id) !== String(btn.dataset.sheetLeadId));
+                        saveSheetLeads();
+                        renderSheetLeads();
+                    });
+                });
+            }
+
+            function initSheetSync() {
+                const sel = document.getElementById('sheetTargetSelect');
+                if (!sel) return;
+                sel.innerHTML = '';
+                SHEET_TARGETS.forEach((t) => {
+                    const opt = document.createElement('option');
+                    opt.value = t.key;
+                    opt.textContent = t.label;
+                    sel.appendChild(opt);
+                });
+                const saved = localStorage.getItem('webswan_sheet_target');
+                if (saved && SHEET_TARGETS.some(t => t.key === saved)) sel.value = saved;
+                sel.addEventListener('change', () => localStorage.setItem('webswan_sheet_target', sel.value));
+                document.getElementById('sheetSendBtn').addEventListener('click', sendLeadToSelectedSheet);
+                document.getElementById('sheetReceiveBtn').addEventListener('click', receiveLeadsFromSelectedSheet);
+                document.getElementById('sheetOpenBtn').addEventListener('click', () => window.open(getSelectedSheetTarget().url, '_blank', 'noopener'));
+                document.getElementById('sheetSetupBtn').addEventListener('click', setupSheetSync);
+                loadSheetLeads();
+                renderSheetLeads();
             }
 
             // ===== LESSONS FUNCTIONS =====
@@ -5661,6 +5916,7 @@
 
             loadTmDismissed();
             loadTmPushed();
+            initSheetSync();
             fetchTelemarketingLeads(false);
             const tmPushToFormBtn = document.getElementById('tmPushToFormBtn');
             if (tmPushToFormBtn) tmPushToFormBtn.addEventListener('click', () => pushTmLeadToForm(tmCurrentLead));
