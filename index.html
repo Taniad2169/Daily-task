@@ -5429,27 +5429,45 @@
                     const response = await fetch(base + '?action=receive&sheet=' + encodeURIComponent(target.key));
                     const data = await response.json();
                     if (!data || !data.ok) throw new Error((data && data.error) || 'The sheet did not answer.');
-                    const incoming = (data.leads || []).map((r) => ({
-                        id: 'sheet-' + target.key + '-' + r.row,
-                        sheetKey: target.key,
-                        sheetLabel: target.label,
-                        name: r.name || '',
-                        companyName: r.company || '',
-                        phone: r.phone || '',
-                        email: r.email || '',
-                        website: r.url || '',
-                        comment: r.comment || '',
-                        category: 'Sheet: ' + target.label,
-                        timestamp: new Date().toISOString()
-                    }));
+                    const incoming = (data.leads || []).map((r) => {
+                        // Newer script sends the raw row; read it by what each cell contains,
+                        // so sheets whose headers do not line up with the data still work.
+                        const f = Array.isArray(r.cells) ? parseSheetCells(r.cells) : { name: r.name || r.company || '', phone: r.phone, email: r.email, url: r.url, comment: r.comment };
+                        return {
+                            id: 'sheet-' + target.key + '-' + r.row,
+                            sheetKey: target.key,
+                            sheetLabel: target.label,
+                            sheetRow: r.row,
+                            name: f.name || '',
+                            companyName: '',
+                            phone: f.phone || '',
+                            email: f.email || '',
+                            website: f.url || '',
+                            comment: f.comment || '',
+                            category: 'Sheet: ' + target.label,
+                            timestamp: new Date().toISOString()
+                        };
+                    });
                     incoming.forEach((lead) => {
                         sheetLeads = sheetLeads.filter(l => l.id !== lead.id);
                         sheetLeads.unshift(lead);
                     });
                     saveSheetLeads();
                     renderSheetLeads();
+                    // Tell the sheet these rows arrived, only after they are safely saved here
+                    if (incoming.length && (data.leads || []).some(r => Array.isArray(r.cells))) {
+                        try {
+                            await fetch(base, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                                body: JSON.stringify({ action: 'ack', sheet: target.key, rows: incoming.map(l => l.sheetRow) })
+                            });
+                        } catch (ackError) {
+                            console.warn('Could not mark rows as sent in the sheet:', ackError);
+                        }
+                    }
                     if (incoming.length) {
-                        showToast(`📥 ${incoming.length} lead(s) received from "${target.label}".`, 'success');
+                        showToast(`📥 ${incoming.length} lead(s) received from "${target.label}". They are in the Telemarketing Calls list below.`, 'success');
                         const box = document.getElementById('sheetLeadsContainer');
                         if (box) box.scrollIntoView({ behavior: 'smooth', block: 'center' });
                     } else {
@@ -5463,6 +5481,26 @@
                 }
             }
 
+            // Works out which cell is the email, phone, website, name and notes by its content
+            function parseSheetCells(cells) {
+                const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                const urlRe = /^(https?:\/\/|www\.)\S+$|^[a-z0-9-]+(\.[a-z0-9-]+)+(\/\S*)?$/i;
+                const phoneRe = /^(tel:)?\s*[+(]?\d[\d\s().+-]{5,}$/i;
+                const out = { name: '', phone: '', email: '', url: '', comment: '' };
+                const rest = [];
+                (cells || []).map(c => String(c === undefined || c === null ? '' : c).trim()).filter(Boolean).forEach((t) => {
+                    const digits = t.replace(/\D/g, '').length;
+                    if (/^(no email|no url|no website|n\/a|true|false)$/i.test(t)) return;
+                    if (emailRe.test(t)) { if (!out.email) out.email = t; return; }
+                    if (phoneRe.test(t) && digits >= 7 && digits <= 15) { if (!out.phone) out.phone = t.replace(/^tel:\s*/i, ''); return; }
+                    if (urlRe.test(t)) { if (!out.url) out.url = t; return; }
+                    rest.push(t);
+                });
+                if (rest.length && rest[0].length <= 140) out.name = rest.shift();
+                out.comment = rest.join('\n');
+                return out;
+            }
+
             function renderSheetLeads() {
                 const el = document.getElementById('sheetLeadsContainer');
                 if (!el) return;
@@ -5472,7 +5510,7 @@
                 }
                 const esc = (v) => String(v === undefined || v === null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
                 let html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
-                    + '<span style="font-weight:700;color:#0b6b3a;font-size:0.85rem;"><i class="fas fa-table"></i> Telemarketing Calls: from Google Sheets</span>'
+                    + '<span style="font-weight:700;color:#ad1457;font-size:0.85rem;"><i class="fas fa-phone-volume"></i> Telemarketing Calls: from Google Sheets (' + sheetLeads.length + ')</span>'
                     + '</div>';
                 sheetLeads.forEach((lead) => {
                     const title = esc(lead.name || lead.companyName || lead.phone || lead.email || 'No name');
