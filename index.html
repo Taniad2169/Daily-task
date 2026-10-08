@@ -6050,6 +6050,33 @@
             }
 
             // ===== INIT APP =====
+            // Add a lead from a link like ?addlead=1&name=..&phone=..&email=..&url=..&comment=..&color=indigo
+            // (used by Claude to drop a lead in). The color highlights the lead's name; indigo is "Prepare Audit".
+            function importLeadFromLink() {
+                const P = new URLSearchParams(location.search);
+                if (!P.get('addlead')) return;
+                const name = (P.get('name') || '').trim();
+                const phone = (P.get('phone') || '').trim();
+                if (!name && !phone) return;
+                const digits = v => String(v || '').replace(/\D/g, '');
+                let lead = leads.find(l => (name && l.name === name) || (digits(phone).length >= 7 && digits(l.phone) === digits(phone)));
+                if (!lead) {
+                    lead = { id: nextId++, name: name || 'No name', phone: phone || 'No phone', email: (P.get('email') || '').trim() || 'No email',
+                        url: (P.get('url') || '').trim() || 'No URL', comment: (P.get('comment') || '').trim(), dropdown: 'call back', customDropdown: '', completed: false };
+                    leads.push(lead);
+                }
+                const color = (P.get('color') || 'indigo').trim();
+                highlights[`lead-${lead.id}-name`] = color;
+                saveHighlightsToStorage();
+                saveToStorage();
+                renderLeads();
+                applyAllHighlights();
+                history.replaceState(null, '', location.pathname);
+                const card = document.querySelector(`.lead-card[data-lead-id="${lead.id}"]`);
+                if (card) { card.scrollIntoView({ behavior: 'smooth', block: 'center' }); card.classList.add('lead-card-flash'); setTimeout(() => card.classList.remove('lead-card-flash'), 1600); }
+                showToast('💜 ' + (lead.name || 'Lead') + ' added and highlighted for Prepare Audit.', 'success');
+            }
+
             function initApp() {
                 if (appInitialized) return;
                 appInitialized = true;
@@ -6079,6 +6106,7 @@
             loadTmDismissed();
             loadTmPushed();
             initSheetSync();
+            importLeadFromLink();
             fetchTelemarketingLeads(false);
             const tmPushToFormBtn = document.getElementById('tmPushToFormBtn');
             if (tmPushToFormBtn) tmPushToFormBtn.addEventListener('click', () => pushTmLeadToForm(tmCurrentLead));
