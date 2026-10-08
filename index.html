@@ -3887,7 +3887,8 @@
                 'webswan_lessonnotes',
                 'webswan_saved_notes',
                 'webswan_notes',
-                'webswan_translator_script'
+                'webswan_translator_script',
+                'webswan_deleted_leads'
             ];
 
             let firebaseUser = null;
@@ -3960,7 +3961,7 @@
             }
 
             const ARRAY_STORAGE_KEYS = new Set([
-                'webswan_leads', 'webswan_todos', 'webswan_completed', 'webswan_saved_notes'
+                'webswan_leads', 'webswan_todos', 'webswan_completed', 'webswan_saved_notes', 'webswan_deleted_leads'
             ]);
 
             function mergeDailyTaskData(localData, remoteData) {
@@ -3979,6 +3980,14 @@
                     }
                     merged[key] = mergeTextValue(localVal, remoteVal);
                 });
+                // Leads deleted on any device stay deleted: drop them (and their completed rows) after merging.
+                try {
+                    const gone = new Set(JSON.parse(merged['webswan_deleted_leads'] || '[]').map(d => String(d.id)));
+                    if (gone.size) {
+                        if (merged['webswan_leads']) merged['webswan_leads'] = JSON.stringify(JSON.parse(merged['webswan_leads']).filter(l => !gone.has(String(l.id))));
+                        if (merged['webswan_completed']) merged['webswan_completed'] = JSON.stringify(JSON.parse(merged['webswan_completed']).filter(c => !(c.type === 'lead' && gone.has(String(c.leadId)))));
+                    }
+                } catch (e) { console.error('Could not apply deleted leads:', e); }
                 return merged;
             }
 
@@ -4529,6 +4538,46 @@
             }
 
             const WEBSWAN_CRM_URL = 'https://taniad2169.github.io/WebSwan-CRM-GoogleSheet/';
+            const WEBSWAN_STUDIO_URL = 'https://taniad2169.github.io/webswan-dagigoia-task/studio/';
+
+            // Send one saved lead (not the form) to a Google Sheet through Sheet Sync.
+            async function sendLeadObjectToSheet(lead, sheetKey) {
+                const target = SHEET_TARGETS.find(t => t.key === sheetKey) || SHEET_TARGETS[0];
+                const base = getSheetSyncUrl() || setupSheetSync();
+                if (!base) return false;
+                try {
+                    const response = await fetch(base, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: 'append', sheet: target.key, lead: { name: lead.name || '', phone: lead.phone || '', email: lead.email || '', url: lead.url || '', comment: lead.comment || '' } })
+                    });
+                    const data = await response.json();
+                    if (!data || !data.ok) throw new Error((data && data.error) || 'The sheet did not confirm the save.');
+                    showToast(`✅ ${lead.name || 'Lead'} saved to "${target.label}" (row ${data.row}).`, 'success');
+                    return true;
+                } catch (error) {
+                    console.error('Send to sheet failed:', error);
+                    showToast('❌ Could not save to the sheet: ' + error.message, 'error');
+                    return false;
+                }
+            }
+
+            // Open WebSwan Studio with this lead ready to save as a hot lead.
+            function openLeadInStudio(lead) {
+                const q = new URLSearchParams({ hot: '1', business: lead.name || '', phone: lead.phone || '', email: lead.email || '', url: lead.url || '', notes: lead.comment || '' });
+                window.open(WEBSWAN_STUDIO_URL + '?' + q.toString(), '_blank', 'noopener,noreferrer');
+                showToast('Opening WebSwan Studio — pick the state, services and follow-up date, then Save. 🔥', 'success');
+            }
+
+            // Menu entries shared by the lead card "Send" menu and the Completed list menu.
+            function pushMenuItemsHtml(extraAttr) {
+                const sheets = SHEET_TARGETS.map(t => `<button class="send-option" data-action="sheet:${t.key}" ${extraAttr}><i class="fas fa-table"></i> Sheet: ${t.label}</button>`).join('');
+                return `<button class="send-option" data-action="task" ${extraAttr}><i class="fas fa-list-check"></i> Google Task</button>
+                    <button class="send-option" data-action="calendar" ${extraAttr}><i class="fas fa-calendar-plus"></i> Google Calendar</button>
+                    ${sheets}
+                    <button class="send-option" data-action="crm" ${extraAttr}><i class="fas fa-database"></i> Open in CRM</button>
+                    <button class="send-option" data-action="studio" ${extraAttr}><i class="fas fa-swatchbook"></i> WebSwan Studio (hot lead)</button>`;
+            }
 
             function openLeadInCRM(lead) {
                 const leadData = `?name=${encodeURIComponent(lead.name || '')}&phone=${encodeURIComponent(lead.phone || '')}&email=${encodeURIComponent(lead.email || '')}&url=${encodeURIComponent(lead.url || '')}&comment=${encodeURIComponent(lead.comment || '')}`;
@@ -4760,7 +4809,46 @@
                     dropdownContainer.appendChild(dropdownBtn);
                     dropdownContainer.appendChild(dropdownContent);
 
+                    const sendContainer = document.createElement('div');
+                    sendContainer.className = 'edit-dropdown lead-send-dropdown';
+                    const sendBtn = document.createElement('button');
+                    sendBtn.className = 'btn btn-outline';
+                    sendBtn.style.borderColor = '#0077b6';
+                    sendBtn.style.color = '#0077b6';
+                    sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Send to';
+                    const sendContent = document.createElement('div');
+                    sendContent.className = 'edit-dropdown-content';
+                    sendContent.innerHTML = pushMenuItemsHtml('');
+                    sendBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        document.querySelectorAll('.edit-dropdown-content.show').forEach(c => { if (c !== sendContent) c.classList.remove('show'); });
+                        sendContent.classList.toggle('show');
+                    });
+                    sendContent.querySelectorAll('.send-option').forEach(opt => {
+                        opt.addEventListener('click', async (e) => {
+                            e.stopPropagation();
+                            sendContent.classList.remove('show');
+                            const action = opt.dataset.action;
+                            if (action === 'task') {
+                                await sendLeadToAppsScript(lead);
+                            } else if (action === 'calendar') {
+                                openCalendarModal();
+                                calConfirmBtn.dataset.pendingLead = JSON.stringify(lead);
+                                delete calConfirmBtn.dataset.pendingCompletedId;
+                            } else if (action === 'crm') {
+                                openLeadInCRM(lead);
+                            } else if (action.startsWith('sheet:')) {
+                                await sendLeadObjectToSheet(lead, action.slice(6));
+                            } else if (action === 'studio') {
+                                openLeadInStudio(lead);
+                            }
+                        });
+                    });
+                    sendContainer.appendChild(sendBtn);
+                    sendContainer.appendChild(sendContent);
+
                     actions.appendChild(completeBtn);
+                    actions.appendChild(sendContainer);
                     actions.appendChild(dropdownContainer);
                     card.appendChild(actions);
                     container.appendChild(card);
@@ -4769,7 +4857,15 @@
                 renderAllTextHighlights();
             }
 
+            function rememberDeletedLead(leadId) {
+                let gone = [];
+                try { gone = JSON.parse(localStorage.getItem('webswan_deleted_leads') || '[]'); if (!Array.isArray(gone)) gone = []; } catch (e) { gone = []; }
+                if (!gone.some(d => String(d.id) === String(leadId))) gone.push({ id: leadId, at: Date.now() });
+                localStorage.setItem('webswan_deleted_leads', JSON.stringify(gone));
+            }
+
             function deleteLead(leadId) {
+                rememberDeletedLead(leadId);
                 leads = leads.filter(l => l.id !== leadId);
                 completedItems = completedItems.filter(item => item.leadId !== leadId);
                 saveToStorage();
@@ -4946,9 +5042,7 @@
                         <div class="edit-dropdown completed-send-dropdown">
                             <button class="completed-send-btn" title="Send this lead"><i class="fas fa-paper-plane"></i></button>
                             <div class="edit-dropdown-content">
-                                <button class="send-option" data-action="task" data-index="${index}"><i class="fas fa-list-check"></i> Google Task</button>
-                                <button class="send-option" data-action="calendar" data-index="${index}"><i class="fas fa-calendar-plus"></i> Google Calendar</button>
-                                <button class="send-option" data-action="crm" data-index="${index}"><i class="fas fa-database"></i> Open in CRM</button>
+                                ${pushMenuItemsHtml(`data-index="${index}"`)}
                                 <button class="color-code-btn" data-index="${index}"><i class="fas fa-palette"></i> Color Code</button>
                                 <div class="completed-color-swatches" data-index="${index}">
                                     <button class="completed-color-swatch" data-color="yellow" data-index="${index}" style="background:#ffd600;" title="Yellow"></button>
@@ -5005,7 +5099,7 @@
                     });
                 });
 
-                document.querySelectorAll('.send-option').forEach(btn => {
+                document.querySelectorAll('#completedContainer .send-option, .completed-item .send-option').forEach(btn => {
                     btn.addEventListener('click', async function(e) {
                         e.stopPropagation();
                         const index = parseInt(this.dataset.index);
@@ -5043,6 +5137,10 @@
                             leads = leads.filter(l => l.id !== lead.id);
                             saveToStorage();
                             renderLeads();
+                        } else if (action.startsWith('sheet:')) {
+                            await sendLeadObjectToSheet(lead, action.slice(6));
+                        } else if (action === 'studio') {
+                            openLeadInStudio(lead);
                         }
                     });
                 });
