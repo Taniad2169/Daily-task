@@ -4565,6 +4565,22 @@
                 }
             }
 
+            // Alek Call Queue: copy the lead as one sheet row (columns A to P) and open the sheet to paste it.
+            const ALEK_QUEUE_URL = 'https://docs.google.com/spreadsheets/d/1FnmZogC-s2m9AORZLVQsy7dwzPGaGsu0mRW3rR2FNl8/edit';
+            async function pushLeadToAlekQueue(lead) {
+                const clean = v => String(v || '').replace(/[\t\r\n]+/g, ' ').trim();
+                const notes = [lead.comment, lead.url ? 'Website: ' + lead.url : ''].filter(Boolean).join(' · ');
+                // A Row ID, B Prospect, C Contact, D Phone, E Email, F City/state, G Time zone, H Brand, I Topic,
+                // J Who Tania spoke to, K Goal, L Comment/script, M Callback, N Claude, O ChatGPT, P STATUS
+                const row = ['', lead.name, '', lead.phone, lead.email, '', '', '', '', '', 'Appointment', notes, '', '', '', 'PENDING'].map(clean).join('\t');
+                let copied = false;
+                try { await navigator.clipboard.writeText(row); copied = true; } catch (e) {
+                    try { const ta = document.createElement('textarea'); ta.value = row; document.body.appendChild(ta); ta.select(); copied = document.execCommand('copy'); ta.remove(); } catch (_) {}
+                }
+                window.open(ALEK_QUEUE_URL, '_blank', 'noopener,noreferrer');
+                showToast(copied ? '📋 Lead copied for Alek. In the sheet, click column A of the next empty row and press Ctrl+V.' : 'Could not copy automatically. The sheet is open; add the lead there.', copied ? 'success' : 'error');
+            }
+
             // Open WebSwan Studio with this lead ready to save as a hot lead.
             function openLeadInStudio(lead) {
                 const q = new URLSearchParams({ hot: '1', business: lead.name || '', phone: lead.phone || '', email: lead.email || '', url: lead.url || '', notes: lead.comment || '' });
@@ -4578,6 +4594,7 @@
                 return `<button class="send-option" data-action="task" ${extraAttr}><i class="fas fa-list-check"></i> Google Task</button>
                     <button class="send-option" data-action="calendar" ${extraAttr}><i class="fas fa-calendar-plus"></i> Google Calendar</button>
                     ${sheets}
+                    <button class="send-option" data-action="alek" ${extraAttr}><i class="fas fa-headset"></i> Alek Call Queue</button>
                     <button class="send-option" data-action="crm" ${extraAttr}><i class="fas fa-database"></i> Open in CRM</button>
                     <button class="send-option" data-action="studio" ${extraAttr}><i class="fas fa-swatchbook"></i> WebSwan Studio (hot lead)</button>`;
             }
@@ -4844,6 +4861,8 @@
                                 await sendLeadObjectToSheet(lead, action.slice(6));
                             } else if (action === 'studio') {
                                 openLeadInStudio(lead);
+                            } else if (action === 'alek') {
+                                await pushLeadToAlekQueue(lead);
                             }
                         });
                     });
@@ -5144,6 +5163,8 @@
                             await sendLeadObjectToSheet(lead, action.slice(6));
                         } else if (action === 'studio') {
                             openLeadInStudio(lead);
+                        } else if (action === 'alek') {
+                            await pushLeadToAlekQueue(lead);
                         }
                     });
                 });
