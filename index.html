@@ -2076,6 +2076,8 @@
                     <a class="btn btn-outline" href="https://webswan-lead-prospector.netlify.app/" target="_blank" rel="noopener noreferrer" style="border-color:#1b70c2;color:#0c3a61;"><i class="fas fa-search"></i> Lead Prospector</a>
                     <a class="btn btn-outline" href="https://docs.google.com/spreadsheets/d/1FnmZogC-s2m9AORZLVQsy7dwzPGaGsu0mRW3rR2FNl8/edit" target="_blank" rel="noopener noreferrer" style="border-color:#7c3aed;color:#5b21b6;"><i class="fas fa-headset"></i> Alek Call Queue</a>
                     <a class="btn btn-outline" href="https://taniad2169.github.io/webswan-dagigoia-task/studio/" target="_blank" rel="noopener noreferrer" style="border-color:#0d7c86;color:#0b5f66;"><i class="fas fa-swatchbook"></i> WebSwan Studio</a>
+                    <a class="btn btn-outline" href="https://taniad2169.github.io/webswan-dagigoia-task/intake/" target="_blank" rel="noopener noreferrer" style="border-color:#339cde;color:#1f6fa3;"><i class="fas fa-file-signature"></i> WebSwan Intake</a>
+                    <button class="btn btn-outline" id="copyIntakeBtn" type="button" style="border-color:#339cde;color:#1f6fa3;" title="Copy the client intake form link"><i class="fas fa-copy"></i> Copy Intake Link</button>
                     <a class="btn btn-outline" href="https://ads.webswanmedianetwork.com/" target="_blank" rel="noopener noreferrer" style="border-color:#0e7490;color:#0e7490;"><i class="fas fa-database"></i> WSMN Directory</a>
                     <button class="btn btn-whatsapp" id="whatsappSendBtn"><i class="fab fa-whatsapp"></i> WhatsApp</button>
                     <button class="btn btn-outline" id="chatgptSendBtn" style="border-color:#10a37f;color:#087d61;"><i class="fas fa-comment-dots"></i> ChatGPT</button>
@@ -6457,5 +6459,16 @@
             });
         })();
     </script>
+<script>
+(function(){
+  var URL_INTAKE = 'https://taniad2169.github.io/webswan-dagigoia-task/intake/';
+  var b = document.getElementById('copyIntakeBtn'); if (!b) return;
+  function done(){ b.innerHTML = '<i class="fas fa-check"></i> Copied!'; setTimeout(function(){ b.innerHTML = '<i class="fas fa-copy"></i> Copy Intake Link'; }, 2000); }
+  b.addEventListener('click', function(){
+    if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(URL_INTAKE).then(done, fallback); } else fallback();
+    function fallback(){ var ta = document.createElement('textarea'); ta.value = URL_INTAKE; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch(e) { prompt('Copy this link:', URL_INTAKE); } ta.remove(); }
+  });
+})();
+</script>
 </body>
 </html>
