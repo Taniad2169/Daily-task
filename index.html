@@ -6476,5 +6476,191 @@
   });
 })();
 </script>
+<!-- ===== WORKPILOT ADD-ON ===== -->
+<style id="wsx-style">
+/* stop the screen from jumping */
+body { min-height: 100dvh; }
+.app-container { backdrop-filter: none; }
+.firebase-sync-status { width: 12.5rem; justify-content: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#lockScreen.hidden { visibility: hidden; transition: opacity .6s ease, transform .6s ease, visibility 0s .6s; }
+@media (hover: none) { .btn:hover { transform: none; } }
+@media (max-width: 900px), (pointer: coarse) {
+  .field-group input, .field-group select, .field-group textarea, .briefing-section textarea,
+  .general-comment textarea, .notes-textarea, .todo-input-group input, .lead-search-bar input { font-size: 16px; }
+}
+/* in-field text highlighting */
+.wsx-ov { position: absolute; margin: 0; overflow: hidden; pointer-events: none; color: transparent;
+  box-sizing: border-box; mix-blend-mode: multiply; z-index: 2; border-style: solid; border-color: transparent; }
+.wsx-ov mark { color: transparent; border-radius: 3px; padding: 0; }
+#wsxBar { position: fixed; left: 16px; bottom: 16px; z-index: 9997; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+#wsxMain { border: 2px solid #0077b6; background: #fff; color: #023e8a; border-radius: 50px; padding: .5rem 1rem;
+  font-weight: 700; font-size: .8rem; cursor: pointer; box-shadow: 0 8px 20px rgba(0,60,110,.3); touch-action: manipulation; }
+#wsxPicker { display: none; flex-wrap: wrap; gap: 7px; max-width: 250px; background: #fff; border-radius: 22px; padding: 9px 11px; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+#wsxPicker.show { display: flex; }
+#wsxPicker button { width: 28px; height: 28px; border-radius: 50%; border: 2px solid rgba(0,0,0,.15); cursor: pointer; padding: 0; background: #f7fafc; color: #a0aec0; font-size: .7rem; }
+#wsxMsg { display: none; background: #0a1e2f; color: #fff; border-radius: 12px; padding: 6px 12px; font-size: .78rem; max-width: 230px; }
+</style>
+<script id="wsx-script">
+(function () { try {
+  var LS = 'wsx_text_hl';
+  var COL = { yellow:'#ffe45c', green:'rgba(46,125,50,.45)', red:'#ef9a9a', blue:'rgba(21,101,192,.4)', orange:'rgba(245,124,0,.55)',
+              teal:'rgba(8,145,178,.45)', indigo:'rgba(92,105,242,.4)', charcoal:'rgba(54,69,79,.4)', crimson:'rgba(145,30,26,.4)' };
+  var H = {}; try { H = JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch (e) { H = {}; }
+  var SEL = 'textarea:not([readonly])', noteKey = 'new', snap = null, last = null, ovs = new WeakMap(), prev = new WeakMap(), raf = 0;
+  function save() { try { localStorage.setItem(LS, JSON.stringify(H)); } catch (e) {} }
+  function esc(s) { return s.replace(/[&<>]/g, function (c) { return { '&':'&amp;', '<':'&lt;', '>':'&gt;' }[c]; }); }
+  function keyOf(el) {
+    if (el.id === 'noteContentInput') return 'note:' + noteKey;
+    var g = el.closest('[data-hlkey]'); return g ? g.dataset.hlkey : (el.id || null);
+  }
+  function render(el) {
+    var key = keyOf(el); if (!key) return;
+    var r = (H[key] || []).slice().sort(function (a, b) { return a.s - b.s; }), ov = ovs.get(el);
+    if (!r.length) { if (ov) { ov.remove(); ovs.delete(el); } prev.set(el, el.value); return; }
+    var p = el.parentElement; if (!p) return;
+    if (getComputedStyle(p).position === 'static') p.style.position = 'relative';
+    if (!ov || !ov.isConnected) {
+      ov = document.createElement('div'); ov.className = 'wsx-ov'; ov.setAttribute('aria-hidden', 'true'); p.appendChild(ov); ovs.set(el, ov);
+      el.addEventListener('scroll', function () { ov.scrollTop = el.scrollTop; });
+      if (window.ResizeObserver) new ResizeObserver(function () { render(el); }).observe(el);
+    }
+    var cs = getComputedStyle(el);
+    ['fontFamily','fontSize','fontWeight','fontStyle','letterSpacing','wordSpacing','lineHeight','textTransform','textIndent','tabSize'].forEach(function (k) { ov.style[k] = cs[k]; });
+    var sb = Math.max(0, el.offsetWidth - el.clientWidth - (parseFloat(cs.borderLeftWidth) || 0) - (parseFloat(cs.borderRightWidth) || 0));
+    ov.style.left = el.offsetLeft + 'px'; ov.style.top = el.offsetTop + 'px';
+    ov.style.width = el.offsetWidth + 'px'; ov.style.height = el.offsetHeight + 'px';
+    ov.style.borderWidth = cs.borderTopWidth + ' ' + cs.borderRightWidth + ' ' + cs.borderBottomWidth + ' ' + cs.borderLeftWidth;
+    ov.style.padding = cs.paddingTop + ' ' + ((parseFloat(cs.paddingRight) || 0) + sb) + 'px ' + cs.paddingBottom + ' ' + cs.paddingLeft;
+    ov.style.borderRadius = cs.borderRadius; ov.style.whiteSpace = 'pre-wrap'; ov.style.overflowWrap = 'break-word';
+    var t = el.value, h = '', c = 0;
+    r.forEach(function (x) {
+      var s = Math.max(c, Math.min(x.s, t.length)), e = Math.min(x.e, t.length); if (e <= s) return;
+      h += esc(t.slice(c, s)) + '<mark style="background:' + (COL[x.c] || 'transparent') + '">' + esc(t.slice(s, e)) + '</mark>'; c = e;
+    });
+    ov.innerHTML = h + esc(t.slice(c)); ov.scrollTop = el.scrollTop; prev.set(el, t);
+  }
+  function renderAll() { cancelAnimationFrame(raf); raf = requestAnimationFrame(function () { document.querySelectorAll(SEL).forEach(render); }); }
+  function op(key, s, e, c) {
+    var out = [];
+    (H[key] || []).forEach(function (r) {
+      if (r.e <= s || r.s >= e) { out.push(r); return; }
+      if (r.s < s) out.push({ s: r.s, e: s, c: r.c });
+      if (r.e > e) out.push({ s: e, e: r.e, c: r.c });
+    });
+    if (c) out.push({ s: s, e: e, c: c });
+    out.sort(function (a, b) { return a.s - b.s; });
+    var m = [];
+    out.forEach(function (r) { var l = m[m.length - 1]; if (l && l.c === r.c && l.e >= r.s) l.e = Math.max(l.e, r.e); else m.push({ s: r.s, e: r.e, c: r.c }); });
+    if (m.length) H[key] = m; else delete H[key]; save();
+  }
+  function adjust(rs, o, n) {
+    var min = Math.min(o.length, n.length), p = 0, s = 0, out = [];
+    while (p < min && o.charCodeAt(p) === n.charCodeAt(p)) p++;
+    while (s < min - p && o.charCodeAt(o.length - 1 - s) === n.charCodeAt(n.length - 1 - s)) s++;
+    var oe = o.length - s, ne = n.length - s, d = n.length - o.length;
+    rs.forEach(function (r) {
+      if (r.e <= p) { out.push(r); return; }
+      if (r.s >= oe) { out.push({ s: r.s + d, e: r.e + d, c: r.c }); return; }
+      var ns = Math.min(r.s, p), en = r.e >= oe ? r.e + d : Math.min(r.e, ne);
+      if (en > ns) out.push({ s: ns, e: en, c: r.c });
+    });
+    return out;
+  }
+  document.addEventListener('input', function (e) {
+    var el = e.target; if (!el.matches || !el.matches(SEL)) return;
+    var key = keyOf(el); if (!key) return;
+    var o = prev.get(el); prev.set(el, el.value);
+    if (!H[key] || o === undefined) return;
+    var n = adjust(H[key], o, el.value);
+    if (n.length) H[key] = n; else delete H[key];
+    save(); render(el);
+  });
+  document.addEventListener('focusin', function (e) { if (e.target.matches && e.target.matches(SEL)) prev.set(e.target, e.target.value); });
+  function cap() {
+    var el = document.activeElement; if (!el || !el.matches || !el.matches(SEL)) return;
+    var k = keyOf(el); if (k) last = { el: el, s: el.selectionStart, e: el.selectionEnd };
+  }
+  ['selectionchange', 'keyup', 'mouseup', 'touchend', 'select', 'focusin'].forEach(function (n) { document.addEventListener(n, cap, true); });
+
+  // --- toolbar ---
+  var bar = document.createElement('div'); bar.id = 'wsxBar';
+  var msg = document.createElement('div'); msg.id = 'wsxMsg';
+  var pick = document.createElement('div'); pick.id = 'wsxPicker';
+  var main = document.createElement('button'); main.id = 'wsxMain'; main.type = 'button'; main.textContent = '✍️ Text highlight';
+  Object.keys(COL).forEach(function (c) {
+    var b = document.createElement('button'); b.type = 'button'; b.title = c; b.dataset.c = c; b.style.background = COL[c]; pick.appendChild(b);
+  });
+  var clr = document.createElement('button'); clr.type = 'button'; clr.title = 'Clear highlight'; clr.dataset.c = ''; clr.textContent = '⊘'; pick.appendChild(clr);
+  bar.appendChild(msg); bar.appendChild(pick); bar.appendChild(main); document.body.appendChild(bar);
+  var mt; function say(t) { msg.textContent = t; msg.style.display = 'block'; clearTimeout(mt); mt = setTimeout(function () { msg.style.display = 'none'; }, 2800); }
+  bar.addEventListener('mousedown', function (e) { cap(); e.preventDefault(); });
+  bar.addEventListener('touchstart', cap, { passive: true });
+  main.addEventListener('click', function () {
+    if (!last || !document.contains(last.el)) { say('Tap inside a note or comment box first. Select words, or select nothing to use all the text.'); return; }
+    pick.classList.toggle('show');
+  });
+  pick.addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    if (!last || !document.contains(last.el)) return;
+    var el = last.el, key = keyOf(el), s = last.s, en = last.e, whole = s === en, c = b.dataset.c;
+    if (whole) { s = 0; en = el.value.length; }
+    if (en <= s) { say('That box is empty.'); return; }
+    op(key, s, en, c || null); render(el); pick.classList.remove('show');
+    say(c ? (whole ? 'Highlighted all the text.' : 'Highlighted!') : (whole ? 'Cleared this box.' : 'Cleared.'));
+  });
+
+  // --- which note is being edited (so each note keeps its own highlights) ---
+  function restore() {
+    if (!snap) return;
+    if (snap.r.length) H[snap.k] = snap.r; else delete H[snap.k];
+    save(); snap = null;
+  }
+  function setNoteKey(k) {
+    restore(); noteKey = String(k);
+    snap = noteKey === 'new' ? null : { k: 'note:' + noteKey, r: JSON.parse(JSON.stringify(H['note:' + noteKey] || [])) };
+    var g = document.getElementById('noteContentInput'); if (!g) return;
+    var grp = g.closest('.field-group');
+    if (grp) {
+      if (noteKey === 'new') { delete grp.dataset.hlkey; grp.removeAttribute('data-highlight'); }
+      else {
+        grp.dataset.hlkey = 'note-' + noteKey + '-frame';
+        try { var hh = JSON.parse(localStorage.getItem('webswan_highlights') || '{}'), col = hh[grp.dataset.hlkey];
+          if (col) grp.setAttribute('data-highlight', col); else grp.removeAttribute('data-highlight'); } catch (x) {}
+      }
+    }
+    setTimeout(function () { render(g); }, 40);
+  }
+  document.addEventListener('click', function (e) {
+    var t = e.target; if (!t.closest) return;
+    if (t.closest('#addNoteBtn')) { delete H['note:new']; save(); setNoteKey('new'); return; }
+    var ed = t.closest('.note-edit'); if (ed) { setNoteKey(ed.dataset.noteId); return; }
+    var pen = t.closest('.notes-dropdown-item .delete-note-dropdown');
+    if (pen && pen.querySelector('.fa-pen')) { setNoteKey(pen.closest('.notes-dropdown-item').dataset.noteId); return; }
+    if (t.closest('#noteReadEditBtn')) { setNoteKey(document.getElementById('noteReadModalOverlay').dataset.noteId); return; }
+    if (t.closest('#cancelNoteBtn') || t.closest('#closeNoteBtn')) { restore(); setTimeout(renderAll, 40); return; }
+    if (t.closest('#saveNoteBtn')) {
+      snap = null;
+      if (noteKey === 'new') setTimeout(function () {
+        try { var id = 0; JSON.parse(localStorage.getItem('webswan_saved_notes') || '[]').forEach(function (n) { if (n.id > id) id = n.id; });
+          if (id && H['note:new']) { H['note:' + id] = H['note:new']; delete H['note:new']; save(); } } catch (x) {}
+      }, 80);
+      return;
+    }
+    if (t.closest('#submitLeadBtn, #clearFormBtn, .sheet-push-btn, .tm-push-btn, #tmPushToFormBtn')) {
+      setTimeout(function () { var c = document.getElementById('leadFormComment'); delete H['leadForm-comment']; save(); if (c) render(c); }, 80);
+    }
+  }, true);
+
+  // frame highlight for the daily general comment box too
+  var gc = document.getElementById('generalCommentBox'); if (gc && !gc.dataset.hlkey) gc.dataset.hlkey = 'general-comment';
+  // lead cards are rebuilt by the app, so repaint after that
+  var lc = document.getElementById('leadsContainer');
+  if (window.MutationObserver && lc) new MutationObserver(renderAll).observe(lc, { childList: true });
+  var ac = document.getElementById('appContent');
+  if (window.MutationObserver && ac) new MutationObserver(renderAll).observe(ac, { attributes: true, attributeFilter: ['class'] });
+  window.addEventListener('resize', renderAll);
+  renderAll();
+} catch (err) { console.error('WorkPilot add-on skipped:', err); } })();
+</script>
 </body>
 </html>
