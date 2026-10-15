@@ -6498,15 +6498,18 @@ body { min-height: 100dvh; }
 #wsxPicker { display: none; flex-wrap: wrap; gap: 7px; max-width: 250px; background: #fff; border-radius: 22px; padding: 9px 11px; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
 #wsxPicker.show { display: flex; }
 #wsxPicker button { width: 28px; height: 28px; border-radius: 50%; border: 2px solid rgba(0,0,0,.15); cursor: pointer; padding: 0; background: #f7fafc; color: #a0aec0; font-size: .7rem; }
+#wsxPicker button.wsx-pill { width: 100%; height: auto; border-radius: 14px; padding: 8px 10px; font-size: .8rem; font-weight: 700; border: 2px solid rgba(0,0,0,.2); }
+.wsx-ov2 { mix-blend-mode: normal; z-index: 3; }
 #wsxMsg { display: none; background: #0a1e2f; color: #fff; border-radius: 12px; padding: 6px 12px; font-size: .78rem; max-width: 230px; }
 </style>
 <script id="wsx-script">
 (function () { try {
   var LS = 'wsx_text_hl';
   var COL = { yellow:'#ffe45c', green:'rgba(46,125,50,.45)', red:'#ef9a9a', blue:'rgba(21,101,192,.4)', orange:'rgba(245,124,0,.55)',
-              teal:'rgba(8,145,178,.45)', indigo:'rgba(92,105,242,.4)', charcoal:'rgba(54,69,79,.4)', crimson:'rgba(145,30,26,.4)' };
+              teal:'rgba(8,145,178,.45)', indigo:'rgba(92,105,242,.4)', charcoal:'rgba(54,69,79,.4)', crimson:'rgba(145,30,26,.4)', black:'#111' };
+  var DARK = { black: 1 };
   var H = {}; try { H = JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch (e) { H = {}; }
-  var SEL = 'textarea:not([readonly])', noteKey = 'new', snap = null, last = null, ovs = new WeakMap(), prev = new WeakMap(), raf = 0;
+  var SEL = 'textarea:not([readonly])', noteKey = 'new', snap = null, last = null, ovs = new WeakMap(), ov2s = new WeakMap(), prev = new WeakMap(), raf = 0;
   function save() { try { localStorage.setItem(LS, JSON.stringify(H)); } catch (e) {} }
   function esc(s) { return s.replace(/[&<>]/g, function (c) { return { '&':'&amp;', '<':'&lt;', '>':'&gt;' }[c]; }); }
   function keyOf(el) {
@@ -6516,12 +6519,12 @@ body { min-height: 100dvh; }
   function render(el) {
     var key = keyOf(el); if (!key) return;
     var r = (H[key] || []).slice().sort(function (a, b) { return a.s - b.s; }), ov = ovs.get(el);
-    if (!r.length) { if (ov) { ov.remove(); ovs.delete(el); } prev.set(el, el.value); return; }
+    if (!r.length) { if (ov) { ov.remove(); ovs.delete(el); } var q0 = ov2s.get(el); if (q0) { q0.remove(); ov2s.delete(el); } prev.set(el, el.value); return; }
     var p = el.parentElement; if (!p) return;
     if (getComputedStyle(p).position === 'static') p.style.position = 'relative';
     if (!ov || !ov.isConnected) {
       ov = document.createElement('div'); ov.className = 'wsx-ov'; ov.setAttribute('aria-hidden', 'true'); p.appendChild(ov); ovs.set(el, ov);
-      el.addEventListener('scroll', function () { ov.scrollTop = el.scrollTop; });
+      el.addEventListener('scroll', function () { ov.scrollTop = el.scrollTop; var q1 = ov2s.get(el); if (q1) q1.scrollTop = el.scrollTop; });
       if (window.ResizeObserver) new ResizeObserver(function () { render(el); }).observe(el);
     }
     var cs = getComputedStyle(el);
@@ -6532,12 +6535,21 @@ body { min-height: 100dvh; }
     ov.style.borderWidth = cs.borderTopWidth + ' ' + cs.borderRightWidth + ' ' + cs.borderBottomWidth + ' ' + cs.borderLeftWidth;
     ov.style.padding = cs.paddingTop + ' ' + ((parseFloat(cs.paddingRight) || 0) + sb) + 'px ' + cs.paddingBottom + ' ' + cs.paddingLeft;
     ov.style.borderRadius = cs.borderRadius; ov.style.whiteSpace = 'pre-wrap'; ov.style.overflowWrap = 'break-word';
-    var t = el.value, h = '', c = 0;
+    var t = el.value, h = '', h2 = '', c = 0, hasDark = false;
     r.forEach(function (x) {
       var s = Math.max(c, Math.min(x.s, t.length)), e = Math.min(x.e, t.length); if (e <= s) return;
-      h += esc(t.slice(c, s)) + '<mark style="background:' + (COL[x.c] || 'transparent') + '">' + esc(t.slice(s, e)) + '</mark>'; c = e;
+      var pre = esc(t.slice(c, s)), mid = esc(t.slice(s, e));
+      if (DARK[x.c]) { hasDark = true; h += pre + mid; h2 += pre + '<mark style="background:' + COL[x.c] + ';color:#fff">' + mid + '</mark>'; }
+      else { h += pre + '<mark style="background:' + (COL[x.c] || 'transparent') + '">' + mid + '</mark>'; h2 += pre + mid; }
+      c = e;
     });
-    ov.innerHTML = h + esc(t.slice(c)); ov.scrollTop = el.scrollTop; prev.set(el, t);
+    var rest = esc(t.slice(c));
+    ov.innerHTML = h + rest; ov.scrollTop = el.scrollTop; prev.set(el, t);
+    var o2 = ov2s.get(el);
+    if (hasDark) {
+      if (!o2 || !o2.isConnected) { o2 = document.createElement('div'); o2.className = 'wsx-ov wsx-ov2'; o2.setAttribute('aria-hidden', 'true'); p.appendChild(o2); ov2s.set(el, o2); }
+      o2.style.cssText = ov.style.cssText; o2.innerHTML = h2 + rest; o2.scrollTop = el.scrollTop;
+    } else if (o2) { o2.remove(); ov2s.delete(el); }
   }
   function renderAll() { cancelAnimationFrame(raf); raf = requestAnimationFrame(function () { document.querySelectorAll(SEL).forEach(render); }); }
   function op(key, s, e, c) {
@@ -6588,9 +6600,10 @@ body { min-height: 100dvh; }
   var pick = document.createElement('div'); pick.id = 'wsxPicker';
   var main = document.createElement('button'); main.id = 'wsxMain'; main.type = 'button'; main.textContent = '✍️ Text highlight';
   Object.keys(COL).forEach(function (c) {
-    var b = document.createElement('button'); b.type = 'button'; b.title = c; b.dataset.c = c; b.style.background = COL[c]; pick.appendChild(b);
+    if (c === 'black') return; var b = document.createElement('button'); b.type = 'button'; b.title = c; b.dataset.c = c; b.style.background = COL[c]; pick.appendChild(b);
   });
-  var clr = document.createElement('button'); clr.type = 'button'; clr.title = 'Clear highlight'; clr.dataset.c = ''; clr.textContent = '⊘'; pick.appendChild(clr);
+  var blk = document.createElement('button'); blk.type = 'button'; blk.className = 'wsx-pill'; blk.title = 'No email yet'; blk.dataset.c = 'black'; blk.textContent = 'No email yet'; blk.style.background = '#111'; blk.style.color = '#fff'; pick.appendChild(blk);
+  var clr = document.createElement('button'); clr.type = 'button'; clr.className = 'wsx-pill'; clr.title = 'Remove highlight'; clr.dataset.c = ''; clr.textContent = '✕ No highlight (clear)'; clr.style.background = '#f7fafc'; clr.style.color = '#1a202c'; pick.appendChild(clr);
   bar.appendChild(msg); bar.appendChild(pick); bar.appendChild(main); document.body.appendChild(bar);
   var mt; function say(t) { msg.textContent = t; msg.style.display = 'block'; clearTimeout(mt); mt = setTimeout(function () { msg.style.display = 'none'; }, 2800); }
   bar.addEventListener('mousedown', function (e) { cap(); e.preventDefault(); });
@@ -6603,7 +6616,7 @@ body { min-height: 100dvh; }
     var b = e.target.closest('button'); if (!b) return;
     if (!last || !document.contains(last.el)) return;
     var el = last.el, key = keyOf(el), s = last.s, en = last.e, whole = s === en, c = b.dataset.c;
-    if (whole) { s = 0; en = el.value.length; }
+    if (whole) { var hit = null; if (!c) (H[key] || []).forEach(function (r) { if (s >= r.s && s <= r.e) hit = r; }); if (hit) { s = hit.s; en = hit.e; } else { s = 0; en = el.value.length; } }
     if (en <= s) { say('That box is empty.'); return; }
     op(key, s, en, c || null); render(el); pick.classList.remove('show');
     say(c ? (whole ? 'Highlighted all the text.' : 'Highlighted!') : (whole ? 'Cleared this box.' : 'Cleared.'));
