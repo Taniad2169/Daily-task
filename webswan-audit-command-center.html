@@ -401,6 +401,7 @@
             <option value="NY">NY (SHIELD + ADA)</option>
             <option value="TX">TX (TDPSA + HB 300)</option>
             <option value="FL">FL (FDBR + HIPAA)</option>
+            <option value="OTHER">Other state (federal HIPAA + ADA)</option>
           </select>
         </div>
 
@@ -726,6 +727,11 @@
   const iframeForms = [...document.querySelectorAll('iframe[src]')].map(i =&gt; where(i.src)).filter(s =&gt; /jotform|typeform|wufoo|formstack|google\.com\/forms|hubspot|cognitoforms|intakeq|jane\.app|simplepractice|zocdoc|nexhealth|weave|solutionreach|formsite|123formbuilder/i.test(s)).slice(0, 6);
   const pageTitle = document.title || '';
   const h1s = [...document.querySelectorAll('h1')];
+  const ST = 'AL AK AZ AR CA CO CT DE FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY DC'.split(' ');
+  const NAMES = { california: 'CA', washington: 'WA', 'new york': 'NY', texas: 'TX', florida: 'FL' };
+  let siteState = '';
+  try { for (const sc of document.querySelectorAll('script[type="application/ld+json"]')) { const m = sc.textContent.match(/"addressRegion"\s*:\s*"([^"]+)"/); if (m) { const v = m[1].trim(); siteState = ST.includes(v.toUpperCase()) ? v.toUpperCase() : (NAMES[v.toLowerCase()] || ''); if (siteState) break; } } } catch (e) {}
+  if (!siteState) { const counts = {}; ((document.body &amp;&amp; document.body.innerText) || '').replace(/,\s*([A-Z]{2})\.?\s+(\d{5})(-\d{4})?\b/g, (m0, st) =&gt; { if (ST.includes(st)) counts[st] = (counts[st] || 0) + 1; return m0; }); siteState = Object.keys(counts).sort((a, b) =&gt; counts[b] - counts[a])[0] || ''; }
   const healthPage = /appointment|patient|intake|booking|book-now|schedule|symptom|treatment|new-patient|telehealth|consult|medical|health|clinic|therapy|dental|chiro/i.test(location.pathname + ' ' + pageTitle + ' ' + h1s.map(txt).join(' '));
 
   // ---- cookie banner ----
@@ -858,7 +864,7 @@
     version: 'webswan-sniffer-4', domain: location.hostname, url: location.href, timestamp: new Date().toISOString(),
     resourceCount: res.length, consentTools, cookieBanner, trackingCookiesBeforeConsent, trackers,
     accessibility, a11y, https, links,
-    page: { title: pageTitle.slice(0, 120), healthPage },
+    page: { title: pageTitle.slice(0, 120), healthPage, state: siteState },
     forms, iframeForms
   };
   const out = JSON.stringify(report, null, 2);
@@ -1067,13 +1073,24 @@
           </div>
 
           <div class="space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label for="outreachContactName" class="block text-[11px] font-mono uppercase text-slate-400 mb-1">Contact First Name (optional)</label>
+                <input id="outreachContactName" type="text" oninput="updateOutreachGenerators()" placeholder="e.g. Maria" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs sm:text-sm focus:outline-none focus:border-swan-sky" />
+              </div>
+              <div>
+                <label for="outreachBusinessName" class="block text-[11px] font-mono uppercase text-slate-400 mb-1">Business Name (optional)</label>
+                <input id="outreachBusinessName" type="text" oninput="updateOutreachGenerators()" placeholder="e.g. Bay Family Chiropractic" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-white text-xs sm:text-sm focus:outline-none focus:border-swan-sky" />
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-400">The email is written automatically from your scan: every finding on the site, why it matters, and the penalty rules for the business's state. The scan reads the state from the address on their website and sets it at the top for you (CA, WA, NY, TX, FL have state rules; other states use federal HIPAA and ADA rules). If no address is found, pick the state yourself. Edit anything you like before copying.</p>
             <div>
-              <label class="block text-[11px] font-mono uppercase text-slate-400 mb-1">Subject Line (High Open-Rate Curiosity Hook)</label>
-              <input id="emailSubjectInput" type="text" readonly class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-swan-sky font-medium text-xs sm:text-sm focus:outline-none" />
+              <label class="block text-[11px] font-mono uppercase text-slate-400 mb-1">Subject Line</label>
+              <input id="emailSubjectInput" type="text" class="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-swan-sky font-medium text-xs sm:text-sm focus:outline-none" />
             </div>
             <div>
-              <label class="block text-[11px] font-mono uppercase text-slate-400 mb-1">Personalized Body (Cites Active Network Telemetry vs. Dormant Tags)</label>
-              <textarea id="emailBodyTextarea" rows="14" class="w-full p-4 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-200 text-xs sm:text-sm leading-relaxed font-sans focus:outline-none focus:border-swan-sky"></textarea>
+              <label class="block text-[11px] font-mono uppercase text-slate-400 mb-1">Personalized Email (Findings + Why It Matters + State Penalties)</label>
+              <textarea id="emailBodyTextarea" rows="22" class="w-full p-4 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-200 text-xs sm:text-sm leading-relaxed font-sans focus:outline-none focus:border-swan-sky"></textarea>
             </div>
           </div>
         </div>
@@ -1109,6 +1126,23 @@
         </div>
 
       </div>
+
+      <details class="glass-card rounded-2xl p-5 text-xs text-slate-300">
+        <summary class="cursor-pointer font-display font-bold text-sm text-swan-sky"><i class="fa-solid fa-scale-balanced mr-1.5"></i>Penalty facts used in the emails &amp; sources (checked October 2026)</summary>
+        <ul class="list-disc ml-5 mt-3 space-y-1.5 leading-relaxed">
+          <li><strong>HIPAA:</strong> $145 to $73,011 per violation, yearly cap $2,190,294 (HHS 2026 adjustment). Applies to healthcare providers and their vendors.</li>
+          <li><strong>BAA:</strong> a signed contract can't be seen from a website, so the scan flags vendors that would need one (outside form/booking tools on patient pages) and pixels whose companies don't sign BAAs (Meta, Google, TikTok). Ask the practice for their BAA list.</li>
+          <li><strong>ADA Title III:</strong> 8,667 federal lawsuits in 2025 (CA 3,252 • FL 1,823 • NY 1,471). Usually the business pays to fix the site plus attorney fees.</li>
+          <li><strong>California CIPA:</strong> $5,000 per violation in private lawsuits over website tracking without consent. Bill SB 690 may limit some claims; still pending.</li>
+          <li><strong>California Unruh Act:</strong> at least $4,000 per violation for accessibility barriers (courts may treat a whole website as one violation).</li>
+          <li><strong>CCPA/CPRA:</strong> $2,663 per violation or $7,988 if intentional, only for businesses over $26.6M revenue or 100,000+ Californians' data.</li>
+          <li><strong>Washington MHMDA:</strong> people can sue for damages, attorney fees and up to triple damages (max $25,000).</li>
+          <li><strong>New York SHIELD Act:</strong> up to $5,000 per violation for failing to keep reasonable data safeguards.</li>
+          <li><strong>Texas:</strong> HB 300 $5,000 to $1.5M per year for health information; TDPSA up to $7,500 per violation (30-day cure; most small businesses exempt except for selling sensitive data).</li>
+          <li><strong>Florida:</strong> the Digital Bill of Rights only covers $1B+ companies, so emails for Florida use HIPAA and ADA facts instead.</li>
+        </ul>
+        <p class="mt-3 text-slate-400">Sources: HHS penalty update (prospyrmed.com summary) • Spencer Fane on CIPA • knowledgelib.io CCPA 2026 summary • BCLP on Unruh/Domino's • Cooley on MHMDA • Hunton on the SHIELD Act • Baker Donelson Texas guide • Seyfarth/Mondaq 2025 ADA filing report. Laws change; re-check yearly. This is not legal advice.</p>
+      </details>
     </section>
 
   </main>
@@ -1321,7 +1355,8 @@
       WA: 'Washington My Health My Data Act (MHMDA) & HIPAA',
       NY: 'New York SHIELD Act & WCAG 2.1 AA Accessibility',
       TX: 'Texas Data Privacy & Security Act (TDPSA) & HB 300',
-      FL: 'Florida Digital Bill of Rights & Telehealth Rules'
+      FL: 'Florida Digital Bill of Rights & Telehealth Rules',
+      OTHER: 'Federal HIPAA & ADA Title III'
     };
 
     // Same tracker signatures the Console Sniffer uses (for the "paste page source" option)
@@ -1672,10 +1707,15 @@
         state.https = v4 && parsed.https ? parsed.https : null;
         state.links = v4 && parsed.links ? { ...parsed.links, broken: parsed.links.broken || [], slow: parsed.links.slow || [], notChecked: parsed.links.notChecked || [] } : null;
         state.page = v4 && parsed.page ? parsed.page : null;
+        if (state.page && state.page.state && !parsed.sample) {
+          const sel = document.getElementById('stateSelect');
+          sel.value = [...sel.options].some(o => o.value === state.page.state) ? state.page.state : 'OTHER';
+          state.detectedState = state.page.state;
+        } else state.detectedState = '';
         state.iframeForms = v4 && Array.isArray(parsed.iframeForms) ? parsed.iframeForms.map(String) : [];
         document.getElementById('targetUrlInput').value = state.domain;
         computeAuditData();
-        showToast(parsed.sample ? 'Sample data loaded' : 'Live scan imported', v4 ? `${plural(state.trackers.length, 'tracker')} from ${state.domain}` : 'Older sniffer format: copy the new sniffer and re-run it for cookie banner, HTTPS and link checks.');
+        showToast(parsed.sample ? 'Sample data loaded' : 'Live scan imported', v4 ? `${plural(state.trackers.length, 'tracker')} from ${state.domain}${state.detectedState ? ` • state detected: ${state.detectedState}` : ' • no address found, pick the state at the top'}` : 'Older sniffer format: copy the new sniffer and re-run it for cookie banner, HTTPS and link checks.');
         return;
       }
       // Page source mode: we can see the code, not the network.
@@ -1797,75 +1837,180 @@
 <\/script>`;
     }
 
-    // ---------- Tab 4: outreach built only from measured findings ----------
-    function findingSentences() {
+    // ---------- Tab 4: personalized outreach written only from measured findings ----------
+    // Penalty facts checked October 2026. Update LAW_FACTS when laws or amounts change.
+    const LAW_FACTS = {
+      hipaa: 'HIPAA civil penalties run from $145 up to $73,011 per violation, with a yearly cap of $2,190,294 (2026 HHS amounts), and HHS has warned that tracking tools on appointment and patient pages can expose protected health information.',
+      adaFed: '8,667 ADA Title III website and accessibility lawsuits were filed in federal court in 2025; a business that is sued usually pays to fix the site plus the other side\'s attorney fees.',
+      CA: {
+        name: 'California',
+        tracking: 'California\'s Invasion of Privacy Act (CIPA) lets website visitors sue for $5,000 per violation when tracking tools capture their information without consent, and thousands of these website-tracking claims are filed every year.',
+        ada: 'California\'s Unruh Civil Rights Act adds at least $4,000 in damages per violation on top of the ADA, and California had the most ADA lawsuits in the country in 2025 (3,252 federal filings).',
+        cookie: 'For businesses large enough to fall under the CCPA (for example, more than $26.6 million in yearly revenue), the state can fine up to $2,663 per violation, or $7,988 if intentional.'
+      },
+      WA: {
+        name: 'Washington',
+        health: 'Washington\'s My Health My Data Act covers consumer health information collected through websites, tracking tools included, and lets people sue for their damages, attorney fees and up to triple damages (up to $25,000).'
+      },
+      NY: {
+        name: 'New York',
+        ada: 'New York is one of the top three states for ADA lawsuits (1,471 federal filings in 2025), and many website accessibility cases are now filed in New York state court as well.',
+        security: 'New York\'s SHIELD Act requires reasonable safeguards for New Yorkers\' private information, and the Attorney General can seek up to $5,000 per violation.'
+      },
+      TX: {
+        name: 'Texas',
+        health: 'Texas HB 300 applies to anyone who collects or stores health information about Texans, with penalties from $5,000 up to $1.5 million per year.',
+        tracking: 'Under the Texas Data Privacy and Security Act, the Attorney General can fine up to $7,500 per violation (after a 30-day chance to fix); even small businesses may not sell sensitive data without consent.'
+      },
+      FL: {
+        name: 'Florida',
+        ada: 'Florida had the second-most ADA lawsuits in the country in 2025 (1,823 federal filings).'
+      },
+      OTHER: { name: 'the U.S. (federal rules)' }
+    };
+
+    function detailedFindings() {
       const out = [];
+      const live = state.source === 'live' || state.source === 'demo';
       const sent = state.trackers.filter(t => t.status === 'SENT_DATA');
-      if (state.source === 'live' || state.source === 'demo') {
-        if (sent.length) out.push(`When ${state.domain} first loads, ${sent.map(t => t.tracker).join(' and ')} ${sent.length === 1 ? 'sends' : 'send'} visitor page data to outside companies before the visitor makes any cookie choice.`);
-      } else if (state.source === 'source' && state.trackers.length) {
-        out.push(`The page code of ${state.domain} includes ${state.trackers.map(t => t.tracker).join(', ')}.`);
+      const isHealth = state.industry === 'healthcare' || state.industry === 'dental';
+      const pageWord = state.page && state.page.healthPage ? (isHealth ? 'appointment / patient page' : 'intake / contact page') : 'page';
+      const d = state.domain;
+      if (live && sent.length) out.push({ area: 'tracking',
+        text: `When someone opens ${d}, ${sent.map(t => t.tracker).join(' and ')} ${sent.length === 1 ? 'sends' : 'send'} their visit information (the page they're on, device details and a tracking ID) to ${sent.length === 1 ? 'that company' : 'those companies'} before they agree to anything.`,
+        why: isHealth ? `On a healthcare website, the page someone visits can reveal that they are looking for care. Sharing that without consent is exactly what privacy regulators and lawsuits focus on.` : `Collecting visitor data before consent is what most website privacy lawsuits are about.` });
+      else if (state.source === 'source' && state.trackers.length) out.push({ area: 'tracking',
+        text: `The code of ${d} includes ${state.trackers.map(t => t.tracker).join(', ')}.`,
+        why: 'These tools collect visitor data, so they need to wait for the visitor\'s consent.' });
+      const cb = state.cookieBanner;
+      if (cb && !cb.detected) out.push({ area: 'cookie',
+        text: `There is no cookie banner on ${d}, so visitors have no way to accept or decline tracking.`,
+        why: state.trackers.length ? 'Tracking runs for every visitor with no choice offered, which is the first thing privacy complaints point to.' : 'If tracking or advertising tools are ever added, the site has no way to ask permission first.' });
+      else if (cb) {
+        if (live && sent.length) out.push({ area: 'cookie',
+          text: `The cookie banner on ${d} doesn't actually stop tracking: data is sent before the visitor clicks anything.`,
+          why: 'A banner that doesn\'t block tracking gives the look of compliance without the protection.' });
+        if (cb.buttonsKnown && !cb.hasReject) out.push({ area: 'cookie',
+          text: `The cookie banner offers "${(cb.buttons[0] || 'Accept').replace(/^./, c => c.toUpperCase())}" but no way to decline.`,
+          why: 'Regulators treat a banner without an equal "Decline" option as not giving visitors a real choice.' });
       }
       if (Array.isArray(state.forms)) {
         const sens = state.forms.reduce((n, f) => n + (f.sensitiveFields || 0), 0);
-        if (sens) out.push(`A form on the page asks for personal details directly on the website${sent.length ? ', on the same page where those tracking tools run,' : ''} instead of in a separate secure portal.`);
+        if (sens) out.push({ area: 'hipaa',
+          text: `A form on the ${pageWord} asks for ${isHealth ? 'personal details (like date of birth, insurance or symptoms)' : 'sensitive personal details'} right on the website${live && sent.length ? ', on the same page where those tracking tools are sending data' : ''}.`,
+          why: isHealth ? `Health details typed into a website form should go to a secure, HIPAA-ready portal covered by a signed Business Associate Agreement (BAA), not sit next to advertising pixels.${live && sent.some(t => /Meta|Google|TikTok/.test(t.tracker)) ? ' Meta, Google and TikTok do not sign BAAs for their tracking pixels.' : ''}` : 'Sensitive details are safest in a secure portal, away from tracking tools.' });
+        else if (isHealth && state.page && state.page.healthPage && live && sent.length) out.push({ area: 'hipaa',
+          text: `This is a ${pageWord}, and the tracking tools report its address and title to outside companies.`,
+          why: 'That alone can show which patients are booking which services.' });
+        const getSens = state.forms.filter(f => f.method === 'GET' && f.sensitiveFields).length;
+        if (getSens) out.push({ area: 'hipaa', text: 'A form with sensitive fields puts the answers right into the web address when it\'s sent.', why: 'Web addresses get saved in browser history, server logs and analytics tools.' });
       }
-      const cb = state.cookieBanner;
-      if (cb && !cb.detected) out.push(`I couldn't find a cookie banner on ${state.domain}, so visitors have no way to accept or decline tracking.`);
-      else if (cb && cb.buttonsKnown && !cb.hasReject) out.push(`The cookie banner on ${state.domain} offers an accept button but no way to decline.`);
-      if (state.accessibility && !state.accessibility.statementLink) out.push(`There is no Accessibility Statement on the page${state.accessibility.widgets.length ? ` (an accessibility widget is installed, but a widget alone doesn't cover WCAG)` : ''}.`);
-      if (state.https && state.https.isHttps === false) out.push(`The page loads without HTTPS, so information typed into it is not encrypted.`);
-      if (state.links && state.links.broken.filter(b => b.internal).length) out.push(`${plural(state.links.broken.filter(b => b.internal).length, 'link')} on the site ${state.links.broken.filter(b => b.internal).length === 1 ? 'leads' : 'lead'} to a page that doesn't load.`);
       if (state.a11y) {
         const a = state.a11y, items = [];
-        if (a.imagesMissingAlt) items.push(plural(a.imagesMissingAlt, 'image') + ' missing alt text');
-        if (a.unlabeledFields) items.push(plural(a.unlabeledFields, 'form field') + ' without a label');
-        if (a.lowContrast) items.push(plural(a.lowContrast, 'text element') + ' with low color contrast');
-        if (a.buttonsWithoutName + a.linksWithoutName) items.push(plural(a.buttonsWithoutName + a.linksWithoutName, 'button or link', 'buttons or links') + ' with no readable name');
-        if (items.length) out.push(`Screen-reader checks found ${items.join(', ')} (WCAG 2.1 AA).`);
+        if (a.imagesMissingAlt) items.push(plural(a.imagesMissingAlt, 'image') + ' with no alt text');
+        if (a.unlabeledFields) items.push(plural(a.unlabeledFields, 'form field') + ' with no label');
+        if (a.buttonsWithoutName + a.linksWithoutName) items.push(plural(a.buttonsWithoutName + a.linksWithoutName, 'button or link', 'buttons or links') + ' a screen reader can\'t name');
+        if (a.lowContrast) items.push(plural(a.lowContrast, 'line') + ' of text that is too light to read easily');
+        if (a.zoomBlocked) items.push('zoom turned off on phones');
+        if (!a.htmlLang) items.push('no page language set');
+        if (items.length) out.push({ area: 'ada',
+          text: `Accessibility check (WCAG 2.1 AA): ${items.join(', ')}.`,
+          why: 'People who are blind or have low vision can\'t use these parts of the site, and these are the exact items listed in website accessibility lawsuits.' });
+      }
+      if (state.accessibility && !state.accessibility.statementLink) out.push({ area: 'ada',
+        text: state.accessibility.widgets.length ? `The site uses an accessibility widget (${state.accessibility.widgets.join(', ')}) but has no Accessibility Statement.` : 'There is no Accessibility Statement or accessibility page on the site.',
+        why: state.accessibility.widgets.length ? 'Widgets alone don\'t make a site compliant, and businesses with widgets are still being sued.' : 'A statement shows good faith and tells visitors how to ask for help.' });
+      if (isHealth && ((state.iframeForms && state.iframeForms.length) || (Array.isArray(state.forms) && state.forms.some(f => f.thirdParty && f.sensitiveFields)))) out.push({ area: 'hipaa',
+        text: `Patient information on ${d} goes through an outside form or booking service (${[...(state.iframeForms || []), ...(state.forms || []).filter(f => f.thirdParty && f.sensitiveFields).map(f => f.actionHost)].join(', ')}).`,
+        why: 'That service needs a signed Business Associate Agreement (BAA) and a HIPAA-ready plan. Is one in place?' });
+      if (state.https && state.https.isHttps === false) out.push({ area: 'security', text: `${d} loads without HTTPS.`, why: 'Chrome labels the page "Not secure", and anything typed into it travels unencrypted.' });
+      else if (state.https && (state.https.mixedContent || state.https.insecureFormActions)) out.push({ area: 'security', text: 'Part of the page still loads or sends over insecure http://.', why: 'Browsers can show security warnings and block those parts.' });
+      if (state.links) {
+        const bi = state.links.broken.filter(b => b.internal);
+        if (bi.length) out.push({ area: 'links', text: `${plural(bi.length, 'link')} on the site ${bi.length === 1 ? 'goes' : 'go'} to a page that doesn't load (${bi.slice(0, 3).map(b => b.url.replace(/^[^/]+/, '') || '/').join(', ')}).`, why: 'Visitors give up on broken pages, and Google ranks sites with broken links lower.' });
       }
       return out;
     }
 
+    function lawPoints(findings) {
+      const areas = new Set(findings.map(f => f.area));
+      const L = LAW_FACTS[state.jurisdiction] || LAW_FACTS.OTHER;
+      const isHealth = state.industry === 'healthcare' || state.industry === 'dental';
+      const pts = [];
+      const privacy = areas.has('tracking') || areas.has('cookie') || areas.has('hipaa');
+      if (privacy && L.tracking) pts.push(L.tracking);
+      if (privacy && isHealth && L.health) pts.push(L.health);
+      if (isHealth && (areas.has('tracking') || areas.has('hipaa'))) pts.push(LAW_FACTS.hipaa);
+      if (areas.has('ada')) pts.push(L.ada || LAW_FACTS.adaFed);
+      if ((areas.has('security') || areas.has('hipaa')) && L.security) pts.push(L.security);
+      if (areas.has('cookie') && L.cookie) pts.push(L.cookie);
+      return pts.slice(0, 4);
+    }
+
     function updateOutreachGenerators() {
-      const ind = industryMeta[state.industry], jur = stateMeta[state.jurisdiction];
+      const ind = industryMeta[state.industry];
       const subj = document.getElementById('emailSubjectInput'), body = document.getElementById('emailBodyTextarea'), call = document.getElementById('callScriptContent');
-      const items = findingSentences();
+      const contact = (document.getElementById('outreachContactName') || {}).value || '';
+      const biz = ((document.getElementById('outreachBusinessName') || {}).value || '').trim() || state.domain;
+      const items = detailedFindings();
       if (state.source === 'none' || state.source === 'demo' || !items.length) {
         const why = state.source === 'demo' ? 'This is sample data. Scan a real website before writing to a prospect.' : (state.source === 'none' ? 'Scan the prospect\'s website first. The email is written only from what the scan actually finds.' : 'The scan found nothing to flag on this page, so there is no outreach email to send.');
         subj.value = ''; body.value = why;
         call.innerHTML = `<p class="text-slate-400">${esc(why)}</p>`;
         return;
       }
-      subj.value = `Quick question about ${state.domain}`;
-      body.value = `Hi there,
+      const L = LAW_FACTS[state.jurisdiction] || LAW_FACTS.OTHER;
+      const laws = lawPoints(items);
+      const scoreLine = state.currentScore != null ? `On our WebSwan compliance check, ${state.domain} scored ${state.currentScore}/100.` : '';
+      const ar = new Set(items.map(f => f.area)), fixes = [];
+      if (ar.has('tracking') || ar.has('cookie')) fixes.push('set up a cookie banner that truly blocks tracking until visitors agree');
+      if (ar.has('ada')) fixes.push('fix the accessibility items and add an Accessibility Statement');
+      if (ar.has('hipaa')) fixes.push('move sensitive forms into a secure portal');
+      if (ar.has('security')) fixes.push('put the whole site on HTTPS');
+      if (ar.has('links')) fixes.push('repair the broken links');
+      const fixLine = fixes.length ? `We can ${fixes.length > 1 ? fixes.slice(0, -1).join(', ') + ', and ' + fixes[fixes.length - 1] : fixes[0]}.` : '';
+      const date = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      subj.value = `${biz}: ${plural(items.length, 'thing')} I noticed on your website`;
+      body.value = `Hi ${contact.trim() || 'there'},
 
-I ran a quick technical and accessibility check on ${state.domain} and wanted to share what I saw:
+My name is Tania Domingue with WebSwan Digital Solutions. On ${date} I ran a technical privacy and accessibility review of ${state.domain}, and I wanted to share what I found with you privately.
 
-${items.map((s, i) => `${i + 1}. ${s}`).join('\n')}
+What I found:
+${items.map((f, i) => `${i + 1}. ${f.text}\n   Why it matters: ${f.why}`).join('\n\n')}
+${laws.length ? `
+Why this matters in ${L.name}:
+${laws.map(p => '• ' + p).join('\n')}
+` : ''}
+${scoreLine}
 
-Are you already working on a cookie-consent setup or website accessibility update with ${jur} in mind this quarter?
+The good news is that all of this can be fixed without redesigning your website. ${fixLine}
 
-I put together a short 1-page summary for ${state.domain}. Would you like me to send it over, or would a quick 10-minute call this week be easier?
+Would you like me to send over the 1-page report for ${state.domain}? Or if it's easier, I'm happy to walk you through it on a quick 10-minute call this week.
+
+(Just so you know, I'm not an attorney and this isn't legal advice. It's a technical review of what your website does today.)
 
 Warm regards,
 
 Tania Domingue
 Certified Web Developer, UI/UX Specialist & Digital Compliance Strategist
 WebSwan Digital Solutions • Oakland, CA
-415-877-0687 | thewebswann@gmail.com | https://www.thewebswan.com`;
+415-877-0687 | thewebswann@gmail.com | https://www.thewebswan.com`.replace(/\n{3,}/g, '\n\n');
       call.innerHTML = `
         <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800">
           <span class="text-[11px] font-mono uppercase text-swan-sky font-bold block mb-1">Step 1: Gatekeeper Opener</span>
-          <p>"Hi! This is Tania Domingue with WebSwan Digital Solutions. I ran a quick technical check on <strong>${esc(state.domain)}</strong> and noticed a couple of things I'd like to share with your <strong>${esc(ind.decisionMaker)}</strong>. Who handles your website?"</p>
+          <p>"Hi! This is Tania Domingue with WebSwan Digital Solutions. I ran a technical review of <strong>${esc(state.domain)}</strong> and found a couple of things your <strong>${esc(ind.decisionMaker)}</strong> should know about. Who takes care of your website?"</p>
         </div>
         <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800">
           <span class="text-[11px] font-mono uppercase text-amber-400 font-bold block mb-1">Step 2: What I Found</span>
-          <p>"${esc(items[0])}"</p>
+          <p>"${esc(items[0].text)} ${esc(items[0].why)}"</p>
         </div>
+        ${laws.length ? `<div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800">
+          <span class="text-[11px] font-mono uppercase text-rose-400 font-bold block mb-1">Step 3: Why It Matters in ${esc(L.name)}</span>
+          <p>"${esc(laws[0])}"</p>
+        </div>` : ''}
         <div class="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800">
-          <span class="text-[11px] font-mono uppercase text-emerald-400 font-bold block mb-1">Step 3: Easy Close</span>
-          <p>"We fix this kind of thing for practices like yours. Could I email you the 1-page summary so you can see exactly what we found?"</p>
+          <span class="text-[11px] font-mono uppercase text-emerald-400 font-bold block mb-1">Step ${laws.length ? 4 : 3}: Easy Close</span>
+          <p>"It's all fixable without a redesign. Could I email you the 1-page report so you can see exactly what we found?"</p>
         </div>`;
     }
 
