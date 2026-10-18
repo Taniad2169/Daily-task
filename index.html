@@ -2071,6 +2071,8 @@
                 <div class="header-actions">
                     <a class="btn btn-outline" href="https://silver-malabi-1a1324.netlify.app/" target="_blank" rel="noopener noreferrer" style="border-color:#0891b2;color:#0891b2;"><i class="fas fa-vial"></i> Tech Test · Audit Lab</a>
                     <a class="btn btn-outline" href="webswan-audit-command-center.html" target="_blank" rel="noopener" style="border-color:#16a34a;color:#16a34a;"><i class="fas fa-user-shield"></i> Compliance Audit</a>
+                    <a class="btn btn-reminder" id="reminderBtn" href="https://taniad2169.github.io/Reminder/" target="_blank" rel="noopener noreferrer"><i class="fas fa-bell"></i> Reminder</a>
+                    <a class="btn btn-outline" href="https://taniad2169.github.io/WebSwan-Games/index.html" target="_blank" rel="noopener noreferrer" style="border-color:#7c3aed;color:#6d28d9;"><i class="fas fa-gamepad"></i> WebSwan-Game</a>
                     <a class="btn btn-outline" href="https://taniad2169.github.io/Business-Audit/" target="_blank" rel="noopener noreferrer" style="border-color:#6f42c1;color:#6f42c1;"><i class="fas fa-clipboard-check"></i> Business Audit</a>
                     <a class="btn btn-outline" href="https://taniad2169.github.io/WebSwan-Compliance-English-Spanish-Ad-Campaign/" target="_blank" rel="noopener noreferrer" style="border-color:#b52d21;color:#b52d21;"><i class="fas fa-cookie-bite"></i> Cookie/ADA Test</a>
                     <a class="btn btn-outline" href="https://taniad2169.github.io/Telemarketing/" target="_blank" rel="noopener noreferrer" style="border-color:#ec407a;color:#ad1457;"><i class="fas fa-phone-volume"></i> Telemarketing Calls</a>
@@ -2253,7 +2255,6 @@
                     <button class="btn btn-outline" id="importDataBtn" style="border-color:#8B5CF6;color:#6d28d9;"><i class="fas fa-upload"></i> Restore Data</button>
                     <input type="file" id="importDataInput" accept="application/json,.json" hidden>
                     <button class="btn btn-sms" id="smsSendBtn"><i class="fas fa-sms"></i> Send to 415-877-0687</button>
-                    <a class="btn btn-reminder" id="reminderBtn" href="https://taniad2169.github.io/Reminder/" target="_blank" rel="noopener noreferrer"><i class="fas fa-bell"></i> Reminder</a>
                     <button class="btn btn-outline" id="clearDataBtn" style="border-color:#e74c3c;color:#e74c3c;"><i class="fas fa-trash"></i> Clear</button>
                 </div>
 
@@ -2405,7 +2406,7 @@
                             <div class="notes-dropdown-content" id="notesDropdownContent">
                                 <div class="notes-dropdown-search">
                                     <i class="fas fa-search"></i>
-                                    <input type="text" id="notesSearchInput" placeholder="Search notes by title...">
+                                    <input type="text" id="notesSearchInput" placeholder="Search notes by any word...">
                                 </div>
                                 <div id="notesDropdownList">
                                     <div class="notes-dropdown-empty">No saved notes yet.</div>
@@ -2436,6 +2437,11 @@
                         </div>
                     </div>
 
+                    <div class="lead-search-bar wsx-notes-search" style="margin-bottom:0.8rem;">
+                        <i class="fas fa-search"></i>
+                        <input type="search" id="notesListSearch" placeholder="Search your notes (type any word)..." aria-label="Search notes">
+                        <span id="notesListSearchCount" style="font-size:0.75rem;color:#6d28d9;white-space:nowrap;"></span>
+                    </div>
                     <div class="notes-list" id="notesListContainer">
                         <div class="notes-empty">No notes yet. Click "New Note" to create your first note! 📝</div>
                     </div>
@@ -3429,13 +3435,20 @@
             // are organized" at a glance without opening the dropdown.
             function renderNotesList() {
                 if (!notesListContainer) return;
+                const nlsWire = document.getElementById('notesListSearch');
+                if (nlsWire && !nlsWire.dataset.wired) { nlsWire.dataset.wired = '1'; nlsWire.addEventListener('input', renderNotesList); }
                 if (notes.length === 0) {
                     notesListContainer.innerHTML = '<div class="notes-empty">No notes yet. Click "New Note" to create your first note! 📝</div>';
                     notesListContainer.classList.add('visible');
                     return;
                 }
                 notesListContainer.classList.add('visible');
-                const sorted = [...notes].reverse();
+                const nlsEl = document.getElementById('notesListSearch');
+                const nlq = nlsEl ? nlsEl.value.trim().toLowerCase() : '';
+                const sorted = [...notes].reverse().filter(n => !nlq || String(n.content || '').toLowerCase().includes(nlq));
+                const nlc = document.getElementById('notesListSearchCount');
+                if (nlc) nlc.textContent = nlq ? sorted.length + ' of ' + notes.length + ' notes' : '';
+                if (nlq && !sorted.length) { notesListContainer.innerHTML = '<div class="notes-empty">No notes contain "' + escapeHtmlForOverlay(nlq) + '". 🔍</div>'; return; }
                 notesListContainer.innerHTML = sorted.map(note => {
                     const hex = note.color && HIGHLIGHT_COLOR_HEX[note.color];
                     const borderStyle = hex ? `border-left:6px solid ${hex};` : '';
@@ -3608,8 +3621,8 @@
                     if (!query) { item.classList.remove('note-hidden'); return; }
                     const noteId = parseInt(item.dataset.noteId);
                     const note = notes.find(n => n.id === noteId);
-                    const title = note ? getNoteTitle(note.content).toLowerCase() : '';
-                    item.classList.toggle('note-hidden', !title.includes(query));
+                    const text = note ? String(note.content || '').toLowerCase() : '';
+                    item.classList.toggle('note-hidden', !text.includes(query));
                 });
             }
 
@@ -6477,6 +6490,24 @@
   });
 })();
 </script>
+<!-- ===== WORKPILOT MOBILE + NOTES SEARCH ADD-ON ===== -->
+<style id="wsx-mobile">
+.wsx-notes-search { display: flex; align-items: center; gap: 8px; }
+.wsx-notes-search input { flex: 1; min-width: 0; border: none; outline: none; background: transparent; font-size: 16px; }
+@media (max-width: 640px) {
+  body { padding: 0; }
+  .app-container { border-radius: 0; padding: 0.75rem 0.5rem 1.5rem; border: none; box-shadow: none; }
+  .lead-form, .lead-card, .briefing-section, .ai-chat-section, .general-comment, .completed-section, .todo-section,
+  .lesson-card, .copy-link-section, .translator-section, .notes-section { padding: 0.9rem 0.6rem; border-radius: 16px; }
+  .completed-item { flex-wrap: wrap; gap: 6px 8px; padding: 8px; }
+  .completed-item .item-text, .completed-item .item-text[data-highlight] { flex: 1 1 calc(100% - 40px); min-width: 0; overflow-wrap: anywhere; }
+  .completed-item .item-type { white-space: nowrap; }
+  .completed-item > span[style*="font-size:0.7rem"] { flex: 1 1 auto; }
+  .notes-item { flex-wrap: wrap; }
+  .notes-dropdown-content { max-width: calc(100vw - 2rem); }
+  .header-actions { gap: 6px; }
+}
+</style>
 <!-- ===== WORKPILOT ADD-ON ===== -->
 <style id="wsx-style">
 /* stop the screen from jumping */
