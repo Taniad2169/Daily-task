@@ -909,6 +909,17 @@
                 placeholder='Paste JSON output from the Console Sniffer here, e.g. {"domain": "exampleclinic.com", "trackers": [...]} or paste raw HTML source...'
                 class="w-full p-3.5 rounded-xl bg-slate-950 border border-slate-700 text-xs font-mono text-emerald-300 focus:outline-none focus:border-swan-sky"
               ></textarea>
+              <div id="wsFind" class="flex flex-wrap items-center gap-2 pt-1" role="search" aria-label="Search the scan and report">
+                <div class="relative flex-1 min-w-[220px]">
+                  <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs" aria-hidden="true"></i>
+                  <label for="wsFindInput" class="sr-only">Search the scan and report</label>
+                  <input id="wsFindInput" type="search" autocomplete="off" spellcheck="false" placeholder="Find in scan &amp; report: fbevents, form, cookie, Google Ads, alt…" class="w-full pl-8 pr-3 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-swan-sky">
+                </div>
+                <span id="wsFindCount" class="text-[11px] font-mono text-slate-400 min-w-[110px]" aria-live="polite"></span>
+                <button type="button" id="wsFindPrev" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 border border-slate-700" aria-label="Previous match"><i class="fa-solid fa-chevron-up"></i></button>
+                <button type="button" id="wsFindNext" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 border border-slate-700" aria-label="Next match"><i class="fa-solid fa-chevron-down"></i></button>
+              </div>
+              <p class="text-[11px] text-slate-500 -mt-1">Searches the pasted scan and every tab. Press Enter for the next match, Shift+Enter for the previous one, Esc to clear.</p>
             </div>
 
             <div class="flex flex-wrap items-center gap-3">
@@ -2149,5 +2160,88 @@ WebSwan Digital Solutions • Oakland, CA
 
     window.addEventListener('load', () => computeAuditData());
   </script>
+
+<style>
+mark.ws-find{background:#fde047;color:#111827;border-radius:3px;padding:0 1px;box-shadow:0 0 0 1px #facc15}
+mark.ws-find.ws-current{background:#f97316;color:#fff;box-shadow:0 0 0 2px #fff,0 0 0 4px #f97316}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+<script>
+(function(){
+  const PANELS=['dashboard','pixel-telemetry','remediation','outreach'];
+  const PANEL_NAMES={dashboard:'Tab 1',['pixel-telemetry']:'Tab 2',remediation:'Tab 3',outreach:'Tab 4'};
+  // words people type -> what the report actually says
+  const SYN=[[/^fb ?events?|^fbq|^meta|^facebook/i,['fbevents','Meta (Facebook) Pixel','facebook.com/tr','_fbp']],[/^google ?ads?|^adwords|^aw-/i,['Google Ads','doubleclick','_gcl_au','AW-']],[/^ga4?$|^google analytics|^gtag/i,['Google Analytics','g/collect','_ga']],[/^gtm|^tag manager/i,['Google Tag Manager','gtm.js']],[/^tiktok/i,['TikTok']],[/^cookie banner|^consent/i,['cookieBanner','cookie banner','consent']],[/^forms?$/i,['form','iframeForms']],[/^alt( text)?$/i,['alt','missingAlt']],[/^hipaa/i,['HIPAA','sensitiveFields','healthPage']]];
+  const $=id=>document.getElementById(id);
+  const input=$('wsFindInput'), countEl=$('wsFindCount'), ta=$('liveTelemetryInput');
+  if(!input||!ta) return;
+  let hits=[], cur=-1, timer=null, lastQ='', hitSel=null;
+  const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  function termsFor(q){ const t=[q]; SYN.forEach(([rx,list])=>{ if(rx.test(q)) list.forEach(x=>{ if(!t.some(y=>y.toLowerCase()===x.toLowerCase())) t.push(x); }); }); return t; }
+  function clearMarks(){ document.querySelectorAll('mark.ws-find').forEach(m=>{ const p=m.parentNode; p.replaceChild(document.createTextNode(m.textContent),m); p.normalize(); }); }
+  function run(q){
+    clearMarks(); hits=[]; cur=-1; lastQ=q;
+    if(!q||q.trim().length<2){ countEl.textContent=''; return; }
+    const rx=new RegExp(termsFor(q.trim()).map(esc).join('|'),'gi');
+    // 1) the pasted scan in the Step 2 box
+    let m; const v=ta.value; rx.lastIndex=0;
+    while((m=rx.exec(v))&&hits.length<400){ hits.push({type:'ta',idx:m.index,len:m[0].length}); if(!m[0].length) rx.lastIndex++; }
+    // 2) every tab on the page
+    PANELS.forEach(pid=>{
+      const root=$('panel-'+pid); if(!root) return;
+      const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>{ const el=n.parentElement; if(!el||!n.nodeValue.trim()) return NodeFilter.FILTER_REJECT; if(el.closest('script,style,textarea,input,select,#wsFind,mark.ws-find')) return NodeFilter.FILTER_REJECT; return NodeFilter.FILTER_ACCEPT; }});
+      const nodes=[]; while(walker.nextNode()) nodes.push(walker.currentNode);
+      nodes.forEach(node=>{
+        if(hits.length>=600) return;
+        const text=node.nodeValue; rx.lastIndex=0; const parts=[]; let last=0, mm;
+        while((mm=rx.exec(text))){ if(!mm[0].length){rx.lastIndex++;continue;} parts.push([mm.index,mm[0].length]); }
+        if(!parts.length) return;
+        const frag=document.createDocumentFragment();
+        parts.forEach(([i,l])=>{ if(i>last) frag.appendChild(document.createTextNode(text.slice(last,i))); const mk=document.createElement('mark'); mk.className='ws-find'; mk.textContent=text.slice(i,i+l); frag.appendChild(mk); hits.push({type:'dom',el:mk,panel:pid}); last=i+l; });
+        if(last<text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+        node.parentNode.replaceChild(frag,node);
+      });
+    });
+    if(!hits.length){ countEl.textContent='No matches'; return; }
+    go(0);
+  }
+  function where(h){ return h.type==='ta'?'pasted scan':PANEL_NAMES[h.panel]; }
+  function go(i){
+    if(!hits.length) return;
+    cur=(i+hits.length)%hits.length; const h=hits[cur];
+    document.querySelectorAll('mark.ws-current').forEach(x=>x.classList.remove('ws-current'));
+    if(h.type==='ta'){
+      if(typeof switchTab==='function') switchTab('pixel-telemetry');
+      ta.scrollIntoView({block:'center',behavior:'smooth'});
+      // scroll inside the box to the matching line, then select the word
+      const before=ta.value.slice(0,h.idx); const line=before.split('\n').length-1; const lh=parseFloat(getComputedStyle(ta).lineHeight)||16;
+      ta.scrollTop=Math.max(0,line*lh-ta.clientHeight/2);
+      try{ ta.focus({preventScroll:true}); ta.setSelectionRange(h.idx,h.idx+h.len); }catch(e){}
+      hitSel={s:h.idx,e:h.idx+h.len};
+    } else {
+      if(typeof switchTab==='function') switchTab(h.panel);
+      h.el.classList.add('ws-current');
+      let hidden=false; for(let n=h.el;n&&n!==document.body;n=n.parentElement){ if(n.tagName==='DETAILS'&&!n.open){ n.open=true; } if(getComputedStyle(n).display==='none'){ hidden=true; break; } }
+      if(!hidden) h.el.scrollIntoView({block:'center',behavior:'smooth'});
+    }
+    countEl.textContent=(cur+1)+' of '+hits.length+' · '+where(h);
+  }
+  input.addEventListener('input',()=>{ clearTimeout(timer); timer=setTimeout(()=>run(input.value),300); });
+  input.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){ e.preventDefault(); if(input.value!==lastQ||!hits.length) run(input.value); else go(cur+(e.shiftKey?-1:1)); }
+    else if(e.key==='Escape'){ input.value=''; run(''); }
+  });
+  // while a match is selected in the paste box, Enter jumps to the next match instead of typing over it
+  ta.addEventListener('keydown',e=>{
+    if(!hitSel||ta.selectionStart!==hitSel.s||ta.selectionEnd!==hitSel.e) return;
+    if(e.key==='Enter'){ e.preventDefault(); go(cur+(e.shiftKey?-1:1)); }
+    else if(e.key==='Escape'){ e.preventDefault(); hitSel=null; input.focus(); }
+  });
+  $('wsFindNext').addEventListener('click',()=>{ if(input.value!==lastQ) run(input.value); else go(cur+1); });
+  $('wsFindPrev').addEventListener('click',()=>{ if(input.value!==lastQ) run(input.value); else go(cur-1); });
+  // the report re-draws after Analyze, so start a fresh search afterwards
+  if(typeof window.parseLiveTelemetryInput==='function'){ const orig=window.parseLiveTelemetryInput; window.parseLiveTelemetryInput=function(){ clearMarks(); hits=[]; lastQ=''; countEl.textContent=''; return orig.apply(this,arguments); }; }
+})();
+</script>
 </body>
 </html>
