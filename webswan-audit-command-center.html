@@ -935,6 +935,23 @@
         </div>
       </div>
 
+      <!-- ===== SCAN RESULTS SUMMARY (fills in after Analyze & Update Report) ===== -->
+      <div id="wsSummary" class="glass-card rounded-2xl p-5 sm:p-6" hidden aria-live="polite">
+        <div class="ws-sum-head">
+          <div>
+            <p class="ws-sum-eyebrow">Scan results summary</p>
+            <h3 id="wsSumTitle" class="font-display text-xl font-bold text-white">Results</h3>
+            <p id="wsSumMeta" class="text-xs text-slate-400 mt-1"></p>
+          </div>
+          <div class="ws-sum-actions">
+            <button type="button" id="wsSumCopy" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 border border-slate-700"><i class="fa-solid fa-copy"></i> Copy summary</button>
+            <button type="button" id="wsSumHide" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 border border-slate-700" aria-label="Hide summary"><i class="fa-solid fa-xmark"></i></button>
+          </div>
+        </div>
+        <div id="wsSumTalk" class="ws-talk"></div>
+        <div id="wsSumGrid" class="ws-sum-grid"></div>
+      </div>
+
     </section>
 
     <!-- ==========================================
@@ -2241,6 +2258,155 @@ mark.ws-find.ws-current{background:#f97316;color:#fff;box-shadow:0 0 0 2px #fff,
   $('wsFindPrev').addEventListener('click',()=>{ if(input.value!==lastQ) run(input.value); else go(cur-1); });
   // the report re-draws after Analyze, so start a fresh search afterwards
   if(typeof window.parseLiveTelemetryInput==='function'){ const orig=window.parseLiveTelemetryInput; window.parseLiveTelemetryInput=function(){ clearMarks(); hits=[]; lastQ=''; countEl.textContent=''; return orig.apply(this,arguments); }; }
+})();
+</script>
+
+<style>
+#wsSummary{margin-top:0}
+.ws-sum-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}
+.ws-sum-eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#81c9f0;font-weight:700;margin:0 0 4px}
+.ws-sum-actions{display:flex;gap:8px}
+.ws-sum-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px}
+.ws-card{background:rgba(2,6,23,.55);border:1px solid #334155;border-radius:14px;padding:14px 16px;min-width:0}
+.ws-card h4{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px;font-size:14px;font-weight:700;color:#fff}
+.ws-card h4 .t{display:flex;align-items:center;gap:8px}
+.ws-card h4 i{color:#81c9f0;width:16px;text-align:center}
+.ws-chip{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:999px;white-space:nowrap}
+.ws-bad{background:#4c0519;color:#fda4af;border:1px solid #9f1239}
+.ws-warn{background:#422006;color:#fcd34d;border:1px solid #92400e}
+.ws-good{background:#052e16;color:#86efac;border:1px solid #166534}
+.ws-na{background:#1e293b;color:#94a3b8;border:1px solid #334155}
+.ws-verdict{font-size:13px;color:#e2e8f0;margin:0 0 10px;line-height:1.5}
+.ws-rows{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:12.5px}
+.ws-rows li{display:grid;grid-template-columns:minmax(120px,42%) 1fr;gap:10px;border-top:1px solid rgba(51,65,85,.6);padding-top:6px;color:#cbd5e1}
+.ws-rows li span:first-child{color:#94a3b8}
+.ws-rows li span:last-child{word-break:break-word}
+.ws-rows b{color:#fff}
+.ws-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.ws-tbl th{text-align:left;color:#94a3b8;font-weight:600;padding:4px 6px;border-bottom:1px solid #334155}
+.ws-tbl td{padding:6px;border-bottom:1px solid rgba(51,65,85,.5);color:#e2e8f0;vertical-align:top}
+.ws-scroll{overflow-x:auto}
+.ws-talk{background:linear-gradient(135deg,rgba(129,201,240,.12),rgba(52,211,153,.08));border:1px solid rgba(129,201,240,.35);border-radius:14px;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#e2e8f0}
+.ws-talk p{margin:0 0 6px;font-weight:700;color:#81c9f0;font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+.ws-talk ol{margin:0;padding-left:18px;display:grid;gap:4px}
+.ws-small{font-size:11.5px;color:#94a3b8;margin:8px 0 0}
+@media (max-width:640px){.ws-rows li{grid-template-columns:1fr}}
+</style>
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const box=$('wsSummary'); if(!box||typeof state==='undefined') return;
+  const E=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const chip=(k,t)=>`<span class="ws-chip ws-${k}">${E(t)}</span>`;
+  const yes=(v,good)=>v?(good?chip('good','Yes'):chip('bad','Yes')):(good?chip('bad','No'):chip('good','No'));
+  const row=(a,b)=>`<li><span>${E(a)}</span><span>${b}</span></li>`;
+  const card=(icon,title,status,verdict,body)=>`<section class="ws-card"><h4><span class="t"><i class="fa-solid ${icon}" aria-hidden="true"></i>${E(title)}</span>${status}</h4>${verdict?`<p class="ws-verdict">${verdict}</p>`:''}${body||''}</section>`;
+  const NA=t=>card('fa-circle-question',t,chip('na','Not measured'),'This scan didn\'t include this check. Run the Console Sniffer (Option A) on the prospect\'s site and paste its result.','');
+  let lastText='';
+
+  function render(){
+    const S=state, live=S.source==='live'||S.source==='demo';
+    if(S.source==='none'){ box.hidden=true; return; }
+    const talk=[], txt=[];
+    const host=S.domain||'the site';
+    $('wsSumTitle').textContent=host;
+    $('wsSumMeta').textContent=[S.source==='demo'?'Sample data (demo)':S.source==='source'?'Page source only: shows what is in the code, not what sends data':'Live Console Sniffer scan', S.scanUrl||'', S.scanTime?new Date(S.scanTime).toLocaleString():'', S.page&&S.page.state?'State: '+S.page.state:'', S.page&&S.page.healthPage?'Health / appointment page':''].filter(Boolean).join(' · ');
+    txt.push('WEBSWAN SCAN SUMMARY: '+host, $('wsSumMeta').textContent,'');
+    const cards=[];
+
+    // 1. Trackers / pixels
+    const tr=S.trackers||[], sent=tr.filter(t=>t.status==='SENT_DATA');
+    const lbl={SENT_DATA:'Collecting data',LOADED:'Loaded, no data seen',IN_SOURCE:'In the code only'};
+    if(tr.length||live){
+      const rowsH=tr.map(t=>`<tr><td><b>${E(t.tracker)}</b></td><td>${t.status==='SENT_DATA'?chip('bad',lbl[t.status]):chip(t.status==='LOADED'?'warn':'na',lbl[t.status]||t.status)}</td><td>${t.requestsSent||0}${t.firstSentMs!=null?` · ${t.firstSentMs} ms`:''}</td><td>${E((t.cookies||[]).join(', ')||'—')}</td></tr>`).join('');
+      cards.push(card('fa-satellite-dish','Tracking pixels',sent.length?chip('bad',sent.length+' collecting'):tr.length?chip('warn','Found, not sending'):chip('good','None found'),
+        sent.length?`<b>${sent.map(t=>E(t.tracker)).join(', ')}</b> sent visitor data as the page loaded, before the visitor clicked Accept or Reject.`:tr.length?(S.source==='source'?'These trackers are in the page code. Page source can\'t show whether they send data, so run the Console Sniffer to confirm.':'Trackers are on the page but did not send data during this scan.'):'No tracking pixels were found on this page.',
+        tr.length?`<div class="ws-scroll"><table class="ws-tbl"><thead><tr><th>Tracker</th><th>Status</th><th>Requests</th><th>Cookies</th></tr></thead><tbody>${rowsH}</tbody></table></div>`:''));
+      txt.push('TRACKING PIXELS: '+(tr.length?tr.map(t=>`${t.tracker}: ${lbl[t.status]||t.status}${t.requestsSent?` (${t.requestsSent} requests)`:''}`).join('; '):'none found'));
+      if(sent.length) talk.push(`${sent.map(t=>t.tracker.replace(' (Facebook)','')).join(' and ')} ${sent.length>1?'collect':'collects'} visitor data as soon as the page loads, before visitors can accept or decline.`);
+    }
+
+    // 2. Cookie consent
+    const cb=S.cookieBanner;
+    if(cb){
+      const before=S.cookiesBeforeConsent||[];
+      const st=!cb.detected?chip('bad','No banner'):(!cb.hasReject?chip('warn','No reject button'):chip('good','Banner found'));
+      cards.push(card('fa-cookie-bite','Cookie consent',st,
+        !cb.detected?'No cookie banner was found, so visitors can\'t accept or reject tracking.':(!cb.hasReject?'A banner was found, but it has no clear Reject option.':'A cookie banner was found with Accept and Reject options.')+(before.length?` <b>${before.length}</b> tracking cookie${before.length>1?'s were':' was'} set before any choice.`:''),
+        `<ul class="ws-rows">${row('Banner detected',yes(cb.detected,true))}${row('Banner visible',yes(cb.visible,true))}${row('Consent tool',E((cb.tools||[]).join(', ')||'None'))}${row('Accept button',yes(cb.hasAccept,true))}${row('Reject button',yes(cb.hasReject,true))}${row('Settings button',yes(cb.hasSettings,true))}${row('Privacy policy link',yes(cb.privacyPolicyLink,true))}${row('"Do not sell / share" link',yes(cb.doNotSellLink,true))}${row('Tracking cookies before consent',before.length?`<b>${E(before.join(', '))}</b>`:chip('good','None'))}</ul>`));
+      txt.push('COOKIE CONSENT: '+(cb.detected?'banner found':'NO cookie banner')+`; accept ${cb.hasAccept?'yes':'no'}, reject ${cb.hasReject?'yes':'no'}; privacy policy link ${cb.privacyPolicyLink?'yes':'no'}; tracking cookies before consent: ${before.join(', ')||'none'}`);
+      if(!cb.detected) talk.unshift('There\'s no cookie banner, so visitors can\'t accept or decline tracking.');
+    } else cards.push(NA('Cookie consent'));
+
+    // 3. ADA / accessibility
+    const ac=S.accessibility, a=S.a11y;
+    if(ac||a){
+      const issues=[]; if(a){ if(a.imagesMissingAlt) issues.push(a.imagesMissingAlt+' images missing alt text'); if(a.unlabeledFields) issues.push(a.unlabeledFields+' unlabeled form fields'); if(a.buttonsWithoutName) issues.push(a.buttonsWithoutName+' buttons without a name'); if(a.linksWithoutName) issues.push(a.linksWithoutName+' links without a name'); if(a.lowContrast) issues.push(a.lowContrast+' low-contrast text items'); if(a.headingSkips) issues.push(a.headingSkips+' skipped heading levels'); if(a.zoomBlocked) issues.push('zoom is blocked on phones'); if(a.h1Count!==1) issues.push(a.h1Count+' main headings (H1), should be 1'); if(!a.htmlLang) issues.push('page language not set'); }
+      const noProgram=ac&&!ac.statementLink&&!(ac.widgets||[]).length;
+      const st=noProgram||issues.length>2?chip('bad',noProgram?'No statement or tool':issues.length+' issues'):issues.length?chip('warn',issues.length+' issues'):chip('good','Looks good');
+      const low=a&&a.lowContrastSamples&&a.lowContrastSamples.length?`<p class="ws-small">Low contrast: ${a.lowContrastSamples.map(x=>`"${E(x.text)}" ${x.ratio}:1`).join(', ')} (needs 4.5:1)</p>`:'';
+      cards.push(card('fa-universal-access','ADA / accessibility',st,
+        (ac?(ac.statementLink?'Accessibility statement link found. ':'<b>No accessibility statement</b> link. ')+((ac.widgets||[]).length?'Accessibility tool: '+E(ac.widgets.join(', '))+'. ':'<b>No accessibility tool or widget.</b> '):'')+(issues.length?'WCAG issues: '+E(issues.join('; '))+'.':'No WCAG issues found in the automated checks.'),
+        a?`<ul class="ws-rows">${row('Accessibility statement',ac?yes(ac.statementLink,true):'—')}${row('Accessibility tool',ac?E((ac.widgets||[]).join(', ')||'None'):'—')}${row('Unlabeled form fields',a.unlabeledFields?chip('bad',a.unlabeledFields):chip('good','0'))}${row('Buttons without a name',a.buttonsWithoutName?chip('bad',a.buttonsWithoutName):chip('good','0'))}${row('Links without a name',a.linksWithoutName?chip('warn',a.linksWithoutName):chip('good','0'))}${row('Low-contrast text',a.lowContrast?chip('warn',a.lowContrast+' of '+a.contrastChecked+' checked'):chip('good','0'))}${row('Heading levels skipped',a.headingSkips?chip('warn',a.headingSkips):chip('good','0'))}${row('Main headings (H1)',a.h1Count===1?chip('good','1'):chip('warn',a.h1Count))}${row('Skip-to-content link',yes(a.skipLink,true))}${row('Phone zoom blocked',a.zoomBlocked?chip('bad','Yes'):chip('good','No'))}${row('Page language',a.htmlLang?E(a.htmlLang):chip('warn','Not set'))}</ul>${low}`:''));
+      txt.push('ADA / ACCESSIBILITY: statement '+(ac&&ac.statementLink?'yes':'NO')+'; tool '+(ac&&(ac.widgets||[]).length?ac.widgets.join(', '):'none')+'; issues: '+(issues.join('; ')||'none found'));
+      if(noProgram) talk.push('There\'s no accessibility statement or tool for visitors with disabilities.');
+    } else cards.push(NA('ADA / accessibility'));
+
+    // 4. Alt text
+    if(a){
+      const miss=a.imagesMissingAlt||0;
+      cards.push(card('fa-image','Image alt text',miss?chip('bad',miss+' missing'):chip('good','All clear'),
+        miss?`<b>${miss} of ${a.images}</b> images have no alt text, so screen readers can't describe them.`:`All <b>${a.images}</b> images have alt text.`,
+        `<ul class="ws-rows">${row('Images on page',E(a.images))}${row('Missing alt text',miss?chip('bad',miss):chip('good','0'))}${row('Linked images with no text',a.linkedImagesNoText?chip('warn',a.linkedImagesNoText):chip('good','0'))}${miss&&(a.missingAltFiles||[]).length?row('Files',E(a.missingAltFiles.join(', '))):''}</ul>`));
+      txt.push(`ALT TEXT: ${miss} of ${a.images} images missing alt text`+(miss&&(a.missingAltFiles||[]).length?` (${a.missingAltFiles.join(', ')})`:''));
+      if(miss) talk.push(`${miss} images are missing descriptions for screen readers.`);
+    } else cards.push(NA('Image alt text'));
+
+    // 5. Forms + client portal
+    const fm=S.forms, ifr=S.iframeForms||[];
+    if(fm||ifr.length){
+      const real=(fm||[]).filter(f=>(f.fields||0)>1), searchOnly=(fm||[]).length-real.length;
+      const sens=real.reduce((n,f)=>n+(f.sensitiveFields||0),0);
+      const PORTAL=/jane\.app|intakeq|simplepractice|zocdoc|nexhealth|weave|solutionreach|clio|mycase/i;
+      const portals=ifr.filter(x=>PORTAL.test(x));
+      let kind=real.length&&ifr.length?'Standalone forms + embedded form':real.length?'Standalone forms (built into the site)':ifr.length?(portals.length?'Embedded portal / booking form':'Embedded third-party form'):'No forms';
+      const st=sens?chip('bad',sens+' sensitive fields'):real.length&&S.page&&S.page.healthPage&&sent.length?chip('warn','Check HIPAA'):real.length||ifr.length?chip('warn',kind.split(' (')[0]):chip('good','No forms');
+      const list=real.map((f,i)=>`<tr><td>Form ${i+1}</td><td>${f.fields} fields${f.sensitiveFields?` · ${chip('bad',f.sensitiveFields+' sensitive')}`:''}</td><td>${E(f.actionHost)}${f.thirdParty?' '+chip('warn','3rd party'):''}</td><td>${f.actionHttps?chip('good','HTTPS'):chip('bad','Not secure')}</td></tr>`).join('');
+      cards.push(card('fa-file-medical','Forms & client portal',st,
+        `<b>${E(kind)}.</b> `+(real.length?`${real.length} form${real.length>1?'s are':' is'} built into the website${sens?`, asking for ${sens} sensitive detail${sens>1?'s':''} (health, insurance, birth date and similar)`:''}.`:'')+(searchOnly?` ${searchOnly} search box${searchOnly>1?'es':''} not counted.`:'')+(ifr.length?` Embedded form from: <b>${E(ifr.join(', '))}</b>.`:'')+(real.length&&sent.length?' These forms sit on a page where tracking pixels are collecting data.':''),
+        (list?`<div class="ws-scroll"><table class="ws-tbl"><thead><tr><th>Form</th><th>Fields</th><th>Sends to</th><th>Secure</th></tr></thead><tbody>${list}</tbody></table></div>`:'')+`<ul class="ws-rows">${row('Standalone forms on the site',real.length?chip('warn',real.length):chip('na','0'))}${row('Embedded (iframe) forms',ifr.length?E(ifr.join(', ')):chip('na','None'))}${row('Patient / client portal',portals.length?chip('good','Embedded: '+portals.join(', ')):chip('na','Not detected'))}</ul><p class="ws-small">A portal is often a "Patient Portal" or "Book Online" button that opens another site. The scan can't see those, so check the page for one.</p>`));
+      txt.push(`FORMS: ${kind}; standalone forms ${real.length}${sens?` (${sens} sensitive fields)`:''}; embedded forms: ${ifr.join(', ')||'none'}; portal: ${portals.join(', ')||'not detected'}`);
+      if(real.length&&S.page&&S.page.healthPage) talk.push(sens?`The website's own form asks for sensitive patient details (${sens} field${sens>1?'s':''}).`:'The website\'s own contact forms take free-text messages with no notice not to send health information.');
+    } else cards.push(NA('Forms & client portal'));
+
+    // 6. iframes
+    cards.push(card('fa-window-restore','Embedded content (iframes)',ifr.length?chip('warn',ifr.length+' found'):chip('good','None'),ifr.length?'These outside services run inside the page. Patient data typed into them goes to that company.':'No embedded form or booking iframes were found. Videos and maps are not counted.',ifr.length?`<ul class="ws-rows">${ifr.map((x,i)=>row('Iframe '+(i+1),E(x))).join('')}</ul>`:''));
+    txt.push('IFRAMES: '+(ifr.join(', ')||'none'));
+
+    // 7. HTTPS & links
+    const h=S.https, l=S.links;
+    if(h||l){
+      const br=l?(l.broken||[]):[];
+      cards.push(card('fa-lock','Security & links',(h&&!h.isHttps)||br.length?chip('bad',h&&!h.isHttps?'Not secure':br.length+' broken'):chip('good','OK'),
+        (h?(h.isHttps?'The site uses HTTPS. ':'<b>The site is not secure (no HTTPS).</b> '):'')+(br.length?`${br.length} broken link${br.length>1?'s':''} found.`:'No broken links found in the links checked.'),
+        `<ul class="ws-rows">${h?row('HTTPS',yes(h.isHttps,true))+row('Mixed content',h.mixedContent?chip('bad',h.mixedContent):chip('good','0'))+row('Insecure form actions',h.insecureFormActions?chip('bad',h.insecureFormActions):chip('good','0')):''}${l?row('Links checked',`${l.checkedInternal} internal, ${l.checkedExternal} external`)+row('Broken links',br.length?E(br.map(b=>b.url+' ('+b.status+')').join(', ')):chip('good','0')):''}</ul>`));
+      txt.push(`SECURITY: HTTPS ${h&&h.isHttps?'yes':'NO'}; broken links: ${br.map(b=>b.url+' ('+b.status+')').join(', ')||'none'}`);
+    }
+
+    $('wsSumGrid').innerHTML=cards.join('');
+    const tp=talk.slice(0,3);
+    $('wsSumTalk').innerHTML=tp.length?`<p>Talking points for the call</p><ol>${tp.map(t=>`<li>${E(t)}</li>`).join('')}</ol>`:'<p>Talking points for the call</p><div>No major findings in this scan.</div>';
+    lastText=txt.join('\n')+(tp.length?'\n\nTALKING POINTS:\n'+tp.map((t,i)=>(i+1)+'. '+t).join('\n'):'');
+    box.hidden=false;
+    setTimeout(()=>box.scrollIntoView({behavior:'smooth',block:'start'}),150);
+  }
+
+  $('wsSumHide').addEventListener('click',()=>{ box.hidden=true; });
+  $('wsSumCopy').addEventListener('click',()=>{ const done=()=>{ if(typeof showToast==='function') showToast('Summary copied','Paste it into notes, WorkPilot or an email.'); };
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(lastText).then(done).catch(()=>{ const t=document.createElement('textarea'); t.value=lastText; document.body.appendChild(t); t.select(); try{document.execCommand('copy');done();}catch(e){} t.remove(); });
+  });
+  const wrap=name=>{ const orig=window[name]; if(typeof orig!=='function') return; window[name]=function(){ const r=orig.apply(this,arguments); try{ render(); }catch(e){ console.error('Summary failed',e); } return r; }; };
+  wrap('parseLiveTelemetryInput'); wrap('loadSampleLiveJson');
 })();
 </script>
 </body>
