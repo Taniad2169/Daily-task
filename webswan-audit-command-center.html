@@ -869,8 +869,9 @@
   };
   const out = JSON.stringify(report, null, 2);
   console.log('%c[WebSwan] Scan captured. Copy the JSON below into the WebSwan Command Center:', 'color:#81c9f0;font-weight:bold;font-size:14px;');
+  window.webswanReport = out;
   console.log(out);
-  try { copy(out); console.log('%cCopied to your clipboard.', 'color:#34d399;font-weight:bold;'); } catch (e) { console.log('%cSelect the text above and copy it by hand.', 'color:#fbbf24;font-weight:bold;'); }
+  try { copy(out); console.log('%cCopied to your clipboard.', 'color:#34d399;font-weight:bold;'); } catch (e) { console.log('%cAuto-copy was blocked. Type  copy(webswanReport)  here and press Enter, then paste into the Command Center.', 'color:#fbbf24;font-weight:bold;'); }
   return 'WebSwan scan done';
 })();</pre>
             </div>
@@ -1710,8 +1711,15 @@
     }
 
     function parseLiveTelemetryInput() {
-      const raw = (document.getElementById('liveTelemetryInput').value || '').trim();
+      let raw = (document.getElementById('liveTelemetryInput').value || '').trim();
       if (!raw) { showToast('Nothing to analyze', 'Paste the Console Sniffer result or the page source first.'); return; }
+      // A sniffer result copied from the Console can carry extra lines ("[WebSwan] Scan captured…", "VM205:", "Copied to your clipboard").
+      // If the paste contains a WebSwan scan, keep only the JSON so it is read as a live scan, not as page source.
+      if (!raw.startsWith('{') && /"version"\s*:\s*"webswan-sniffer/.test(raw)) {
+        const cleaned = raw.replace(/^\s*VM\d+:\d+\s?/gm, '');
+        const v = cleaned.search(/"version"\s*:\s*"webswan-sniffer/), a = cleaned.lastIndexOf('{', v), b = cleaned.lastIndexOf('}');
+        if (a > -1 && b > a) { try { JSON.parse(cleaned.slice(a, b + 1)); raw = cleaned.slice(a, b + 1); document.getElementById('liveTelemetryInput').value = raw; } catch (e) {} }
+      }
       if (raw.startsWith('{')) {
         let parsed;
         try { parsed = JSON.parse(raw); } catch (e) { showToast('That JSON is incomplete', 'Copy the whole Console Sniffer result, from the first { to the last }.'); return; }
@@ -2291,6 +2299,10 @@ mark.ws-find.ws-current{background:#f97316;color:#fff;box-shadow:0 0 0 2px #fff,
 .ws-talk ol{margin:0;padding-left:18px;display:grid;gap:4px}
 .ws-small{font-size:11.5px;color:#94a3b8;margin:8px 0 0}
 @media (max-width:640px){.ws-rows li{grid-template-columns:1fr}}
+.ws-wide{grid-column:1/-1}
+.ws-dim{color:#94a3b8;font-size:11px}
+.ws-report{width:100%;background:#020617;border:1px solid #334155;border-radius:10px;padding:12px 14px;color:#e2e8f0;font:12.5px/1.6 ui-sans-serif,system-ui,sans-serif;resize:vertical}
+.ws-report:focus{outline:2px solid #81c9f0;outline-offset:1px}
 </style>
 <script>
 (function(){
@@ -2298,113 +2310,179 @@ mark.ws-find.ws-current{background:#f97316;color:#fff;box-shadow:0 0 0 2px #fff,
   const box=$('wsSummary'); if(!box||typeof state==='undefined') return;
   const E=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const chip=(k,t)=>`<span class="ws-chip ws-${k}">${E(t)}</span>`;
-  const yes=(v,good)=>v?(good?chip('good','Yes'):chip('bad','Yes')):(good?chip('bad','No'):chip('good','No'));
+  const NC=chip('na','Not checked');
+  const has=v=>v!==undefined&&v!==null;
+  // yes/no for things that should be present (true = good)
+  const yn=v=>!has(v)?NC:(v?chip('good','Yes'):chip('bad','No'));
+  // a count where 0 is good
+  const cnt=(v,level)=>!has(v)?NC:(v?chip(level||'bad',v):chip('good','0'));
   const row=(a,b)=>`<li><span>${E(a)}</span><span>${b}</span></li>`;
-  const card=(icon,title,status,verdict,body)=>`<section class="ws-card"><h4><span class="t"><i class="fa-solid ${icon}" aria-hidden="true"></i>${E(title)}</span>${status}</h4>${verdict?`<p class="ws-verdict">${verdict}</p>`:''}${body||''}</section>`;
-  const NA=t=>card('fa-circle-question',t,chip('na','Not measured'),'This scan didn\'t include this check. Run the Console Sniffer (Option A) on the prospect\'s site and paste its result.','');
-  let lastText='';
+  const card=(icon,title,status,verdict,body,wide)=>`<section class="ws-card${wide?' ws-wide':''}"><h4><span class="t"><i class="fa-solid ${icon}" aria-hidden="true"></i>${E(title)}</span>${status}</h4>${verdict?`<p class="ws-verdict">${verdict}</p>`:''}${body||''}</section>`;
+  const host=u=>{ try{ return new URL('https://'+String(u).replace(/^https?:\/\//,'')).hostname; }catch(e){ return String(u||''); } };
+  const list=a=>a.length<=1?a.join(''):a.slice(0,-1).join(', ')+' and '+a[a.length-1];
+  let lastText='', reportText='';
 
   function render(){
-    const S=state, live=S.source==='live'||S.source==='demo';
+    const S=state, src=S.source==='source', live=S.source==='live'||S.source==='demo';
     if(S.source==='none'){ box.hidden=true; return; }
-    const talk=[], txt=[];
-    const host=S.domain||'the site';
-    $('wsSumTitle').textContent=host;
-    $('wsSumMeta').textContent=[S.source==='demo'?'Sample data (demo)':S.source==='source'?'Page source only: shows what is in the code, not what sends data':'Live Console Sniffer scan', S.scanUrl||'', S.scanTime?new Date(S.scanTime).toLocaleString():'', S.page&&S.page.state?'State: '+S.page.state:'', S.page&&S.page.healthPage?'Health / appointment page':''].filter(Boolean).join(' · ');
-    txt.push('WEBSWAN SCAN SUMMARY: '+host, $('wsSumMeta').textContent,'');
+    const talk=[], txt=[], found=[], good=[], fixes=[];
+    const site=S.domain||'the site';
+    const when=S.scanTime?new Date(S.scanTime).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}):'';
+    $('wsSumTitle').textContent=site;
+    $('wsSumMeta').textContent=[S.source==='demo'?'Sample data (demo)':src?'Page source only: shows what is in the code, not what actually runs':'Live Console Sniffer scan', S.scanUrl||'', S.scanTime?new Date(S.scanTime).toLocaleString():'', S.page&&S.page.state?'State: '+S.page.state:'', S.page&&S.page.healthPage?'Health / appointment page':''].filter(Boolean).join(' · ');
+    txt.push('WEBSWAN SCAN SUMMARY: '+site, $('wsSumMeta').textContent,'');
     const cards=[];
 
-    // 1. Trackers / pixels
-    const tr=S.trackers||[], sent=tr.filter(t=>t.status==='SENT_DATA');
-    const lbl={SENT_DATA:'Collecting data',LOADED:'Loaded, no data seen',IN_SOURCE:'In the code only'};
-    if(tr.length||live){
-      const rowsH=tr.map(t=>`<tr><td><b>${E(t.tracker)}</b></td><td>${t.status==='SENT_DATA'?chip('bad',lbl[t.status]):chip(t.status==='LOADED'?'warn':'na',lbl[t.status]||t.status)}</td><td>${t.requestsSent||0}${t.firstSentMs!=null?` · ${t.firstSentMs} ms`:''}</td><td>${E((t.cookies||[]).join(', ')||'—')}</td></tr>`).join('');
-      cards.push(card('fa-satellite-dish','Tracking pixels',sent.length?chip('bad',sent.length+' collecting'):tr.length?chip('warn','Found, not sending'):chip('good','None found'),
-        sent.length?`<b>${sent.map(t=>E(t.tracker)).join(', ')}</b> sent visitor data as the page loaded, before the visitor clicked Accept or Reject.`:tr.length?(S.source==='source'?'These trackers are in the page code. Page source can\'t show whether they send data, so run the Console Sniffer to confirm.':'Trackers are on the page but did not send data during this scan.'):'No tracking pixels were found on this page.',
-        tr.length?`<div class="ws-scroll"><table class="ws-tbl"><thead><tr><th>Tracker</th><th>Status</th><th>Requests</th><th>Cookies</th></tr></thead><tbody>${rowsH}</tbody></table></div>`:''));
-      txt.push('TRACKING PIXELS: '+(tr.length?tr.map(t=>`${t.tracker}: ${lbl[t.status]||t.status}${t.requestsSent?` (${t.requestsSent} requests)`:''}`).join('; '):'none found'));
-      if(sent.length) talk.push(`${sent.map(t=>t.tracker.replace(' (Facebook)','')).join(' and ')} ${sent.length>1?'collect':'collects'} visitor data as soon as the page loads, before visitors can accept or decline.`);
-    }
+    // ---------- 1. Tracking pixels ----------
+    const tr=S.trackers||[], sent=tr.filter(t=>t.status==='SENT_DATA'), loaded=tr.filter(t=>t.status==='LOADED');
+    const lbl={SENT_DATA:'Active: sent data',LOADED:'Loaded, no data seen',IN_SOURCE:src?'In the code (not confirmed)':'In the code only'};
+    const pixStatus=sent.length?chip('bad',sent.length+' active'):src&&tr.length?chip('warn',tr.length+' in code'):tr.length?chip('warn','Found, none active'):chip('good','None found');
+    const pixVerdict=sent.length
+      ?`<b>Active pixels: ${E(sent.map(t=>t.tracker).join(', '))}.</b> ${sent.length>1?'They':'It'} sent visitor data while the page loaded, before the visitor chose Accept or Reject.`+(loaded.length?` Also loaded but not sending during the scan: ${E(loaded.map(t=>t.tracker).join(', '))}.`:'')
+      :src&&tr.length?`Tracking code found for <b>${E(tr.map(t=>t.tracker).join(', '))}</b>. Page source shows what is in the code, not what sends data. To see which pixels are active, paste the Console Sniffer result instead.`
+      :tr.length?'Trackers are on the page but none sent data during this scan.':'No tracking pixels were found on this page.';
+    const rowsH=tr.map(t=>`<tr><td><b>${E(t.tracker)}</b></td><td>${t.status==='SENT_DATA'?chip('bad',lbl[t.status]):chip(t.status==='LOADED'?'warn':'na',lbl[t.status]||t.status)}</td><td>${t.status==='SENT_DATA'?`${t.requestsSent} request${t.requestsSent===1?'':'s'}${t.firstSentMs!=null?`, first at ${t.firstSentMs} ms`:''}`:'—'}${t.endpoint?`<br><span class="ws-dim">${E(host(t.endpoint))}</span>`:''}</td><td>${E((t.cookies||[]).join(', ')||'—')}</td></tr>`).join('');
+    cards.push(card('fa-satellite-dish','Tracking pixels',pixStatus,pixVerdict,tr.length?`<div class="ws-scroll"><table class="ws-tbl"><thead><tr><th>Tracker</th><th>Status</th><th>Data sent</th><th>Cookies set</th></tr></thead><tbody>${rowsH}</tbody></table></div>`:''));
+    txt.push('TRACKING PIXELS: '+(tr.length?tr.map(t=>`${t.tracker}: ${lbl[t.status]||t.status}${t.status==='SENT_DATA'?` (${t.requestsSent} requests)`:''}`).join('; '):'none found'));
+    if(sent.length){
+      talk.push(`${list(sent.map(t=>t.tracker.replace(' (Facebook)','')))} ${sent.length>1?'collect':'collects'} visitor data as soon as the page loads, before visitors can accept or decline.`);
+      sent.forEach(t=>found.push(`${t.tracker} sent visitor data ${t.requestsSent} time${t.requestsSent===1?'':'s'} while the page loaded${t.firstSentMs!=null?` (first at ${(t.firstSentMs/1000).toFixed(1)} seconds)`:''}${t.endpoint?` to ${host(t.endpoint)}`:''}, before any cookie choice was made${(t.cookies||[]).length?`. Cookies set: ${t.cookies.join(', ')}`:''}.`));
+    } else if(src&&tr.length) found.push(`Tracking code is present for ${list(tr.map(t=>t.tracker))} (from the page source; a live scan confirms whether it sends data).`);
 
-    // 2. Cookie consent
+    // ---------- 2. Cookie consent ----------
     const cb=S.cookieBanner;
     if(cb){
       const before=S.cookiesBeforeConsent||[];
-      const st=!cb.detected?chip('bad','No banner'):(!cb.hasReject?chip('warn','No reject button'):chip('good','Banner found'));
-      cards.push(card('fa-cookie-bite','Cookie consent',st,
-        !cb.detected?'No cookie banner was found, so visitors can\'t accept or reject tracking.':(!cb.hasReject?'A banner was found, but it has no clear Reject option.':'A cookie banner was found with Accept and Reject options.')+(before.length?` <b>${before.length}</b> tracking cookie${before.length>1?'s were':' was'} set before any choice.`:''),
-        `<ul class="ws-rows">${row('Banner detected',yes(cb.detected,true))}${row('Banner visible',yes(cb.visible,true))}${row('Consent tool',E((cb.tools||[]).join(', ')||'None'))}${row('Accept button',yes(cb.hasAccept,true))}${row('Reject button',yes(cb.hasReject,true))}${row('Settings button',yes(cb.hasSettings,true))}${row('Privacy policy link',yes(cb.privacyPolicyLink,true))}${row('"Do not sell / share" link',yes(cb.doNotSellLink,true))}${row('Tracking cookies before consent',before.length?`<b>${E(before.join(', '))}</b>`:chip('good','None'))}</ul>`));
-      txt.push('COOKIE CONSENT: '+(cb.detected?'banner found':'NO cookie banner')+`; accept ${cb.hasAccept?'yes':'no'}, reject ${cb.hasReject?'yes':'no'}; privacy policy link ${cb.privacyPolicyLink?'yes':'no'}; tracking cookies before consent: ${before.join(', ')||'none'}`);
-      if(!cb.detected) talk.unshift('There\'s no cookie banner, so visitors can\'t accept or decline tracking.');
-    } else cards.push(NA('Cookie consent'));
+      const btnKnown=!src&&(cb.buttonsKnown!==false);
+      let st,verd;
+      if(!cb.detected){ st=chip('bad','No banner'); verd=src?'No cookie banner code was found in the page source.':'No cookie banner appeared, so visitors can\'t accept or decline tracking.'; }
+      else if(btnKnown&&!cb.hasReject){ st=chip('warn','No Reject option'); verd='A cookie banner appears, but it has no clear Reject option.'; }
+      else if(!btnKnown){ st=chip('warn','Banner found'); verd=src?'Cookie banner code was found. Page source can\'t show whether it appears or which buttons it has.':'A banner was found, but its buttons could not be read.'; }
+      else { st=chip('good','Banner with Reject'); verd='A cookie banner appears with Accept and Reject options.'; }
+      if(before.length) verd+=` <b>${before.length}</b> tracking cookie${before.length>1?'s were':' was'} set before any choice.`;
+      cards.push(card('fa-cookie-bite','Cookie consent',st,verd,
+        `<ul class="ws-rows">${row(src?'Banner code found':'Banner detected',yn(cb.detected))}${cb.detected&&!src?row('Banner visible on screen',yn(cb.visible)):''}${row('Consent tool',E((cb.tools||[]).join(', ')||'None'))}${row('Accept button',btnKnown&&cb.detected?yn(cb.hasAccept):cb.detected?NC:chip('na','—'))}${row('Reject button',btnKnown&&cb.detected?yn(cb.hasReject):cb.detected?NC:chip('na','—'))}${row('Privacy policy link',yn(cb.privacyPolicyLink))}${row('"Do not sell or share" link',yn(cb.doNotSellLink))}${row('Tracking cookies set before consent',src?NC:before.length?`<b>${E(before.join(', '))}</b>`:chip('good','None'))}</ul>`));
+      txt.push('COOKIE CONSENT: '+(cb.detected?'banner found':'NO cookie banner')+(btnKnown&&cb.detected?`; reject ${cb.hasReject?'yes':'no'}`:'')+`; privacy policy link ${cb.privacyPolicyLink?'yes':'no'}`+(src?'':`; tracking cookies before consent: ${before.join(', ')||'none'}`));
+      if(!cb.detected){ talk.unshift('There\'s no cookie banner, so visitors can\'t accept or decline tracking.'); found.unshift(src?'No cookie consent banner was found in the page code.':'No cookie consent banner appears, so visitors have no way to accept or decline tracking.'); fixes.push('Add a cookie consent banner that blocks analytics and advertising tags until the visitor clicks Accept, with an equally easy Reject button.'); }
+      else if(btnKnown&&!cb.hasReject){ found.push('The cookie banner has no Reject option.'); fixes.push('Add a Reject button that is as easy to use as Accept.'); }
+      else if(btnKnown) good.push('A cookie banner with Accept and Reject options.');
+      if(cb.privacyPolicyLink===false){ found.push('There is no link to a privacy policy on this page.'); fixes.push('Link the privacy policy from every page, usually in the footer.'); }
+      else if(cb.privacyPolicyLink) good.push('A link to a privacy policy.');
+      if(sent.length&&cb.detected&&!src) found.push('Tracking runs before the visitor makes a cookie choice, so the banner is not blocking it.');
+    } else cards.push(card('fa-cookie-bite','Cookie consent',NC,'This scan didn\'t include the cookie check. Paste the Console Sniffer result to see it.',''));
 
-    // 3. ADA / accessibility
+    // ---------- 3. ADA / accessibility ----------
     const ac=S.accessibility, a=S.a11y;
     if(ac||a){
-      const issues=[]; if(a){ if(a.imagesMissingAlt) issues.push(a.imagesMissingAlt+' images missing alt text'); if(a.unlabeledFields) issues.push(a.unlabeledFields+' unlabeled form fields'); if(a.buttonsWithoutName) issues.push(a.buttonsWithoutName+' buttons without a name'); if(a.linksWithoutName) issues.push(a.linksWithoutName+' links without a name'); if(a.lowContrast) issues.push(a.lowContrast+' low-contrast text items'); if(a.headingSkips) issues.push(a.headingSkips+' skipped heading levels'); if(a.zoomBlocked) issues.push('zoom is blocked on phones'); if(a.h1Count!==1) issues.push(a.h1Count+' main headings (H1), should be 1'); if(!a.htmlLang) issues.push('page language not set'); }
-      const noProgram=ac&&!ac.statementLink&&!(ac.widgets||[]).length;
-      const st=noProgram||issues.length>2?chip('bad',noProgram?'No statement or tool':issues.length+' issues'):issues.length?chip('warn',issues.length+' issues'):chip('good','Looks good');
-      const low=a&&a.lowContrastSamples&&a.lowContrastSamples.length?`<p class="ws-small">Low contrast: ${a.lowContrastSamples.map(x=>`"${E(x.text)}" ${x.ratio}:1`).join(', ')} (needs 4.5:1)</p>`:'';
+      const issues=[]; const add=(v,t)=>{ if(has(v)&&v) issues.push(t(v)); };
+      if(a){ add(a.imagesMissingAlt,n=>`${n} image${n>1?'s':''} with no alt tag`); add(a.linkedImagesNoText,n=>`${n} image link${n>1?'s':''} a screen reader can't name`); add(a.unlabeledFields,n=>`${n} form field${n>1?'s':''} without a label`); add(a.buttonsWithoutName,n=>`${n} button${n>1?'s':''} without a name`); add(a.linksWithoutName,n=>`${n} link${n>1?'s':''} without a name`); add(a.lowContrast,n=>`${n} low-contrast text item${n>1?'s':''}`); add(a.headingSkips,n=>`${n} skipped heading level${n>1?'s':''}`); if(a.zoomBlocked) issues.push('zoom is blocked on phones'); if(has(a.h1Count)&&a.h1Count!==1) issues.push(`${a.h1Count} main headings (H1) instead of 1`); if(has(a.htmlLang)&&!a.htmlLang) issues.push('page language not set'); }
+      const noStatement=ac&&!ac.statementLink, noTool=ac&&!(ac.widgets||[]).length;
+      const st=(noStatement&&noTool)?chip('bad','No statement or tool'):issues.length>2?chip('bad',issues.length+' issues'):issues.length?chip('warn',issues.length+' issue'+(issues.length>1?'s':'')):chip('good','No issues found');
+      const lowS=a&&a.lowContrastSamples&&a.lowContrastSamples.length?`<p class="ws-small">Low contrast examples: ${a.lowContrastSamples.map(x=>`"${E(x.text)}" ${x.ratio}:1`).join(', ')}. WCAG AA needs at least 4.5:1 for normal text.</p>`:'';
       cards.push(card('fa-universal-access','ADA / accessibility',st,
-        (ac?(ac.statementLink?'Accessibility statement link found. ':'<b>No accessibility statement</b> link. ')+((ac.widgets||[]).length?'Accessibility tool: '+E(ac.widgets.join(', '))+'. ':'<b>No accessibility tool or widget.</b> '):'')+(issues.length?'WCAG issues: '+E(issues.join('; '))+'.':'No WCAG issues found in the automated checks.'),
-        a?`<ul class="ws-rows">${row('Accessibility statement',ac?yes(ac.statementLink,true):'—')}${row('Accessibility tool',ac?E((ac.widgets||[]).join(', ')||'None'):'—')}${row('Unlabeled form fields',a.unlabeledFields?chip('bad',a.unlabeledFields):chip('good','0'))}${row('Buttons without a name',a.buttonsWithoutName?chip('bad',a.buttonsWithoutName):chip('good','0'))}${row('Links without a name',a.linksWithoutName?chip('warn',a.linksWithoutName):chip('good','0'))}${row('Low-contrast text',a.lowContrast?chip('warn',a.lowContrast+' of '+a.contrastChecked+' checked'):chip('good','0'))}${row('Heading levels skipped',a.headingSkips?chip('warn',a.headingSkips):chip('good','0'))}${row('Main headings (H1)',a.h1Count===1?chip('good','1'):chip('warn',a.h1Count))}${row('Skip-to-content link',yes(a.skipLink,true))}${row('Phone zoom blocked',a.zoomBlocked?chip('bad','Yes'):chip('good','No'))}${row('Page language',a.htmlLang?E(a.htmlLang):chip('warn','Not set'))}</ul>${low}`:''));
+        (ac?(ac.statementLink?'Accessibility statement link found. ':'<b>No accessibility statement</b> link. ')+((ac.widgets||[]).length?'Accessibility tool: '+E(ac.widgets.join(', '))+'. ':'<b>No accessibility tool.</b> '):'')+(issues.length?'Issues found: '+E(issues.join('; '))+'.':'The automated checks found no issues.'),
+        `<ul class="ws-rows">${row('Accessibility statement link',ac?yn(ac.statementLink):NC)}${row('Accessibility tool / widget',ac?E((ac.widgets||[]).join(', ')||'None'):NC)}${a?row('Form fields without a label',cnt(a.unlabeledFields))+row('Buttons without a name',cnt(a.buttonsWithoutName))+row('Links without a name',cnt(a.linksWithoutName,'warn'))+row('Low-contrast text',!has(a.lowContrast)?NC:a.lowContrast?chip('warn',a.lowContrast+' of '+a.contrastChecked+' checked'):chip('good','0'))+row('Heading levels skipped',cnt(a.headingSkips,'warn'))+row('Main headings (H1)',!has(a.h1Count)?NC:a.h1Count===1?chip('good','1'):chip('warn',a.h1Count))+row('Skip-to-content link',yn(a.skipLink))+row('Phone zoom blocked',!has(a.zoomBlocked)?NC:a.zoomBlocked?chip('bad','Yes'):chip('good','No'))+row('Page language set',!has(a.htmlLang)?NC:a.htmlLang?chip('good',a.htmlLang):chip('warn','No')):''}</ul>${lowS}`));
       txt.push('ADA / ACCESSIBILITY: statement '+(ac&&ac.statementLink?'yes':'NO')+'; tool '+(ac&&(ac.widgets||[]).length?ac.widgets.join(', '):'none')+'; issues: '+(issues.join('; ')||'none found'));
-      if(noProgram) talk.push('There\'s no accessibility statement or tool for visitors with disabilities.');
-    } else cards.push(NA('ADA / accessibility'));
+      if(noStatement&&noTool) talk.push('There\'s no accessibility statement or tool for visitors with disabilities.');
+      if(noStatement) found.push('There is no accessibility statement'+(noTool?' and no accessibility tool.':'.'));
+      else if(ac) good.push('An accessibility statement.');
+      if(a){
+        if(a.unlabeledFields) found.push(`${a.unlabeledFields} form field${a.unlabeledFields>1?'s have':' has'} no label, so screen reader users can't tell what to type.`);
+        if(a.buttonsWithoutName) found.push(`${a.buttonsWithoutName} button${a.buttonsWithoutName>1?'s have':' has'} no name a screen reader can read.`);
+        if(a.linksWithoutName) found.push(`${a.linksWithoutName} link${a.linksWithoutName>1?'s have':' has'} no text a screen reader can read.`);
+        if(a.lowContrast) found.push(`${a.lowContrast} text item${a.lowContrast>1?'s have':' has'} low color contrast`+(a.lowContrastSamples&&a.lowContrastSamples[0]?` (for example "${a.lowContrastSamples[0].text}" at ${a.lowContrastSamples[0].ratio}:1; the standard is 4.5:1)`:'')+'.');
+        if(a.headingSkips) found.push(`The heading order skips levels ${a.headingSkips} time${a.headingSkips>1?'s':''}, which makes the page harder to navigate with a screen reader.`);
+        if(a.zoomBlocked) found.push('The page blocks zooming on phones.');
+        if(a.skipLink) good.push('A "skip to main content" link.');
+      }
+      const fixItems=['alt text','link and button names','form labels','color contrast','heading order'].filter((x,i)=>[a&&(a.imagesMissingAlt||a.linkedImagesNoText),a&&(a.linksWithoutName||a.buttonsWithoutName),a&&a.unlabeledFields,a&&a.lowContrast,a&&a.headingSkips][i]);
+      if(noStatement&&fixItems.length) fixes.push('Add an accessibility statement and fix the items above to meet WCAG 2.1 AA ('+fixItems.join(', ')+').');
+      else if(noStatement) fixes.push('Add an accessibility statement with a way for visitors to report problems.');
+      else if(fixItems.length) fixes.push('Fix the items above to meet WCAG 2.1 AA ('+fixItems.join(', ')+').');
+    } else cards.push(card('fa-universal-access','ADA / accessibility',NC,'This scan didn\'t include accessibility checks.',''));
 
-    // 4. Alt text
-    if(a){
-      const miss=a.imagesMissingAlt||0;
-      cards.push(card('fa-image','Image alt text',miss?chip('bad',miss+' missing'):chip('good','All clear'),
-        miss?`<b>${miss} of ${a.images}</b> images have no alt text, so screen readers can't describe them.`:`All <b>${a.images}</b> images have alt text.`,
-        `<ul class="ws-rows">${row('Images on page',E(a.images))}${row('Missing alt text',miss?chip('bad',miss):chip('good','0'))}${row('Linked images with no text',a.linkedImagesNoText?chip('warn',a.linkedImagesNoText):chip('good','0'))}${miss&&(a.missingAltFiles||[]).length?row('Files',E(a.missingAltFiles.join(', '))):''}</ul>`));
-      txt.push(`ALT TEXT: ${miss} of ${a.images} images missing alt text`+(miss&&(a.missingAltFiles||[]).length?` (${a.missingAltFiles.join(', ')})`:''));
-      if(miss) talk.push(`${miss} images are missing descriptions for screen readers.`);
-    } else cards.push(NA('Image alt text'));
+    // ---------- 4. Image alt text ----------
+    if(a&&has(a.images)){
+      const n=a.images, miss=a.imagesMissingAlt||0, withAlt=n-miss, lk=a.linkedImagesNoText;
+      let st,verd;
+      if(!n){ st=chip('na','No images'); verd='There are no images on this page.'; }
+      else if(miss){ st=chip('bad',miss+' missing alt'); verd=`<b>No. ${miss} of ${n} image${n>1?'s':''} ${miss>1?'have':'has'} no alt tag at all</b>, so screen readers can't describe ${miss>1?'them':'it'}.`; }
+      else { st=lk?chip('warn','Alt tags OK, '+lk+' link'+(lk>1?'s':'')+' unnamed'):chip('good','All have alt tags'); verd=`<b>Yes. All ${n} images have an alt tag.</b>`; }
+      if(n&&lk) verd+=` ${lk} image${lk>1?'s are':' is'} used as a link (usually a logo or social icon) with an empty alt and no link text, so a screen reader can't say where ${lk>1?'those links go':'that link goes'}.`;
+      cards.push(card('fa-image','Image alt text',st,verd,
+        `<ul class="ws-rows">${row('Images on the page',E(n))}${row('Images WITH an alt tag',n?chip(miss?'warn':'good',withAlt+' of '+n):chip('na','—'))}${row('Images with NO alt tag',n?(miss?chip('bad',miss):chip('good','0')):chip('na','—'))}${row('Image links a screen reader can\'t name',has(lk)?(lk?chip('warn',lk):chip('good','0')):NC)}${miss&&(a.missingAltFiles||[]).length?row('Images missing alt',E(a.missingAltFiles.join(', '))):''}</ul><p class="ws-small">An empty alt (alt="") is correct for decorative images, so those count as having an alt tag. It's only a problem when the image is a link with no other text.</p>`));
+      txt.push(`ALT TEXT: ${withAlt} of ${n} images have an alt tag; ${miss} missing`+(has(lk)?`; ${lk} image links with no name`:'')+(miss&&(a.missingAltFiles||[]).length?` (${a.missingAltFiles.join(', ')})`:''));
+      if(miss){ talk.push(`${miss} of ${n} image${n>1?'s':''} ${miss>1?'have':'has'} no alt tag, so screen readers can't describe ${miss>1?'them':'it'}.`); found.push(`${miss} of ${n} image${n>1?'s':''} ${miss>1?'have':'has'} no alt tag (text description for screen readers)`+((a.missingAltFiles||[]).length?`, including ${a.missingAltFiles.slice(0,4).join(', ')}`:'')+'.'); }
+      else if(n) good.push(`All ${n} images have alt tags.`);
+      if(lk) found.push(`${lk} image link${lk>1?'s':''} (such as a logo or social icon) ${lk>1?'have':'has'} an empty alt and no link text, so a screen reader can't say where ${lk>1?'they go':'it goes'}.`);
+    } else cards.push(card('fa-image','Image alt text',NC,'This scan didn\'t include the image check.',''));
 
-    // 5. Forms + client portal
+    // ---------- 5. Forms & client portal ----------
     const fm=S.forms, ifr=S.iframeForms||[];
+    const PORTAL=/jane\.app|intakeq|simplepractice|zocdoc|nexhealth|weave|solutionreach|clio|mycase|patientpop|phreesia|healow|mychart/i;
     if(fm||ifr.length){
-      const real=(fm||[]).filter(f=>(f.fields||0)>1), searchOnly=(fm||[]).length-real.length;
+      const real=(fm||[]).filter(f=>(f.fields||0)>1), single=(fm||[]).length-real.length;
       const sens=real.reduce((n,f)=>n+(f.sensitiveFields||0),0);
-      const PORTAL=/jane\.app|intakeq|simplepractice|zocdoc|nexhealth|weave|solutionreach|clio|mycase/i;
-      const portals=ifr.filter(x=>PORTAL.test(x));
-      let kind=real.length&&ifr.length?'Standalone forms + embedded form':real.length?'Standalone forms (built into the site)':ifr.length?(portals.length?'Embedded portal / booking form':'Embedded third-party form'):'No forms';
-      const st=sens?chip('bad',sens+' sensitive fields'):real.length&&S.page&&S.page.healthPage&&sent.length?chip('warn','Check HIPAA'):real.length||ifr.length?chip('warn',kind.split(' (')[0]):chip('good','No forms');
-      const list=real.map((f,i)=>`<tr><td>Form ${i+1}</td><td>${f.fields} fields${f.sensitiveFields?` · ${chip('bad',f.sensitiveFields+' sensitive')}`:''}</td><td>${E(f.actionHost)}${f.thirdParty?' '+chip('warn','3rd party'):''}</td><td>${f.actionHttps?chip('good','HTTPS'):chip('bad','Not secure')}</td></tr>`).join('');
+      const portals=ifr.filter(x=>PORTAL.test(x)), other=ifr.filter(x=>!PORTAL.test(x));
+      const kind=real.length&&ifr.length?'Standalone form + embedded form':real.length?'Standalone form (built into the website)':portals.length?'Embedded patient portal / booking form':ifr.length?'Embedded third-party form':'No contact or intake form on this page';
+      const st=sens?chip('bad',sens+' sensitive field'+(sens>1?'s':'')):real.length?chip('warn','Standalone form'):portals.length?chip('good','Portal embedded'):ifr.length?chip('warn','Third-party form'):chip('good','No forms');
+      const rowsF=real.map((f,i)=>`<tr><td>Form ${i+1}</td><td>${f.fields} field${f.fields>1?'s':''}${f.sensitiveFields?` · ${chip('bad',f.sensitiveFields+' sensitive')}`:''}</td><td>${E(f.actionHost||'this site')}${f.thirdParty?' '+chip('warn','other company'):''}</td><td>${has(f.actionHttps)?(f.actionHttps?chip('good','HTTPS'):chip('bad','Not secure')):'—'}</td></tr>`).join('');
       cards.push(card('fa-file-medical','Forms & client portal',st,
-        `<b>${E(kind)}.</b> `+(real.length?`${real.length} form${real.length>1?'s are':' is'} built into the website${sens?`, asking for ${sens} sensitive detail${sens>1?'s':''} (health, insurance, birth date and similar)`:''}.`:'')+(searchOnly?` ${searchOnly} search box${searchOnly>1?'es':''} not counted.`:'')+(ifr.length?` Embedded form from: <b>${E(ifr.join(', '))}</b>.`:'')+(real.length&&sent.length?' These forms sit on a page where tracking pixels are collecting data.':''),
-        (list?`<div class="ws-scroll"><table class="ws-tbl"><thead><tr><th>Form</th><th>Fields</th><th>Sends to</th><th>Secure</th></tr></thead><tbody>${list}</tbody></table></div>`:'')+`<ul class="ws-rows">${row('Standalone forms on the site',real.length?chip('warn',real.length):chip('na','0'))}${row('Embedded (iframe) forms',ifr.length?E(ifr.join(', ')):chip('na','None'))}${row('Patient / client portal',portals.length?chip('good','Embedded: '+portals.join(', ')):chip('na','Not detected'))}</ul><p class="ws-small">A portal is often a "Patient Portal" or "Book Online" button that opens another site. The scan can't see those, so check the page for one.</p>`));
-      txt.push(`FORMS: ${kind}; standalone forms ${real.length}${sens?` (${sens} sensitive fields)`:''}; embedded forms: ${ifr.join(', ')||'none'}; portal: ${portals.join(', ')||'not detected'}`);
-      if(real.length&&S.page&&S.page.healthPage) talk.push(sens?`The website's own form asks for sensitive patient details (${sens} field${sens>1?'s':''}).`:'The website\'s own contact forms take free-text messages with no notice not to send health information.');
-    } else cards.push(NA('Forms & client portal'));
+        `<b>${E(kind)}.</b> `+(real.length?`${real.length} form${real.length>1?'s are':' is'} built into the website itself${sens?`, asking for ${sens} sensitive detail${sens>1?'s':''} (such as health, insurance or date of birth)`:''}.`:'')+(single?` ${single} one-field form${single>1?'s':''} (search box or sign-up) not counted.`:'')+(other.length?` Embedded form from <b>${E(other.join(', '))}</b>.`:'')+(portals.length?` Embedded portal or booking tool: <b>${E(portals.join(', '))}</b>.`:'')+(real.length&&sent.length?' These forms are on the same page where the active pixels run.':''),
+        (rowsF?`<div class="ws-scroll"><table class="ws-tbl"><thead><tr><th>Form</th><th>Fields</th><th>Sends to</th><th>Secure</th></tr></thead><tbody>${rowsF}</tbody></table></div>`:'')+`<ul class="ws-rows">${row('Standalone forms (built into the site)',real.length?chip('warn',real.length):chip('na','0'))}${row('Embedded forms from other companies',other.length?E(other.join(', ')):chip('na','None'))}${row('Patient / client portal',portals.length?chip('good',portals.join(', ')):src?NC:chip('na','Not embedded on this page'))}</ul><p class="ws-small">Many practices link to their portal with a "Patient Portal" or "Book Online" button instead of embedding it. The scan can't see links like that, so check the page for one.</p>`));
+      txt.push(`FORMS: ${kind}; standalone forms ${real.length}${sens?` (${sens} sensitive fields)`:''}; embedded: ${ifr.join(', ')||'none'}`);
+      if(sens){ talk.push(`The website's own form asks for sensitive patient details (${sens} field${sens>1?'s':''}).`); found.push(`The website's own form asks for ${sens} sensitive detail${sens>1?'s':''} (such as health, insurance or date of birth). Forms like this need to be HIPAA-secure.`); fixes.push('Move patient health questions to a HIPAA-secure form or the practice\'s patient portal.'); }
+      else if(real.length&&S.page&&S.page.healthPage){ found.push(`${real.length} contact form${real.length>1?'s are':' is'} built into the website${sent.length?', on the same page where the active pixels run':''}. If patients describe symptoms there, that information isn't protected the way HIPAA expects.`); fixes.push('Add a short note asking patients not to include health details, and link a secure patient portal for anything medical.'); }
+      if(other.length&&S.page&&S.page.healthPage){ found.push(`The contact form is provided by ${other.map(host).join(', ')}. Messages typed there are stored by that company, so it should be on a HIPAA plan with a signed Business Associate Agreement if patients may share health details.`); }
+      if(portals.length) good.push('A patient portal or booking tool on the page.');
+    } else cards.push(card('fa-file-medical','Forms & client portal',src?NC:chip('good','No forms'),src?'Page source mode can\'t check embedded forms.':'No contact or intake form was found on this page.',''));
 
-    // 6. iframes
-    cards.push(card('fa-window-restore','Embedded content (iframes)',ifr.length?chip('warn',ifr.length+' found'):chip('good','None'),ifr.length?'These outside services run inside the page. Patient data typed into them goes to that company.':'No embedded form or booking iframes were found. Videos and maps are not counted.',ifr.length?`<ul class="ws-rows">${ifr.map((x,i)=>row('Iframe '+(i+1),E(x))).join('')}</ul>`:''));
-    txt.push('IFRAMES: '+(ifr.join(', ')||'none'));
+    // ---------- 6. Iframes ----------
+    if(src) cards.push(card('fa-window-restore','Embedded forms (iframes)',NC,'Page source mode can\'t check embedded forms. Paste the Console Sniffer result to see them.',''));
+    else cards.push(card('fa-window-restore','Embedded forms (iframes)',ifr.length?chip('warn',ifr.length+' found'):chip('good','None'),ifr.length?'These outside services run inside the page. Anything typed into them goes to that company.':'No embedded form or booking iframe was found. (Videos and maps are not counted.)',ifr.length?`<ul class="ws-rows">${ifr.map((x,i)=>row('Embedded '+(i+1),E(x))).join('')}</ul>`:''));
+    txt.push('EMBEDDED FORMS (IFRAMES): '+(src?'not checked':(ifr.join(', ')||'none')));
 
-    // 7. HTTPS & links
+    // ---------- 7. Security & links ----------
     const h=S.https, l=S.links;
     if(h||l){
       const br=l?(l.broken||[]):[];
-      cards.push(card('fa-lock','Security & links',(h&&!h.isHttps)||br.length?chip('bad',h&&!h.isHttps?'Not secure':br.length+' broken'):chip('good','OK'),
-        (h?(h.isHttps?'The site uses HTTPS. ':'<b>The site is not secure (no HTTPS).</b> '):'')+(br.length?`${br.length} broken link${br.length>1?'s':''} found.`:'No broken links found in the links checked.'),
-        `<ul class="ws-rows">${h?row('HTTPS',yes(h.isHttps,true))+row('Mixed content',h.mixedContent?chip('bad',h.mixedContent):chip('good','0'))+row('Insecure form actions',h.insecureFormActions?chip('bad',h.insecureFormActions):chip('good','0')):''}${l?row('Links checked',`${l.checkedInternal} internal, ${l.checkedExternal} external`)+row('Broken links',br.length?E(br.map(b=>b.url+' ('+b.status+')').join(', ')):chip('good','0')):''}</ul>`));
+      cards.push(card('fa-lock','Security & links',(h&&!h.isHttps)?chip('bad','Not secure'):br.length?chip('warn',br.length+' broken link'+(br.length>1?'s':'')):chip('good','OK'),
+        (h?(h.isHttps?'The site uses HTTPS. ':'<b>The site does not use HTTPS.</b> '):'')+(br.length?`${br.length} broken link${br.length>1?'s':''} found.`:'No broken links found among the links checked.'),
+        `<ul class="ws-rows">${h?row('HTTPS (secure connection)',yn(h.isHttps))+row('Insecure content on a secure page',cnt(h.mixedContent))+row('Forms that send insecurely',cnt(h.insecureFormActions)):''}${l?row('Links checked',`${l.checkedInternal} on the site, ${l.checkedExternal} to other sites`)+row('Broken links',br.length?E(br.map(b=>b.url+' ('+b.status+')').join(', ')):chip('good','0')):''}</ul>`));
       txt.push(`SECURITY: HTTPS ${h&&h.isHttps?'yes':'NO'}; broken links: ${br.map(b=>b.url+' ('+b.status+')').join(', ')||'none'}`);
+      if(h&&!h.isHttps){ found.push('The site does not use HTTPS, so information sent through it is not encrypted.'); fixes.push('Turn on HTTPS for the whole site.'); } else if(h) good.push('A secure HTTPS connection.');
+      if(h&&h.mixedContent) found.push(`${h.mixedContent} file${h.mixedContent>1?'s load':' loads'} over an insecure connection on a secure page.`);
+      if(br.length){ found.push(`${br.length} broken link${br.length>1?'s':''}: ${br.slice(0,5).map(b=>b.url).join(', ')}.`); fixes.push('Fix or remove the broken links.'); }
     }
+
+    // ---------- shareable report ----------
+    const lines=[];
+    lines.push(`Website compliance review: ${site}`);
+    if(S.scanUrl) lines.push(`Page reviewed: ${S.scanUrl}`);
+    if(when) lines.push(`Date: ${when}`);
+    lines.push(src?'How it was checked: review of the page\'s source code. This shows what is in the code, not what runs for visitors.':'How it was checked: the page was opened fresh in a browser with no cookie choice made, and every request it sent was recorded.');
+    lines.push('');
+    lines.push('What we found');
+    (found.length?found:['No issues were found in the areas checked.']).forEach(f=>lines.push('• '+f));
+    if(good.length){ lines.push(''); lines.push('Already in place'); good.forEach(g=>lines.push('• '+g)); }
+    if(fixes.length){ lines.push(''); lines.push('Recommended fixes'); [...new Set(fixes)].forEach(f=>lines.push('• '+f)); }
+    lines.push(''); lines.push('This review covers one page and is general information, not legal advice.');
+    reportText=lines.join('\n');
+    cards.push(`<section class="ws-card ws-wide"><h4><span class="t"><i class="fa-solid fa-envelope-open-text" aria-hidden="true"></i>Report to share</span><button type="button" id="wsRepCopy" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 border border-slate-700"><i class="fa-solid fa-copy"></i> Copy report</button></h4><p class="ws-verdict">Plain-language findings for this page, ready to paste under your own email. Only what the scan measured is included.</p><label for="wsRepText" class="sr-only">Report to share</label><textarea id="wsRepText" class="ws-report" rows="14" readonly>${E(reportText)}</textarea></section>`);
 
     $('wsSumGrid').innerHTML=cards.join('');
     const tp=talk.slice(0,3);
     $('wsSumTalk').innerHTML=tp.length?`<p>Talking points for the call</p><ol>${tp.map(t=>`<li>${E(t)}</li>`).join('')}</ol>`:'<p>Talking points for the call</p><div>No major findings in this scan.</div>';
     lastText=txt.join('\n')+(tp.length?'\n\nTALKING POINTS:\n'+tp.map((t,i)=>(i+1)+'. '+t).join('\n'):'');
+    $('wsRepCopy').addEventListener('click',()=>copyText(reportText,'Report copied','Paste it under your own email.'));
     box.hidden=false;
     setTimeout(()=>box.scrollIntoView({behavior:'smooth',block:'start'}),150);
   }
-
+  function copyText(t,title,msg){ const done=()=>{ if(typeof showToast==='function') showToast(title,msg); };
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done).catch(()=>fallback()); else fallback();
+    function fallback(){ const x=document.createElement('textarea'); x.value=t; document.body.appendChild(x); x.select(); try{document.execCommand('copy');done();}catch(e){} x.remove(); } }
   $('wsSumHide').addEventListener('click',()=>{ box.hidden=true; });
-  $('wsSumCopy').addEventListener('click',()=>{ const done=()=>{ if(typeof showToast==='function') showToast('Summary copied','Paste it into notes, WorkPilot or an email.'); };
-    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(lastText).then(done).catch(()=>{ const t=document.createElement('textarea'); t.value=lastText; document.body.appendChild(t); t.select(); try{document.execCommand('copy');done();}catch(e){} t.remove(); });
-  });
+  $('wsSumCopy').addEventListener('click',()=>copyText(lastText,'Summary copied','Paste it into notes, WorkPilot or an email.'));
   const wrap=name=>{ const orig=window[name]; if(typeof orig!=='function') return; window[name]=function(){ const r=orig.apply(this,arguments); try{ render(); }catch(e){ console.error('Summary failed',e); } return r; }; };
   wrap('parseLiveTelemetryInput'); wrap('loadSampleLiveJson');
 })();
