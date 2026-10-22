@@ -75,6 +75,14 @@ table.inc td:nth-child(3){color:#3b4f60}
 .btn-primary:hover{background:var(--blue-d)}
 .btn-primary[disabled]{opacity:.55;cursor:not-allowed}
 .btn-light{background:#fff;color:var(--blue-d);border:2px solid var(--blue)}
+.terms .steps{margin:6px 0 0;padding-left:22px;font-size:14px;color:#2c4153}
+.terms .steps li{margin:0 0 12px;padding-left:4px;line-height:1.6}
+.terms .steps b{color:var(--ink)}
+.welcome{margin-top:16px;background:linear-gradient(135deg,#e6f4fe,#f2fbf6);border:1px solid var(--line);border-radius:12px;padding:16px 18px;font-size:14.5px;color:#1d3a50}
+.poc{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
+.poc h4{margin:0 0 6px;font-size:13.5px;font-weight:800;color:var(--blue-d)}
+.poc .same{display:flex;gap:8px;align-items:center;font-size:13px;margin-bottom:8px;cursor:pointer}
+.poc .same input{width:16px;height:16px;accent-color:var(--blue)}
 .msg{font-size:14px;font-weight:700}
 .msg.err{color:var(--err)}.msg.ok{color:var(--ok)}
 .done{display:none;margin-top:16px;background:#ecf8f1;border:1px solid #b8e3c8;border-radius:12px;padding:16px 18px;color:#14532d;font-size:14px}
@@ -147,9 +155,23 @@ table.inc td:nth-child(3){color:#3b4f60}
     <div class="note"><b>What the monthly plan covers:</b> website hosting, security, ongoing maintenance and the site's compliance banners. It keeps the site live, protected, and up to date after launch — the project price covers the build itself.</div>
     <div class="note"><b>Legal review:</b> the compliance elements and the State of New York regulated disclaimer included in this package are drafted and revised by our legal associate, Linda, and are provided as part of the build — your practice does not source or draft them separately.</div>
 
+    <section class="terms" aria-labelledby="termsTitle">
+      <h2 id="termsTitle">How we work together</h2>
+      <ol class="steps">
+        <li><b>We stay in touch.</b> Once <span class="sow-co">Cambria Dental</span> decides to move forward, we stay in communication through the whole process. You can also choose one person from your team as the point of contact. That is who I will update on the progress, ask questions and request any additional information from. Please add their name, title, email and phone number in the form below.</li>
+        <li><b>You see every update.</b> During the build you will receive a preview link. The link always shows the latest version, so you can see each change as it happens.</li>
+        <li><b>Final walk-through.</b> Before launch we review the website together: functionality, brand colors, buttons, content, titles and pictures. This is the time to request any edits.</li>
+        <li><b>Connecting your domain.</b> Once both parties approve the website, we connect it to your domain. Your domain is managed by a third-party provider (for example, the company that hosted your previous website). You can contact them to connect the new website, or we can help you with it. Please keep in mind that the domain provider is a separate company and is not associated with The WebSwan, so any issue with the domain itself needs to be addressed with the domain provider.</li>
+        <li><b>Refund policy.</b> Once the website is ready, tested and fully functional, with all buttons working, <span class="sow-co">Cambria Dental</span> may request a 30% partial refund.</li>
+        <li><b>Your website, your access.</b> When the website is complete, I will assign it to you with your own login credentials, so you can make changes such as adding or removing pictures, changing brand colors and updating content. I do not advise changing the written content, because all content is SEO-optimized for search engines.</li>
+        <li><b>Ongoing support (optional).</b> If you would like The WebSwan as your digital agency, we can discuss ongoing services in the future: social media marketing, monthly Google Business Profile (GBP) management to keep you relevant in Google search, website edits, and monitoring your state attorney general for changes in website regulations.</li>
+      </ol>
+      <div class="welcome">🦢 <b>Welcome to The WebSwan family, <span class="sow-cl">Dr. Michael Cambria</span>!</b> Thank you for your trust in choosing us for <span class="sow-co">Cambria Dental</span>. We are excited to build something great together.</div>
+    </section>
+
     <section class="accept" aria-labelledby="accTitle">
       <h2 id="accTitle">Acceptance</h2>
-      <p>By signing below, both parties agree to the scope and pricing described in this document.</p>
+      <p>By signing below, both parties agree to the scope, pricing and terms described in this document.</p>
       <div class="sigs">
         <div class="party">
           <div class="sigline"><span class="sig" style="font-family:'Great Vibes',cursive">Tania Domingue</span></div>
@@ -167,10 +189,20 @@ table.inc td:nth-child(3){color:#3b4f60}
 
       <form id="signForm" class="no-print" novalidate>
         <div class="consent">
-          <label><input type="checkbox" id="agree"> <span>I have read this Scope of Work and agree to the scope and pricing above. I agree to sign electronically, and my adopted signature has the same effect as my handwritten signature.</span></label>
+          <label><input type="checkbox" id="agree"> <span>I have read this Scope of Work and agree to the scope, pricing and terms above. I agree to sign electronically, and my adopted signature has the same effect as my handwritten signature.</span></label>
           <div class="fields">
             <div><label for="fName">Full name</label><input id="fName" type="text" value="Dr. Michael Cambria" autocomplete="name"></div>
             <div><label for="fEmail">Email (for your copy)</label><input id="fEmail" type="email" placeholder="you@example.com" autocomplete="email"></div>
+          </div>
+          <div class="poc">
+            <h4>Point of contact during the project</h4>
+            <label class="same"><input type="checkbox" id="pocSame" checked> I will be the point of contact</label>
+            <div class="fields" id="pocFields" hidden>
+              <div><label for="pName">Name</label><input id="pName" type="text" autocomplete="off"></div>
+              <div><label for="pTitle">Title</label><input id="pTitle" type="text" placeholder="Office manager" autocomplete="off"></div>
+              <div><label for="pEmail">Email</label><input id="pEmail" type="email" autocomplete="off"></div>
+              <div><label for="pPhone">Phone</label><input id="pPhone" type="tel" autocomplete="off"></div>
+            </div>
           </div>
         </div>
         <div class="actions">
@@ -243,6 +275,7 @@ table.inc td:nth-child(3){color:#3b4f60}
   var mn=document.getElementById('mName'); if(mn) mn.value=D.sigName||client.replace(/^Dr\.?\s+/i,'');
   var foot=q('.foot .r'); foot.innerHTML='<b>'+esc(who)+'</b><br>'+esc([D.phone,D.address].filter(Boolean).join(' · '));
   var done=q('#done b'); if(done) done.textContent='Thank you, '+(client||'and welcome')+'! ✅';
+  qa('.sow-co').forEach(function(e){ e.textContent=practice||client; }); qa('.sow-cl').forEach(function(e){ e.textContent=client||practice; });
 })();
 </script>
 <script>
@@ -277,12 +310,14 @@ table.inc td:nth-child(3){color:#3b4f60}
     $('sigDate').textContent=now.toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
     ov.classList.remove('show'); $('msg').textContent=''; $('agree').focus();
   });
+  $('pocSame').addEventListener('change',function(){ $('pocFields').hidden=this.checked; if(!this.checked) $('pName').focus(); });
   $('signForm').addEventListener('submit',function(e){
     e.preventDefault(); var msg=$('msg'); msg.className='msg';
     if(!signed){ msg.className='msg err'; msg.textContent='Please click the signature box and adopt your signature first.'; box.focus(); return; }
     if(!$('agree').checked){ msg.className='msg err'; msg.textContent='Please check the box to agree before submitting.'; $('agree').focus(); return; }
     var fullName=$('fName').value.trim(); if(!fullName){ msg.className='msg err'; msg.textContent='Please enter your full name.'; $('fName').focus(); return; }
     var email=$('fEmail').value.trim();
+    if(!$('pocSame').checked && !$('pName').value.trim()){ msg.className='msg err'; msg.textContent='Please add the name of your point of contact, or check "I will be the point of contact".'; $('pName').focus(); return; }
     var btn=$('submitBtn'); btn.disabled=true; btn.textContent='Sending…';
     var data=new FormData();
     data.append('_subject','✍️ SIGNED: Scope of Work · '+(S?(S.practice||S.client):'Cambria Dental'));
@@ -297,6 +332,8 @@ table.inc td:nth-child(3){color:#3b4f60}
     data.append('signer_timezone',(Intl.DateTimeFormat().resolvedOptions().timeZone||''));
     data.append('signing_page',location.href);
     data.append('device',navigator.userAgent);
+    if($('pocSame').checked){ data.append('point_of_contact','Signer ('+fullName+')'); }
+    else { data.append('point_of_contact',[$('pName').value,$('pTitle').value].filter(Boolean).join(', ')||'(not given)'); data.append('poc_email',$('pEmail').value); data.append('poc_phone',$('pPhone').value); }
     if(email){ data.append('email',email); data.append('_replyto',email); }
     fetch(FORM_ENDPOINT,{method:'POST',body:data,headers:{'Accept':'application/json'}}).then(function(r){
       if(!r.ok) throw new Error('bad');
