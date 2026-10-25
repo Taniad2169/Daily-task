@@ -2072,6 +2072,7 @@
                     <a class="btn btn-outline" href="https://silver-malabi-1a1324.netlify.app/" target="_blank" rel="noopener noreferrer" style="border-color:#0891b2;color:#0891b2;"><i class="fas fa-vial"></i> Tech Test · Audit Lab</a>
                     <a class="btn btn-outline" href="webswan-audit-command-center.html" target="_blank" rel="noopener" style="border-color:#16a34a;color:#16a34a;"><i class="fas fa-user-shield"></i> Compliance Audit</a>
                     <a class="btn btn-outline" href="https://calendar.app.google/V5vTgj1L22g4YvTq5" target="_blank" rel="noopener noreferrer" style="border-color:#339cde;color:#1f6fa3;" title="Your Google Calendar booking page (thewebswann@gmail.com)"><i class="fas fa-calendar-check"></i> Book a Call</a>
+                    <button class="btn btn-outline" id="blockTimeBtn" type="button" style="border-color:#b42318;color:#b42318;" title="Block days or hours so nobody can book you"><i class="fas fa-calendar-times"></i> Block Time Off</button>
                     <button class="btn btn-outline" id="copyBookingBtn" type="button" style="border-color:#339cde;color:#1f6fa3;" title="Copy your booking link to send to a client"><i class="fas fa-copy"></i> Copy Booking Link</button>
                     <a class="btn btn-outline" href="https://taniad2169.github.io/access-link/dashboard.html" target="_blank" rel="noopener noreferrer" style="border-color:#0d2745;color:#0d2745;" title="Websites using your ADA toolbar or cookie banner"><i class="fas fa-shield-alt"></i> Widget Installs</a>
                     <a class="btn btn-reminder" id="reminderBtn" href="https://taniad2169.github.io/Reminder/" target="_blank" rel="noopener noreferrer"><i class="fas fa-bell"></i> Reminder</a>
@@ -6505,6 +6506,110 @@
   b.addEventListener('click', function(){
     if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(URL_BOOKING).then(done, fallback); } else fallback();
     function fallback(){ var ta = document.createElement('textarea'); ta.value = URL_BOOKING; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch(e) { prompt('Copy this link:', URL_BOOKING); } ta.remove(); }
+  });
+})();
+</script>
+<!-- ===== BLOCK TIME OFF (blocks the Google booking page) ===== -->
+<style>
+#wsBlockModal{position:fixed;inset:0;background:rgba(8,20,36,.6);display:flex;align-items:center;justify-content:center;padding:14px;z-index:99999}
+#wsBlockModal[hidden]{display:none}
+#wsBlockModal .bt-card{background:#fff;border-radius:16px;max-width:460px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);overflow:hidden;font-family:inherit;color:#172033}
+#wsBlockModal .bt-head{background:linear-gradient(135deg,#339cde,#0c2d6b);color:#fff;padding:16px 18px;display:flex;justify-content:space-between;align-items:center}
+#wsBlockModal .bt-head h3{margin:0;font-size:18px}
+#wsBlockModal .bt-x{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:8px;width:34px;height:34px;font-size:22px;cursor:pointer}
+#wsBlockModal .bt-body{padding:16px 18px}
+#wsBlockModal .bt-presets{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+#wsBlockModal .bt-presets button{border:1px solid #9fb0c8;background:#fff;border-radius:999px;padding:6px 12px;font-weight:700;font-size:13px;cursor:pointer;color:#1f3a5f}
+#wsBlockModal .bt-presets button:hover{border-color:#339cde;background:#eef7fd}
+#wsBlockModal label{display:block;font-size:12px;font-weight:700;color:#4a5568;margin:8px 0 4px}
+#wsBlockModal input,#wsBlockModal select{width:100%;box-sizing:border-box;border:1px solid #b8c4d6;border-radius:9px;padding:9px 10px;font:inherit;font-size:14px}
+#wsBlockModal .bt-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#wsBlockModal .bt-note{background:#fff7db;border:1px solid #efcf67;border-radius:10px;font-size:12px;color:#463b17;padding:9px 11px;margin-top:12px}
+#wsBlockModal .bt-go{margin-top:14px;width:100%;background:#b42318;color:#fff;border:0;border-radius:10px;padding:12px;font-weight:800;font-size:15px;cursor:pointer}
+#wsBlockModal .bt-summary{font-size:13px;font-weight:700;color:#0c2d6b;margin-top:10px}
+</style>
+<div id="wsBlockModal" role="dialog" aria-modal="true" aria-labelledby="wsBlockTitle" hidden>
+  <div class="bt-card">
+    <div class="bt-head"><h3 id="wsBlockTitle"><i class="fas fa-calendar-times"></i> Block time off</h3><button class="bt-x" type="button" id="wsBlockClose" aria-label="Close">&times;</button></div>
+    <div class="bt-body">
+      <div class="bt-presets" aria-label="Quick choices">
+        <button type="button" data-preset="today">Today</button>
+        <button type="button" data-preset="tomorrow">Tomorrow</button>
+        <button type="button" data-preset="week">Rest of this week</button>
+        <button type="button" data-preset="nextweek">Next week</button>
+        <button type="button" data-preset="month">Rest of this month</button>
+      </div>
+      <div class="bt-row">
+        <div><label for="wsBlockStart">First day off</label><input type="date" id="wsBlockStart"></div>
+        <div><label for="wsBlockEnd">Last day off</label><input type="date" id="wsBlockEnd"></div>
+      </div>
+      <label for="wsBlockHours">Hours</label>
+      <select id="wsBlockHours"><option value="all">The whole day(s)</option><option value="part">Only some hours</option></select>
+      <div class="bt-row" id="wsBlockTimes" hidden>
+        <div><label for="wsBlockFrom">From</label><input type="time" id="wsBlockFrom" value="09:00"></div>
+        <div><label for="wsBlockTo">To</label><input type="time" id="wsBlockTo" value="13:00"></div>
+      </div>
+      <label for="wsBlockReason">Reason (only you see it)</label>
+      <input type="text" id="wsBlockReason" placeholder="Vacation, doctor, family day…">
+      <p class="bt-summary" id="wsBlockSummary"></p>
+      <button class="bt-go" type="button" id="wsBlockGo"><i class="fas fa-ban"></i> Block it on my calendar</button>
+      <div class="bt-note">Google Calendar opens with the time already filled in (business account thewebswann). Press <b>Save</b> there and nobody can book you during that time. Your booking page and Eva both respect it.</div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var btn = document.getElementById('blockTimeBtn'), m = document.getElementById('wsBlockModal');
+  if (!btn || !m) return;
+  var $ = function(id){ return document.getElementById(id); };
+  function ymd(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
+  function parse(v){ var p = v.split('-'); return new Date(+p[0], +p[1]-1, +p[2]); }
+  function setRange(a, b){ $('wsBlockStart').value = ymd(a); $('wsBlockEnd').value = ymd(b); summary(); }
+  function summary(){
+    var s = $('wsBlockStart').value, e = $('wsBlockEnd').value || s;
+    if (!s) { $('wsBlockSummary').textContent = ''; return; }
+    var a = parse(s), b = parse(e), days = Math.round((b - a) / 864e5) + 1;
+    var f = { weekday:'short', month:'short', day:'numeric' };
+    $('wsBlockSummary').textContent = days < 1 ? 'The last day must be on or after the first day.' :
+      'Blocking ' + a.toLocaleDateString([], f) + (days > 1 ? ' to ' + b.toLocaleDateString([], f) + ' (' + days + ' days)' : '') +
+      ($('wsBlockHours').value === 'part' ? ', ' + $('wsBlockFrom').value + ' to ' + $('wsBlockTo').value + ' each day' : ', all day');
+  }
+  btn.addEventListener('click', function(){ if (!$('wsBlockStart').value) setRange(new Date(), new Date()); m.hidden = false; $('wsBlockStart').focus(); });
+  $('wsBlockClose').addEventListener('click', function(){ m.hidden = true; btn.focus(); });
+  m.addEventListener('click', function(e){ if (e.target === m) m.hidden = true; });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !m.hidden) m.hidden = true; });
+  ['wsBlockStart','wsBlockEnd','wsBlockFrom','wsBlockTo'].forEach(function(id){ $(id).addEventListener('change', summary); });
+  $('wsBlockHours').addEventListener('change', function(){ $('wsBlockTimes').hidden = this.value !== 'part'; summary(); });
+  m.querySelectorAll('[data-preset]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var t = new Date(); t.setHours(0,0,0,0); var p = b.getAttribute('data-preset'), a = new Date(t), z = new Date(t);
+      if (p === 'tomorrow') { a.setDate(t.getDate()+1); z = new Date(a); }
+      if (p === 'week') { z.setDate(t.getDate() + (6 - t.getDay())); }
+      if (p === 'nextweek') { a.setDate(t.getDate() + (((8 - t.getDay()) % 7) || 7)); z = new Date(a); z.setDate(a.getDate()+4); }
+      if (p === 'month') { z = new Date(t.getFullYear(), t.getMonth()+1, 0); }
+      setRange(a, z);
+    });
+  });
+  function stamp(d, hhmm){ return ymd(d).replace(/-/g,'') + 'T' + (hhmm || '00:00').replace(':','') + '00'; }
+  $('wsBlockGo').addEventListener('click', function(){
+    var s = $('wsBlockStart').value, e = $('wsBlockEnd').value || s;
+    if (!s) { alert('Pick the first day off.'); return; }
+    var a = parse(s), b = parse(e);
+    if (b < a) { alert('The last day must be on or after the first day.'); return; }
+    var reason = $('wsBlockReason').value.trim(), title = 'Unavailable' + (reason ? ' - ' + reason : ''), part = $('wsBlockHours').value === 'part';
+    var url = 'https://calendar.google.com/calendar/render?action=TEMPLATE&authuser=thewebswann@gmail.com&ctz=America/Los_Angeles&trp=true' +
+      '&text=' + encodeURIComponent(title) + '&details=' + encodeURIComponent('Blocked from WorkPilot. Nobody can book Tania during this time.');
+    if (part) {
+      if ($('wsBlockFrom').value >= $('wsBlockTo').value) { alert('The "To" time must be after the "From" time.'); return; }
+      var days = Math.round((b - a) / 864e5) + 1;
+      url += '&dates=' + stamp(a, $('wsBlockFrom').value) + '/' + stamp(a, $('wsBlockTo').value);
+      if (days > 1) url += '&recur=' + encodeURIComponent('RRULE:FREQ=DAILY;COUNT=' + days);
+    } else {
+      var after = new Date(b); after.setDate(b.getDate()+1);
+      url += '&dates=' + stamp(a, '00:00') + '/' + stamp(after, '00:00');
+    }
+    window.open(url, '_blank', 'noopener');
+    m.hidden = true;
   });
 })();
 </script>
