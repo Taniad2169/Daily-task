@@ -2071,6 +2071,9 @@
                 <div class="header-actions">
                     <a class="btn btn-outline" href="https://silver-malabi-1a1324.netlify.app/" target="_blank" rel="noopener noreferrer" style="border-color:#0891b2;color:#0891b2;"><i class="fas fa-vial"></i> Tech Test · Audit Lab</a>
                     <a class="btn btn-outline" href="webswan-audit-command-center.html" target="_blank" rel="noopener" style="border-color:#16a34a;color:#16a34a;"><i class="fas fa-user-shield"></i> Compliance Audit</a>
+                    <a class="btn btn-outline" href="https://calendar.app.google/V5vTgj1L22g4YvTq5" target="_blank" rel="noopener noreferrer" style="border-color:#339cde;color:#1f6fa3;" title="Your Google Calendar booking page (thewebswann@gmail.com)"><i class="fas fa-calendar-check"></i> Book a Call</a>
+                    <button class="btn btn-outline" id="copyBookingBtn" type="button" style="border-color:#339cde;color:#1f6fa3;" title="Copy your booking link to send to a client"><i class="fas fa-copy"></i> Copy Booking Link</button>
+                    <a class="btn btn-outline" href="https://taniad2169.github.io/access-link/dashboard.html" target="_blank" rel="noopener noreferrer" style="border-color:#0d2745;color:#0d2745;" title="Websites using your ADA toolbar or cookie banner"><i class="fas fa-shield-alt"></i> Widget Installs</a>
                     <a class="btn btn-reminder" id="reminderBtn" href="https://taniad2169.github.io/Reminder/" target="_blank" rel="noopener noreferrer"><i class="fas fa-bell"></i> Reminder</a>
                     <a class="btn btn-outline" href="https://taniad2169.github.io/WebSwan-Games/index.html" target="_blank" rel="noopener noreferrer" style="border-color:#7c3aed;color:#6d28d9;"><i class="fas fa-gamepad"></i> WebSwan-Game</a>
                     <a class="btn btn-outline" href="https://dagigoia-langue.netlify.app/" target="_blank" rel="noopener noreferrer" style="border-color:#0891b2;color:#0e7490;"><i class="fas fa-language"></i> Dagigoia-Language</a>
@@ -6491,6 +6494,17 @@
   b.addEventListener('click', function(){
     if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(URL_INTAKE).then(done, fallback); } else fallback();
     function fallback(){ var ta = document.createElement('textarea'); ta.value = URL_INTAKE; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch(e) { prompt('Copy this link:', URL_INTAKE); } ta.remove(); }
+  });
+})();
+</script>
+<script>
+(function(){
+  var URL_BOOKING = 'https://calendar.app.google/V5vTgj1L22g4YvTq5';
+  var b = document.getElementById('copyBookingBtn'); if (!b) return;
+  function done(){ b.innerHTML = '<i class="fas fa-check"></i> Copied!'; setTimeout(function(){ b.innerHTML = '<i class="fas fa-copy"></i> Copy Booking Link'; }, 2000); }
+  b.addEventListener('click', function(){
+    if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(URL_BOOKING).then(done, fallback); } else fallback();
+    function fallback(){ var ta = document.createElement('textarea'); ta.value = URL_BOOKING; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch(e) { prompt('Copy this link:', URL_BOOKING); } ta.remove(); }
   });
 })();
 </script>
