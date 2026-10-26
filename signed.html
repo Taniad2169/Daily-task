@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>You're all set | The WebSwan</title>
+<link rel="icon" href="favicon-32x32.png">
+<style>
+  :root{--blue:#339cde;--sky:#93e5fa;--ink:#13263a;--muted:#5b6b7c;--bg:#f3f9fd}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px;background:linear-gradient(160deg,#e8f6fd,#f7fbfe 55%,#eaf8fc);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--ink)}
+  .card{background:#fff;max-width:520px;width:100%;border-radius:22px;box-shadow:0 24px 60px rgba(19,38,58,.12);padding:36px 30px;text-align:center;border-top:6px solid var(--blue)}
+  .swan{width:74px;height:74px;border-radius:50%;margin:0 auto 18px;display:flex;align-items:center;justify-content:center;font-size:38px;background:linear-gradient(135deg,var(--sky),var(--blue));color:#fff}
+  h1{font-size:28px;margin:0 0 10px;letter-spacing:-.02em}
+  p{color:var(--muted);line-height:1.6;margin:0 0 14px;font-size:16px}
+  .plan{display:inline-block;background:#eef8fe;color:#1d6fa3;border-radius:999px;padding:7px 14px;font-weight:700;font-size:14px;margin:4px 0 18px}
+  .small{font-size:13px;color:#7b8a99;margin-top:22px}
+  a.btn{display:inline-block;margin-top:6px;background:var(--blue);color:#fff;text-decoration:none;font-weight:700;padding:12px 22px;border-radius:12px}
+  a.btn:hover{filter:brightness(1.05)}
+</style>
+</head>
+<body>
+  <main class="card" role="main">
+    <div class="swan" aria-hidden="true">&#10003;</div>
+    <h1>You're all set!</h1>
+    <div class="plan" id="plan">Your WebSwan plan</div>
+    <p>Thank you for signing up. Your subscription is active, and Stripe will email you a receipt.</p>
+    <p>Tania has been notified and will be in touch with your next steps.</p>
+    <a class="btn" href="https://www.thewebswan.com">Visit The WebSwan</a>
+    <p class="small">Questions? Email <a href="mailto:designs@thewebswan.com">designs@thewebswan.com</a></p>
+  </main>
+
+<script type="module">
+  // Logs the signup so Tania gets a WorkPilot alert. Nothing about the card is ever sent or stored.
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+  import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+  const params = new URLSearchParams(location.search);
+  const clean = (v, max) => String(v || '').replace(/[<>]/g, '').trim().slice(0, max);
+  const client = clean(params.get('client'), 120) || 'Unknown client';
+  const plan = clean(params.get('plan'), 120) || 'Subscription';
+  const session = clean(params.get('session_id'), 200);
+  document.getElementById('plan').textContent = client + ' · ' + plan;
+
+  // Only log real Stripe checkouts (Stripe fills in session_id); ignore people opening the page directly.
+  if (/^cs_(live|test)_[A-Za-z0-9]+$/.test(session)) {
+    const key = 'ws_signup_logged_' + session;
+    let already = false;
+    try { already = localStorage.getItem(key) === '1'; } catch (e) {}
+    if (!already) {
+      const app = initializeApp({
+        apiKey: "AIzaSyAqhqUzWqpS7YunkODJU_udTBG3pjsJegQ",
+        authDomain: "webswan-marketing.firebaseapp.com",
+        projectId: "webswan-marketing"
+      }, 'signupLogger');
+      const db = getFirestore(app);
+      setDoc(doc(db, 'payment_signups', session), {
+        client, plan, session,
+        page: location.hostname,
+        seen: false,
+        createdAt: serverTimestamp()
+      }).then(() => { try { localStorage.setItem(key, '1'); } catch (e) {} })
+        .catch((err) => console.warn('Signup alert not logged:', err && err.code));
+    }
+  }
+</script>
+</body>
+</html>

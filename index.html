@@ -2074,6 +2074,7 @@
                     <a class="btn btn-outline" href="https://calendar.app.google/V5vTgj1L22g4YvTq5" target="_blank" rel="noopener noreferrer" style="border-color:#339cde;color:#1f6fa3;" title="Your Google Calendar booking page (thewebswann@gmail.com)"><i class="fas fa-calendar-check"></i> Book a Call</a>
                     <button class="btn btn-outline" id="blockTimeBtn" type="button" style="border-color:#b42318;color:#b42318;" title="Block days or hours so nobody can book you"><i class="fas fa-calendar-times"></i> Block Time Off</button>
                     <button class="btn btn-outline" id="copyBookingBtn" type="button" style="border-color:#339cde;color:#1f6fa3;" title="Copy your booking link to send to a client"><i class="fas fa-copy"></i> Copy Booking Link</button>
+                    <button class="btn btn-outline" id="payAlertBtn" type="button" style="border-color:#16a34a;color:#15803d;position:relative;" title="Get notified when a client signs your Stripe payment link"><i class="fas fa-dollar-sign"></i> Payment Alerts <span id="payAlertBadge" hidden style="position:absolute;top:-7px;right:-7px;background:#dc2626;color:#fff;border-radius:999px;font-size:11px;font-weight:800;min-width:20px;height:20px;line-height:20px;padding:0 5px;">0</span></button>
                     <a class="btn btn-outline" href="https://taniad2169.github.io/access-link/dashboard.html" target="_blank" rel="noopener noreferrer" style="border-color:#0d2745;color:#0d2745;" title="Websites using your ADA toolbar or cookie banner"><i class="fas fa-shield-alt"></i> Widget Installs</a>
                     <a class="btn btn-reminder" id="reminderBtn" href="https://taniad2169.github.io/Reminder/" target="_blank" rel="noopener noreferrer"><i class="fas fa-bell"></i> Reminder</a>
                     <a class="btn btn-outline" href="https://taniad2169.github.io/WebSwan-Games/index.html" target="_blank" rel="noopener noreferrer" style="border-color:#7c3aed;color:#6d28d9;"><i class="fas fa-gamepad"></i> WebSwan-Game</a>
@@ -2547,7 +2548,10 @@
                 getDocs,
                 query,
                 orderBy,
-                limit
+                limit,
+                where,
+                onSnapshot,
+                updateDoc
         } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 
         const firebaseConfig = {
@@ -2602,6 +2606,14 @@
             telemarketingSignedIn() {
                 const u = marketingAuth.currentUser;
                 return !!(u && !u.isAnonymous);
+            },
+            watchPaymentSignups(onChange, onError) {
+                // Owner-only: new client signups logged by signed.html (Stripe payment link redirect)
+                const q = query(collection(marketingDb, 'payment_signups'), where('seen', '==', false));
+                return onSnapshot(q, (snap) => onChange(snap.docs.map((d) => ({ id: d.id, ...d.data() }))), onError);
+            },
+            markPaymentSignupSeen(id) {
+                return updateDoc(doc(marketingDb, 'payment_signups', id), { seen: true });
             },
             async loadTelemarketingLeads() {
                 await marketingAuthReady;
@@ -6829,6 +6841,76 @@ body { min-height: 100dvh; }
   window.addEventListener('resize', renderAll);
   renderAll();
 } catch (err) { console.error('WorkPilot add-on skipped:', err); } })();
+</script>
+
+<style>
+#payAlertModal{position:fixed;inset:0;background:rgba(8,20,36,.6);display:flex;align-items:center;justify-content:center;padding:14px;z-index:99999}
+#payAlertModal[hidden]{display:none}
+#payAlertModal .pa-card{background:#fff;border-radius:16px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);overflow:hidden;color:#172033;font-family:inherit}
+#payAlertModal .pa-head{background:linear-gradient(135deg,#16a34a,#0c2d6b);color:#fff;padding:16px 18px;display:flex;justify-content:space-between;align-items:center}
+#payAlertModal .pa-head h3{margin:0;font-size:18px}
+#payAlertModal .pa-x{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:8px;width:34px;height:34px;font-size:22px;cursor:pointer}
+#payAlertModal .pa-body{padding:16px 18px;max-height:65vh;overflow:auto}
+#payAlertModal .pa-item{border:1px solid #d6e4d9;background:#f3fbf5;border-radius:12px;padding:12px;margin-bottom:10px}
+#payAlertModal .pa-item b{display:block;font-size:15px}
+#payAlertModal .pa-item small{color:#5b6b7c;display:block;margin:3px 0 8px}
+#payAlertModal .pa-btn{border:0;border-radius:9px;padding:9px 12px;font-weight:800;cursor:pointer;background:#16a34a;color:#fff}
+#payAlertModal .pa-btn.alt{background:#eef2f7;color:#1f3a5f}
+#payAlertModal .pa-note{font-size:12px;color:#5b6b7c;margin-top:10px;line-height:1.5}
+</style>
+<div id="payAlertModal" hidden role="dialog" aria-modal="true" aria-labelledby="payAlertTitle">
+  <div class="pa-card">
+    <div class="pa-head"><h3 id="payAlertTitle"><i class="fas fa-dollar-sign"></i> New client signups</h3><button class="pa-x" type="button" aria-label="Close" data-pa-close>&times;</button></div>
+    <div class="pa-body" id="payAlertBody"></div>
+  </div>
+</div>
+<script>
+(function(){ try {
+  var btn=document.getElementById('payAlertBtn'), badge=document.getElementById('payAlertBadge'),
+      modal=document.getElementById('payAlertModal'), body=document.getElementById('payAlertBody');
+  if(!btn) return;
+  var items=[], unsub=null, known={}, first=true;
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function when(ts){try{var d=ts&&ts.toDate?ts.toDate():null;return d?d.toLocaleString():'just now';}catch(e){return '';}}
+  function ding(){try{var C=window.AudioContext||window.webkitAudioContext; if(!C) return; var a=new C(), o=a.createOscillator(), g=a.createGain(); o.type='sine'; o.frequency.value=880; g.gain.value=.08; o.connect(g); g.connect(a.destination); o.start(); o.frequency.setValueAtTime(1320,a.currentTime+.15); o.stop(a.currentTime+.35);}catch(e){}}
+  function notify(it){
+    try{ if(typeof showToast==='function') showToast('New signup: '+it.client+' ('+it.plan+')','success'); }catch(e){}
+    ding();
+    try{ if(window.Notification && Notification.permission==='granted'){ new Notification('New client signup – WorkPilot',{body:it.client+' signed up: '+it.plan,icon:'favicon-32x32.png'}); } }catch(e){}
+  }
+  function paintBadge(){ badge.hidden=!items.length; badge.textContent=items.length; }
+  function render(){
+    var signed=window.dailyFirebase&&window.dailyFirebase.telemarketingSignedIn&&window.dailyFirebase.telemarketingSignedIn();
+    if(!signed){
+      body.innerHTML='<p>Turn on payment alerts with your business Google account (thewebswann@gmail.com). WorkPilot will then pop up, play a sound and send a desktop notification whenever a client finishes signing your Stripe payment link.</p><button class="pa-btn" type="button" id="paConnect">Turn on payment alerts</button><p class="pa-note">Works for any Stripe payment link whose "After payment" setting sends clients to your WebSwan "You\'re all set" page.</p>';
+      return;
+    }
+    var perm=(window.Notification&&Notification.permission!=='granted')?'<p class="pa-note"><button class="pa-btn alt" type="button" id="paPerm">Allow desktop notifications</button></p>':'';
+    if(!items.length){ body.innerHTML='<p><b>Payment alerts are on.</b> No new signups right now. Keep WorkPilot open and you will hear a ding when someone signs.</p>'+perm; return; }
+    body.innerHTML=items.map(function(it){return '<div class="pa-item"><b>'+esc(it.client)+'</b><small>'+esc(it.plan)+' · signed '+esc(when(it.createdAt))+'</small><button class="pa-btn" type="button" data-pa-seen="'+esc(it.id)+'">Got it</button> <a class="pa-btn alt" style="text-decoration:none;display:inline-block" target="_blank" rel="noopener" href="https://dashboard.stripe.com/subscriptions">Open Stripe</a></div>';}).join('')+perm;
+  }
+  function start(){
+    if(unsub||!window.dailyFirebase||!window.dailyFirebase.watchPaymentSignups) return;
+    if(!(window.dailyFirebase.telemarketingSignedIn&&window.dailyFirebase.telemarketingSignedIn())) return;
+    unsub=window.dailyFirebase.watchPaymentSignups(function(list){
+      list.sort(function(a,b){return ((b.createdAt&&b.createdAt.seconds)||0)-((a.createdAt&&a.createdAt.seconds)||0);});
+      list.forEach(function(it){ if(!known[it.id]){ known[it.id]=1; if(!first) notify(it); } });
+      if(first&&list.length) notify({client:list.length+' client signup'+(list.length>1?'s':''),plan:'waiting for you'});
+      first=false; items=list; paintBadge(); if(!modal.hidden) render();
+    },function(err){ console.warn('Payment alerts:',err&&err.code); unsub=null; });
+  }
+  btn.addEventListener('click',function(){ render(); modal.hidden=false; });
+  modal.addEventListener('click',function(e){
+    var t=e.target;
+    if(t===modal||t.closest('[data-pa-close]')){ modal.hidden=true; return; }
+    if(t.closest('#paConnect')){ window.dailyFirebase.connectTelemarketing().then(function(){ start(); render(); }).catch(function(){}); return; }
+    if(t.closest('#paPerm')){ try{ Notification.requestPermission().then(render); }catch(x){} return; }
+    var s=t.closest('[data-pa-seen]'); if(s){ window.dailyFirebase.markPaymentSignupSeen(s.getAttribute('data-pa-seen')).catch(function(err){ console.warn(err); }); }
+  });
+  document.addEventListener('keydown',function(e){ if(e.key==='Escape'&&!modal.hidden) modal.hidden=true; });
+  // start as soon as the owner session is available
+  var tries=0, iv=setInterval(function(){ tries++; start(); if(unsub||tries>40) clearInterval(iv); },1500);
+} catch(err){ console.error('Payment alerts add-on skipped:', err); } })();
 </script>
 </body>
 </html>
