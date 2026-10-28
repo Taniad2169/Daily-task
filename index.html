@@ -2069,6 +2069,7 @@
             <div class="header">
                 <h1><i class="fas fa-feather-alt"></i> WebSwan <span style="font-weight:300;color:#0077b6;">·</span> WorkPilot</h1>
                 <div class="header-actions">
+                    <div class="wp-find" role="search"><i class="fas fa-search" aria-hidden="true"></i><input type="search" id="wpBtnSearch" placeholder="Find a button: residual, audit, language…" aria-label="Find a button" autocomplete="off"><span id="wpBtnCount" class="wp-find-count"></span></div>
                     <a class="btn btn-outline" href="https://silver-malabi-1a1324.netlify.app/" target="_blank" rel="noopener noreferrer" style="border-color:#0891b2;color:#0891b2;"><i class="fas fa-vial"></i> Tech Test · Audit Lab</a>
                     <a class="btn btn-outline" href="webswan-audit-command-center.html" target="_blank" rel="noopener" style="border-color:#16a34a;color:#16a34a;"><i class="fas fa-user-shield"></i> Compliance Audit</a>
                     <a class="btn btn-outline" href="https://calendar.app.google/V5vTgj1L22g4YvTq5" target="_blank" rel="noopener noreferrer" style="border-color:#339cde;color:#1f6fa3;" title="Your Google Calendar booking page (thewebswann@gmail.com)"><i class="fas fa-calendar-check"></i> Book a Call</a>
@@ -2103,7 +2104,8 @@
                     <button class="btn btn-gemini" id="geminiSendBtn"><i class="fas fa-robot"></i> Gemini</button>
                     <button class="btn btn-claude" id="claudeSendBtn"><i class="fas fa-brain"></i> Claude</button>
                     <a class="btn btn-residual" href="https://taniad2169.github.io/webswan-dagigoia-task/" target="_blank" rel="noopener noreferrer"><i class="fas fa-chart-line"></i> WebSwan Residual</a>
-                    <a class="btn btn-outline" href="https://taniad2169.github.io/webswan-dagigoia-task/budget/" target="_blank" rel="noopener noreferrer" style="border-color:#11875d;color:#0b6b49;"><i class="fas fa-wallet"></i> Budget</a>
+                    <a class="btn btn-outline" href="https://taniad2169.github.io/webswan-dagigoia-task/budget/" target="_blank" rel="noopener noreferrer" style="border-color:#11875d;color:#0b6b49;"><i class="fas fa-wallet"></i> Swan Budget</a>
+                    <a class="btn btn-outline" href="https://taniad2169.github.io/webswan-dagigoia-task/budget-classic/" target="_blank" rel="noopener noreferrer" style="border-color:#11875d;color:#0b6b49;" title="The original WebSwan Budget page (income from Residual)"><i class="fas fa-wallet"></i> Budget Classic</a>
                     <a class="btn btn-outline" href="https://taniad2169.github.io/webswan-dagigoia-task/business-service/admin.html" target="_blank" rel="noopener noreferrer" style="border-color:#339cde;color:#1f6fa3;"><i class="fas fa-briefcase"></i> Business Service</a>
                     <a class="btn btn-outline" href="https://taniad2169.github.io/webswan-dagigoia-task/business-service/" target="_blank" rel="noopener noreferrer" style="border-color:#339cde;color:#1f6fa3;"><i class="fas fa-file-signature"></i> Business Service (client page)</a>
                     <a class="btn btn-outline" href="https://taniad2169.github.io/webswan-dagigoia-task/business-service/gbp.html" target="_blank" rel="noopener noreferrer" style="border-color:#34a853;color:#1e7b3a;"><i class="fab fa-google"></i> GBP Manager</a>
@@ -6916,6 +6918,40 @@ body { min-height: 100dvh; }
   // start as soon as the owner session is available
   var tries=0, iv=setInterval(function(){ tries++; start(); if(unsub||tries>40) clearInterval(iv); },1500);
 } catch(err){ console.error('Payment alerts add-on skipped:', err); } })();
+</script>
+<style>
+.wp-find{display:flex;align-items:center;gap:6px;flex:1 1 100%;max-width:520px;background:#fff;border:2px solid #97c8f7;border-radius:12px;padding:6px 10px;margin-bottom:4px}
+.wp-find i{color:#559ee6}
+.wp-find input{border:0;outline:0;flex:1;font-size:14px;min-width:0;background:transparent}
+.wp-find:focus-within{border-color:#2baec2;box-shadow:0 0 0 3px rgba(43,174,194,.18)}
+.wp-find-count{font-size:12px;color:#5f7389;white-space:nowrap}
+.wp-hit{outline:3px solid #2baec2 !important;outline-offset:1px}
+</style>
+<script>
+(function(){
+  var box=document.getElementById('wpBtnSearch'); if(!box) return;
+  var wrap=box.closest('.header-actions'), count=document.getElementById('wpBtnCount');
+  var SKIP={firebaseAuthBtn:1,lockAppBtn:1};
+  var ALIAS={dagigoia:'residual language',money:'budget billing residual stripe',email:'email webmail',calendar:'calendar book',call:'call voice rachel',ai:'ai agent rachel voice'};
+  function items(){ return Array.prototype.filter.call(wrap.children,function(el){ return (el.tagName==='A'||el.tagName==='BUTTON') && !SKIP[el.id]; }); }
+  function hay(el){ return ((el.textContent||'')+' '+(el.title||'')).toLowerCase(); }
+  function run(){
+    var q=box.value.trim().toLowerCase(), list=items(), n=0;
+    var words=q?q.split(/\s+/):[];
+    list.forEach(function(el){
+      var h=hay(el), ok=!q || words.every(function(w){ var alt=(ALIAS[w]||'').split(' ').filter(Boolean); return h.indexOf(w)>-1 || alt.some(function(a){return h.indexOf(a)>-1;}); });
+      el.style.display = ok?'':'none'; el.classList.toggle('wp-hit', !!q && ok); if(ok) n++;
+    });
+    var extra=wrap.querySelector('#firebaseSyncStatus'); if(extra) extra.style.display=q?'none':'';
+    count.textContent = q ? (n? n+' found · Enter opens':'No match') : '';
+  }
+  box.addEventListener('input',run);
+  box.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){ box.value=''; run(); }
+    if(e.key==='Enter'){ var f=items().filter(function(el){return el.style.display!=='none';})[0]; if(f && box.value.trim()){ e.preventDefault(); f.click(); } }
+  });
+  document.addEventListener('keydown',function(e){ if(e.key==='/' && document.activeElement && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && !document.activeElement.isContentEditable){ e.preventDefault(); box.focus(); } });
+})();
 </script>
 </body>
 </html>
