@@ -96,6 +96,10 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
 
   <div class="card">
     <h2>4. Scenes</h2>
+    <div class="row" style="margin-bottom:10px">
+      <label class="btn ghost" style="margin:0;justify-content:center;color:var(--brand);border:1px solid var(--brand);background:transparent">📁 Add clips &amp; photos as new scenes<input id="clipFiles" type="file" accept="video/*,image/*" multiple hidden></label>
+      <div class="note">Pick several clips at once, like in Canva. Each becomes a scene, in order. Use ↑ ↓ to reorder.</div>
+    </div>
     <div id="scenes"><div class="note">Your scenes will show here.</div></div>
   </div>
 
@@ -109,13 +113,33 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
     </div>
     <div id="voiceInfo" class="note"></div>
     <div class="check"><input type="checkbox" id="fitVoice" checked><label for="fitVoice" style="margin:0">Fit the scenes to my voice length</label></div>
-    <label>Background music</label>
+    <label style="margin-top:12px">🎵 My music library</label>
     <div class="row">
-      <label class="btn ghost" style="margin:0;justify-content:center;color:var(--brand);border:1px solid var(--brand);background:transparent">🎵 Upload music<input id="musicFile" type="file" accept="audio/*" hidden></label>
-      <div><label for="musicVol">Music volume</label><input id="musicVol" type="range" min="0" max="100" value="25" style="width:100%"></div>
-      <button id="musicClear" class="icon">Remove</button>
+      <div style="flex:2"><label for="musicLib">Music for this video</label><select id="musicLib"><option value="">No music</option></select></div>
+      <div><label for="musicVol">Volume</label><input id="musicVol" type="range" min="0" max="100" value="25" style="width:100%"></div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <div><label for="musicSrc">Where it's from (your license proof)</label>
+        <select id="musicSrc">
+          <option>Pixabay Music (free for business, no credit needed)</option>
+          <option>YouTube Audio Library (check if credit is required)</option>
+          <option>Mixkit (free license)</option>
+          <option>Free Music Archive (check the track's license)</option>
+          <option>Bought / licensed by me</option>
+          <option>Made by me</option>
+        </select></div>
+      <div><label>&nbsp;</label><label class="btn ghost" style="margin:0;justify-content:center;color:var(--brand);border:1px solid var(--brand);background:transparent">➕ Add music to my library<input id="musicFile" type="file" accept="audio/*" multiple hidden></label></div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button id="musicHear" class="ghost">▶ Hear</button>
+      <button id="musicClear" class="icon">Remove from library</button>
     </div>
     <div id="musicInfo" class="note"></div>
+    <p class="note">Get free, legal music here, download the MP3, then ➕ add it:
+      <a href="https://pixabay.com/music/" target="_blank" rel="noopener">Pixabay Music</a> ·
+      <a href="https://studio.youtube.com/" target="_blank" rel="noopener">YouTube Audio Library</a> (YouTube Studio → Audio Library) ·
+      <a href="https://mixkit.co/free-stock-music/" target="_blank" rel="noopener">Mixkit</a>.
+      Never use songs from the radio or Spotify: Facebook and Instagram mute or remove them.</p>
     <div class="row" style="margin-top:10px"><button id="signInBtn" class="ghost">Sign in with Google (for voices and lip sync)</button></div>
     <div id="toolsInfo" class="note"></div>
 
@@ -214,6 +238,8 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
   <div class="card">
     <h2>7. Captions and ending</h2>
     <div class="check"><input type="checkbox" id="captions" checked><label for="captions" style="margin:0">Show captions (you can still turn them on or off for each scene)</label></div>
+    <div class="row" style="margin-bottom:6px"><div><label for="transDef">✨ Transition between scenes</label>
+      <select id="transDef"></select></div></div>
     <div class="check"><input type="checkbox" id="karaoke" checked><label for="karaoke" style="margin:0">Words pop in one by one (great for Reels)</label></div>
     <div class="check"><input type="checkbox" id="endCard" checked><label for="endCard" style="margin:0">Add an ending card with my logo</label></div>
     <div class="row">
@@ -297,6 +323,7 @@ function renderScenes(){
         <img class="avthumb" alt="" style="display:none;flex:0 0 52px;width:52px;height:52px;object-fit:cover;border-radius:8px">
         <div><label>👤 Avatar</label><select class="av"></select></div>
         <div style="flex:2"><label>What I'm doing in this scene</label><input class="act" type="text" placeholder="Sitting at my desk, hand gestures"></div>
+        <div><label>✨ Transition in</label><select class="trn"></select></div>
         <div><label>💬 Captions</label><select class="cap"><option value="">Main setting</option><option value="on">On for this scene</option><option value="off">Off for this scene</option></select></div>
       </div>
       <div class="row" style="margin-top:6px">
@@ -325,6 +352,8 @@ function renderScenes(){
         if (s.vidSound && !v._wired) { audioCtx().createMediaElementSource(v).connect(vidBus()); v._wired = true; }
         v.muted = !s.vidSound; };
     }
+    const trn = d.querySelector(".trn"); trn.innerHTML = '<option value="">Main setting</option>' + TRANS_OPTS;
+    trn.value = s.trans || ""; trn.onchange = () => { s.trans = trn.value; save(); drawAt(sceneStart(i) + 0.3); };
     const cap = d.querySelector(".cap"); cap.value = s.cap || ""; cap.onchange = () => { s.cap = cap.value; save(); drawAt(sceneStart(i) + 0.8); };
     svinfo.textContent = s.voiceBuf ? `🔊 Scene voice ${s.voiceBuf.duration.toFixed(1)} s` : "";
     ta.oninput = () => { s.text = ta.value; save(); drawAt(sceneStart(i) + 0.8); };
@@ -355,7 +384,7 @@ function setMedia(s, file, done){
   }
 }
 function save(){ store.set("project", { script: $("script").value, brand: $("brand").value, format: $("format").value,
-  scenes: scenes.map(s => ({ text: s.text, dur: s.dur, avatarId: s.avatarId || "", action: s.action || "", cap: s.cap || "" })), cta: $("cta").value, contact: $("contact").value }); }
+  scenes: scenes.map(s => ({ text: s.text, dur: s.dur, avatarId: s.avatarId || "", action: s.action || "", cap: s.cap || "", trans: s.trans || "" })), cta: $("cta").value, contact: $("contact").value }); }
 
 // ---------- timeline ----------
 function durations(){
@@ -472,6 +501,36 @@ function drawEnd(local){
   ctx.fillText($("contact").value, W/2, H*0.63 + lines.length * m*0.07 + m*0.04);
   ctx.globalAlpha = 1; ctx.textAlign = "left";
 }
+// ---------- transitions ----------
+const TRANSITIONS = { fade: "Fade", circle: "Circle reveal", slide: "Slide in", zoom: "Zoom in", wipe: "Wipe", stars: "✨ Star sparkle", flash: "💡 Light flash", blur: "Dip to black", none: "No transition (cut)" };
+const TRANS_OPTS = Object.entries(TRANSITIONS).map(([k, v]) => `<option value="${k}">${v}</option>`).join("");
+const TR_LEN = 0.7;
+const ease = (x) => x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+function star(x, y, r){ ctx.beginPath(); for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4, rr = k % 2 ? r * 0.28 : r; ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } ctx.closePath(); ctx.fill(); }
+function sparkles(p, seed){
+  const W = cv.width, H = cv.height, m = Math.min(W, H); ctx.save(); ctx.fillStyle = "#fff"; ctx.shadowColor = "#93e5fa"; ctx.shadowBlur = m * 0.03;
+  for (let k = 0; k < 26; k++) {
+    const rx = Math.abs(Math.sin(seed * 9.1 + k * 12.9898) * 43758.5453) % 1, ry = Math.abs(Math.sin(seed * 3.7 + k * 78.233) * 12543.123) % 1;
+    const tw = Math.sin(Math.PI * Math.min(1, Math.max(0, p * 1.6 - (k % 6) * 0.1)));
+    if (tw <= 0) continue; ctx.globalAlpha = tw; star(rx * W, ry * H, m * (0.012 + 0.03 * ((k * 7) % 5) / 5) * tw);
+  }
+  ctx.restore();
+}
+function drawTransition(kind, prevI, i, local, dur, t){
+  const W = cv.width, H = cv.height, d = durations(), p = ease(Math.min(1, local / TR_LEN));
+  const prev = () => prevI === -1 ? null : drawScene(prevI, d[prevI], d[prevI], t);
+  const cur = () => i === -1 ? drawEnd(local) : drawScene(i, local, dur, t);
+  ctx.save();
+  if (kind === "circle") { prev(); ctx.beginPath(); ctx.arc(W/2, H/2, p * Math.hypot(W, H) / 2, 0, Math.PI*2); ctx.clip(); cur(); }
+  else if (kind === "slide") { prev(); ctx.translate(W * (1 - p), 0); cur(); }
+  else if (kind === "zoom") { prev(); ctx.globalAlpha = p; ctx.translate(W/2, H/2); ctx.scale(1.25 - 0.25*p, 1.25 - 0.25*p); ctx.translate(-W/2, -H/2); cur(); }
+  else if (kind === "wipe") { prev(); ctx.beginPath(); ctx.rect(0, 0, W * p, H); ctx.clip(); cur(); }
+  else if (kind === "flash") { (p < 0.5 ? prev : cur)(); ctx.restore(); ctx.save(); ctx.fillStyle = "#fff"; ctx.globalAlpha = Math.sin(Math.PI * p) * 0.95; ctx.fillRect(0, 0, W, H); }
+  else if (kind === "blur") { (p < 0.5 ? prev : cur)(); ctx.restore(); ctx.save(); ctx.fillStyle = "#000"; ctx.globalAlpha = Math.sin(Math.PI * p); ctx.fillRect(0, 0, W, H); }
+  else if (kind === "stars") { prev(); ctx.globalAlpha = p; cur(); ctx.restore(); ctx.save(); sparkles(Math.min(1, local / (TR_LEN * 1.3)), i + 1); }
+  else { prev(); ctx.globalAlpha = p; cur(); }
+  ctx.restore(); ctx.globalAlpha = 1;
+}
 function drawAt(t){
   const W = cv.width, H = cv.height;
   if (!scenes.length) {
@@ -479,11 +538,14 @@ function drawAt(t){
     ctx.font = `800 ${Math.round(Math.min(W,H)*0.05)}px Montserrat, sans-serif`; ctx.fillText("Your video shows here", W/2, H/2); ctx.textAlign = "left"; drawBadge(); return;
   }
   const p = locate(t);
-  if (p.i === -1) { if ($("endCard").checked) drawEnd(p.local); else drawScene(scenes.length-1, durations().at(-1), durations().at(-1), t); return; }
-  if (p.i > 0 && p.local < FADE) {
-    const d = durations(); drawScene(p.i - 1, d[p.i-1], d[p.i-1], t);
-    ctx.globalAlpha = p.local / FADE; drawScene(p.i, p.local, p.dur, t); ctx.globalAlpha = 1;
-  } else drawScene(p.i, p.local, p.dur, t);
+  if (p.i === -1) {
+    if (!$("endCard").checked) { drawScene(scenes.length-1, durations().at(-1), durations().at(-1), t); return; }
+    if (p.local < TR_LEN) { drawTransition($("transDef").value === "none" ? "fade" : $("transDef").value, scenes.length - 1, -1, p.local, END_LEN, t); return; }
+    drawEnd(p.local); return;
+  }
+  const kind = scenes[p.i].trans || $("transDef").value || "fade";
+  if (p.i > 0 && p.local < TR_LEN && kind !== "none") drawTransition(kind, p.i - 1, p.i, p.local, p.dur, t);
+  else drawScene(p.i, p.local, p.dur, t);
 }
 
 // ---------- playback / export ----------
@@ -564,12 +626,37 @@ function exportVideo(){
 async function loadAudio(file){ const buf = await file.arrayBuffer(); return audioCtx().decodeAudioData(buf); }
 function info(){
   $("voiceInfo").textContent = voice ? `🎙️ ${voice.name} · ${voice.buffer.duration.toFixed(1)} seconds` : "";
-  $("musicInfo").textContent = music ? `🎵 ${music.name}` : "";
+  $("musicInfo").textContent = music ? `🎵 ${music.name} · ${music.buffer.duration.toFixed(0)} s` + (music.source ? ` · License: ${music.source}` : "") : "";
 }
 $("voiceFile").onchange = async (e) => { const f = e.target.files[0]; if (!f) return; try { voice = { buffer: await loadAudio(f), name: f.name }; info(); drawAt(0); } catch { status("That audio file couldn't be opened."); } };
-$("musicFile").onchange = async (e) => { const f = e.target.files[0]; if (!f) return; try { music = { buffer: await loadAudio(f), name: f.name }; info(); } catch { status("That audio file couldn't be opened."); } };
+let musicLib = [];
+async function loadMusicLib(){ try { musicLib = ((await idb.music.all()) || []).sort((a, b) => a.at - b.at); } catch { musicLib = []; } renderMusicLib(store.get("musicId") || ""); }
+function renderMusicLib(pick){
+  const sel = $("musicLib");
+  sel.innerHTML = '<option value="">No music</option>' + musicLib.map(m => `<option value="${m.id}">${m.name.replace(/</g, "&lt;")} · ${m.source.split(" (")[0]}</option>`).join("");
+  if (musicLib.some(m => m.id === pick)) sel.value = pick; useMusic();
+}
+async function useMusic(){
+  const id = $("musicLib").value; store.set("musicId", id);
+  const m = musicLib.find(x => x.id === id);
+  if (!m) { music = null; info(); return; }
+  try { music = { buffer: await audioCtx().decodeAudioData(await m.blob.arrayBuffer()), name: m.name, source: m.source }; } catch { music = null; status("That music file couldn't be opened."); }
+  info();
+}
+$("musicLib").onchange = useMusic;
+$("musicFile").onchange = async (e) => {
+  const files = [...e.target.files]; let last = "";
+  for (const f of files) { const m = { id: "mu-" + Date.now() + "-" + Math.random().toString(36).slice(2, 6), name: f.name.replace(/\.[^.]+$/, "").slice(0, 60), source: $("musicSrc").value, blob: f, at: Date.now() };
+    try { await idb.music.put(m); } catch {} musicLib.push(m); last = m.id; }
+  e.target.value = ""; if (last) renderMusicLib(last);
+};
+let hearNode = null;
+$("musicHear").onclick = () => { if (hearNode) { try { hearNode.stop(); } catch {} hearNode = null; $("musicHear").textContent = "▶ Hear"; return; }
+  if (!music) return status("Pick music first."); const a = audioCtx(); a.resume(); hearNode = a.createBufferSource(); hearNode.buffer = music.buffer; hearNode.connect(a.destination); hearNode.start();
+  hearNode.onended = () => { hearNode = null; $("musicHear").textContent = "▶ Hear"; }; $("musicHear").textContent = "■ Stop"; };
 $("voiceClear").onclick = () => { voice = null; info(); };
-$("musicClear").onclick = () => { music = null; info(); };
+$("musicClear").onclick = async () => { const id = $("musicLib").value; if (!id) return;
+  try { await idb.music.del(id); } catch {} musicLib = musicLib.filter(m => m.id !== id); renderMusicLib(""); };
 let mic = null;
 $("recBtn").onclick = async () => {
   if (mic) { mic.rec.stop(); return; }
@@ -588,6 +675,14 @@ $("recBtn").onclick = async () => {
 
 // ---------- wiring ----------
 $("makeScenes").onclick = makeScenes;
+$("clipFiles").onchange = async (e) => {
+  const files = [...e.target.files]; e.target.value = "";
+  for (const f of files) {
+    const s = { text: "", dur: 4, media: null, avatarId: "", trans: "" }; scenes.push(s);
+    await new Promise(res => setMedia(s, f, () => { if (s.media.type === "video" && s.media.el.duration) s.dur = Math.round(s.media.el.duration * 10) / 10; res(); }));
+  }
+  renderScenes(); save(); drawAt(0); status(files.length + " clip(s) added as scenes. Add words, transitions and voices to each, then ▶ Play.");
+};
 $("playBtn").onclick = async () => { if (await play()) status("Playing preview…"); };
 $("stopBtn").onclick = () => { stop(); status(""); };
 $("exportBtn").onclick = exportVideo;
@@ -752,11 +847,13 @@ $("engine").onchange = talkInfo;
 let avatars = [];  // {id, album, blob, url, at}
 const idb = (() => {
   let dbp = null;
-  const open = () => dbp || (dbp = new Promise((res, rej) => { const r = indexedDB.open("wsvm", 1);
-    r.onupgradeneeded = () => r.result.createObjectStore("avatars", { keyPath: "id" }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }));
-  const run = async (mode, fn) => { const db = await open(); return new Promise((res, rej) => {
-    const t = db.transaction("avatars", mode), req = fn(t.objectStore("avatars")); t.oncomplete = () => res(req && req.result); t.onerror = () => rej(t.error); }); };
-  return { all: () => run("readonly", st => st.getAll()), put: (o) => run("readwrite", st => st.put(o)), del: (id) => run("readwrite", st => st.delete(id)) };
+  const open = () => dbp || (dbp = new Promise((res, rej) => { const r = indexedDB.open("wsvm", 2);
+    r.onupgradeneeded = () => { for (const n of ["avatars", "music"]) if (!r.result.objectStoreNames.contains(n)) r.result.createObjectStore(n, { keyPath: "id" }); };
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }));
+  const run = async (name, mode, fn) => { const db = await open(); return new Promise((res, rej) => {
+    const t = db.transaction(name, mode), req = fn(t.objectStore(name)); t.oncomplete = () => res(req && req.result); t.onerror = () => rej(t.error); }); };
+  const api = (name) => ({ all: () => run(name, "readonly", st => st.getAll()), put: (o) => run(name, "readwrite", st => st.put(o)), del: (id) => run(name, "readwrite", st => st.delete(id)) });
+  return { ...api("avatars"), music: api("music") };
 })();
 const albumNames = () => { const extra = store.get("albums") || []; return [...new Set(["My photos", ...extra, ...avatars.map(x => x.album)])]; };
 const albumIndex = (x) => avatars.filter(y => y.album === x.album).indexOf(x) + 1;
@@ -963,13 +1060,15 @@ function showTalk(url){
 }
 talkInfo();
 const _info = info; info = function(){ _info(); talkInfo(); };
-loadAlbum();
+loadAlbum(); loadMusicLib();
+$("transDef").innerHTML = TRANS_OPTS; $("transDef").value = store.get("transDef") || "fade";
+$("transDef").onchange = () => { store.set("transDef", $("transDef").value); };
 
 const saved = store.get("project");
 if (saved) {
   $("script").value = saved.script || ""; $("brand").value = saved.brand || "ws"; $("format").value = saved.format || "9:16";
   $("cta").value = saved.cta || ""; $("contact").value = saved.contact || "";
-  scenes = (saved.scenes || []).map(s => ({ text: s.text, dur: s.dur, media: null, avatarId: s.avatarId || "", action: s.action || "", cap: s.cap || "" }));
+  scenes = (saved.scenes || []).map(s => ({ text: s.text, dur: s.dur, media: null, avatarId: s.avatarId || "", action: s.action || "", cap: s.cap || "", trans: s.trans || "" }));
 }
 setBrandDefaults(false); renderScenes();
 document.fonts.load("900 40px Montserrat").finally(() => { setSize(); });
