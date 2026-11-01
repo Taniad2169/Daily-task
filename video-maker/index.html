@@ -105,7 +105,27 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
   </div>
 
   <div class="card">
-    <h2>5. Captions and ending</h2>
+    <h2>5. 🗣️ Make me talk (lip sync)</h2>
+    <p class="note">Your photo or a short video of you + the voice from step 4 → a video where your lips move with your words. Pay per video, no subscription.</p>
+    <div class="row">
+      <div><label for="talkMode">Start from</label>
+        <select id="talkMode">
+          <option value="photo">My photo (about 6¢ per second of voice)</option>
+          <option value="clip">My video clip, 2–10 seconds (about 3¢ per video)</option>
+        </select></div>
+      <div><label>&nbsp;</label><label class="btn ghost" style="margin:0;justify-content:center;color:var(--brand);border:1px solid var(--brand);background:transparent">📷 Choose photo or clip<input id="talkFile" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime" hidden></label></div>
+    </div>
+    <div id="talkInfo" class="note" style="margin-top:6px"></div>
+    <div class="row" style="margin-top:8px">
+      <button id="signInBtn" class="ghost">Sign in with Google</button>
+      <button id="talkBtn">🗣️ Make me talk</button>
+    </div>
+    <div id="talkStatus" class="status"></div>
+    <div id="talkResult"></div>
+  </div>
+
+  <div class="card">
+    <h2>6. Captions and ending</h2>
     <div class="check"><input type="checkbox" id="karaoke" checked><label for="karaoke" style="margin:0">Words pop in one by one (great for Reels)</label></div>
     <div class="check"><input type="checkbox" id="endCard" checked><label for="endCard" style="margin:0">Add an ending card with my logo</label></div>
     <div class="row">
@@ -218,9 +238,10 @@ function save(){ store.set("project", { script: $("script").value, brand: $("bra
 function durations(){
   let d = scenes.map(s => s.dur);
   if (voice && $("fitVoice").checked && scenes.length) {
-    const target = voice.buffer.duration + 0.6;
-    const w = scenes.map(s => Math.max(1, words(s.text).length)), tw = w.reduce((a,b) => a+b, 0);
-    d = w.map(x => Math.max(1.2, target * x / tw));
+    const locked = scenes.reduce((a, s) => a + (s.lock ? s.dur : 0), 0);
+    const target = Math.max(1.2, voice.buffer.duration + 0.6 - locked);
+    const w = scenes.map(s => s.lock ? 0 : Math.max(1, words(s.text).length)), tw = w.reduce((a,b) => a+b, 0) || 1;
+    d = scenes.map((s, i) => s.lock ? s.dur : Math.max(1.2, target * w[i] / tw));
   }
   return d;
 }
@@ -272,6 +293,7 @@ function drawScene(i, local, dur, now){
   } else gradientBg(now);
 
   // caption
+  if (!words(s.text).length) { drawBadge(); return; }
   const all = words(s.text), fs = Math.round(Math.min(W, H) * (W > H ? 0.07 : 0.075));
   ctx.font = `900 ${fs}px Montserrat, sans-serif`; ctx.textBaseline = "middle"; ctx.textAlign = "left";
   const maxW = W * 0.84, lines = wrap(all, maxW), lh = fs * 1.22, blockH = lines.length * lh;
@@ -433,6 +455,93 @@ $("brand").onchange = () => { setBrandDefaults(true); save(); drawAt(0); };
 ["cta", "contact", "script"].forEach(id => $(id).addEventListener("input", save));
 ["karaoke", "endCard", "fitVoice"].forEach(id => $(id).addEventListener("change", () => drawAt(0)));
 
+// ---------- Make me talk (lip sync through Netlify + fal.ai) ----------
+const LIPSYNC_API = "https://webswan-billing.netlify.app/.netlify/functions/lipsync";
+let talkFile = null, talkClipSecs = 0, talkConfirm = false;
+const tStatus = (m) => { $("talkStatus").textContent = m || ""; };
+function wavFromBuffer(buf){ // mono 24 kHz 16-bit WAV, small enough for upload (60 s ≈ 2.9 MB)
+  const rate = 24000, len = Math.ceil(buf.duration * rate), out = new Int16Array(len), ch = buf.numberOfChannels, src = [];
+  for (let c = 0; c < ch; c++) src.push(buf.getChannelData(c));
+  for (let i = 0; i < len; i++) { const p = i * buf.sampleRate / rate, k = Math.min(buf.length - 1, Math.floor(p)); let v = 0; for (let c = 0; c < ch; c++) v += src[c][k]; v /= ch; out[i] = Math.max(-1, Math.min(1, v)) * 0x7fff; }
+  const ab = new ArrayBuffer(44 + len * 2), dv = new DataView(ab), w = (o, s) => [...s].forEach((c, i) => dv.setUint8(o + i, c.charCodeAt(0)));
+  w(0, "RIFF"); dv.setUint32(4, 36 + len * 2, true); w(8, "WAVE"); w(12, "fmt "); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+  dv.setUint32(24, rate, true); dv.setUint32(28, rate * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true); w(36, "data"); dv.setUint32(40, len * 2, true);
+  new Int16Array(ab, 44).set(out); return new Blob([ab], { type: "audio/wav" });
+}
+function estimate(){
+  if (!voice) return null;
+  return $("talkMode").value === "clip" ? Math.ceil(Math.max(2, talkClipSecs || 10) / 5) * 0.014 : Math.max(1, voice.buffer.duration) * 0.0562;
+}
+function talkInfo(){
+  const e = estimate(); talkConfirm = false; $("talkBtn").textContent = "🗣️ Make me talk";
+  $("talkInfo").textContent = (talkFile ? "📷 " + talkFile.name + (talkClipSecs ? ` (${talkClipSecs.toFixed(1)} s)` : "") : "No photo or clip yet.") +
+    (voice ? ` · Voice ${voice.buffer.duration.toFixed(1)} s` : " · Record or upload your voice in step 4.") + (e != null && talkFile ? ` · Estimated cost about $${e.toFixed(2)}` : "");
+}
+async function api(body){
+  const token = window.vmToken ? await window.vmToken() : null;
+  if (!token) throw new Error("Please sign in with Google first.");
+  const r = await fetch(LIPSYNC_API, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: JSON.stringify(body) });
+  if (r.status === 404) throw new Error("Make me talk goes live after the Netlify deploy on Nov 5.");
+  const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || "Something went wrong (" + r.status + ").");
+  return j;
+}
+async function upload(blob, name){
+  const { upload_url, file_url } = await api({ action: "upload_init", content_type: blob.type, file_name: name });
+  const r = await fetch(upload_url, { method: "PUT", headers: { "Content-Type": blob.type }, body: blob });
+  if (!r.ok) throw new Error("Upload failed (" + r.status + ").");
+  return file_url;
+}
+$("talkMode").onchange = talkInfo;
+$("talkFile").onchange = () => {
+  const f = $("talkFile").files[0]; if (!f) return;
+  const isVid = f.type.startsWith("video"); $("talkMode").value = isVid ? "clip" : "photo";
+  talkFile = f; talkClipSecs = 0;
+  if (isVid) { const v = document.createElement("video"); v.preload = "metadata"; v.onloadedmetadata = () => { talkClipSecs = v.duration; talkInfo(); if (v.duration < 2 || v.duration > 10) tStatus("Your clip must be 2 to 10 seconds. Trim it on your phone and choose it again."); }; v.src = URL.createObjectURL(f); }
+  talkInfo();
+};
+$("talkBtn").onclick = async () => {
+  if (!talkFile) return tStatus("Choose your photo or clip first.");
+  if (!voice) return tStatus("Record or upload your voice in step 4 first.");
+  if (voice.buffer.duration > 60) return tStatus("Your voice must be 60 seconds or less.");
+  const mode = $("talkMode").value;
+  if (mode === "clip" && (talkClipSecs < 2 || talkClipSecs > 10)) return tStatus("Your clip must be 2 to 10 seconds.");
+  if ((mode === "clip") !== talkFile.type.startsWith("video")) return tStatus(mode === "clip" ? "Choose a video clip for this option." : "Choose a photo for this option.");
+  if (!talkConfirm) { talkConfirm = true; $("talkBtn").textContent = `✅ Yes, make it (about $${estimate().toFixed(2)})`; tStatus("Press again to confirm."); return; }
+  talkConfirm = false; $("talkBtn").disabled = true; $("talkResult").innerHTML = "";
+  try {
+    tStatus("Uploading your " + (mode === "clip" ? "clip" : "photo") + " and voice…");
+    const mediaUrl = await upload(talkFile, talkFile.name);
+    const audioUrl = await upload(wavFromBuffer(voice.buffer), "voice.wav");
+    const job = await api({ action: "submit", mode, seconds: voice.buffer.duration, clip_seconds: talkClipSecs, audio_url: audioUrl, [mode === "clip" ? "video_url" : "image_url"]: mediaUrl });
+    tStatus(`Making your talking video (about $${job.estimate})… this usually takes a few minutes. You can keep working.`);
+    for (let k = 0; k < 120; k++) {
+      await new Promise(r => setTimeout(r, 6000));
+      const s = await api({ action: "check", request_id: job.request_id });
+      if (s.status === "COMPLETED") { showTalk(s.video_url); return; }
+      if (s.status === "FAILED") throw new Error(s.error || "The video didn't come out. Try a clearer, front-facing photo.");
+      tStatus("Still working… " + (s.position != null ? "place in line: " + s.position : s.status.toLowerCase().replace("_", " ")));
+    }
+    throw new Error("It's taking too long. Check again in a few minutes.");
+  } catch (e) { tStatus("⚠️ " + e.message); }
+  finally { $("talkBtn").disabled = false; $("talkBtn").textContent = "🗣️ Make me talk"; }
+};
+async function showTalk(url){
+  tStatus("✅ Your talking video is ready!");
+  const box = $("talkResult");
+  box.innerHTML = `<video controls playsinline style="width:100%;max-height:360px;border-radius:10px;background:#000;margin-top:8px"></video>
+    <div class="row" style="margin-top:8px"><a class="btn" download="talking-video.mp4" target="_blank" rel="noopener">⬇ Download</a><button id="talkScene" class="ghost">➕ Use as Scene 1</button></div>`;
+  box.querySelector("video").src = url; box.querySelector("a").href = url;
+  $("talkScene").onclick = async () => {
+    try {
+      const blob = await (await fetch(url)).blob(), f = new File([blob], "talking-video.mp4", { type: "video/mp4" });
+      const s = { text: "", dur: 5, media: null, lock: true }; scenes.unshift(s);
+      setMedia(s, f, () => { s.dur = Math.round((s.media.el.duration || 5) * 10) / 10; s.media.el.muted = true; renderScenes(); drawAt(1); status("Talking video added as Scene 1. Your voice from step 4 plays with it."); });
+    } catch { tStatus("Couldn't add it here. Download it, then add it to a scene with 🖼️ Photo or video."); }
+  };
+}
+talkInfo();
+const _info = info; info = function(){ _info(); talkInfo(); };
+
 const saved = store.get("project");
 if (saved) {
   $("script").value = saved.script || ""; $("brand").value = saved.brand || "ws"; $("format").value = saved.format || "9:16";
@@ -443,6 +552,17 @@ setBrandDefaults(false); renderScenes();
 document.fonts.load("900 40px Montserrat").finally(() => { setSize(); });
 logo.onload = () => drawAt(0);
 })();
+</script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js';
+// Same Google sign-in as Voice Studio (public web config, not a secret). Only Tania's accounts are accepted by the server.
+const app = initializeApp({ apiKey: 'AIzaSyDEbrLgE5Bl5bA5znP0R7UL_Lqi_2uERs0', authDomain: 'webswan-voice-studio.firebaseapp.com', projectId: 'webswan-voice-studio', appId: '1:135333947873:web:4bd432e3bd6f1779ad8aa0' });
+const auth = getAuth(app); let user = null;
+const btn = document.getElementById('signInBtn');
+onAuthStateChanged(auth, (u) => { user = u; btn.textContent = u ? '✅ ' + u.email : 'Sign in with Google'; });
+btn.onclick = async () => { if (user) return; try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch (e) { document.getElementById('talkStatus').textContent = 'Sign-in was cancelled or blocked.'; } };
+window.vmToken = async () => (user ? user.getIdToken() : null);
 </script>
 </body>
 </html>
