@@ -213,6 +213,7 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
 
   <div class="card">
     <h2>7. Captions and ending</h2>
+    <div class="check"><input type="checkbox" id="captions" checked><label for="captions" style="margin:0">Show captions (you can still turn them on or off for each scene)</label></div>
     <div class="check"><input type="checkbox" id="karaoke" checked><label for="karaoke" style="margin:0">Words pop in one by one (great for Reels)</label></div>
     <div class="check"><input type="checkbox" id="endCard" checked><label for="endCard" style="margin:0">Add an ending card with my logo</label></div>
     <div class="row">
@@ -296,6 +297,7 @@ function renderScenes(){
         <img class="avthumb" alt="" style="display:none;flex:0 0 52px;width:52px;height:52px;object-fit:cover;border-radius:8px">
         <div><label>👤 Avatar</label><select class="av"></select></div>
         <div style="flex:2"><label>What I'm doing in this scene</label><input class="act" type="text" placeholder="Sitting at my desk, hand gestures"></div>
+        <div><label>💬 Captions</label><select class="cap"><option value="">Main setting</option><option value="on">On for this scene</option><option value="off">Off for this scene</option></select></div>
       </div>
       <div class="row" style="margin-top:6px">
         <button class="icon" data-a="svoice">🔊 Voice (read this scene)</button>
@@ -312,6 +314,7 @@ function renderScenes(){
     const showTh = () => { const x = avatars.find(y => y.id === av.value); th.style.display = x ? "block" : "none"; if (x) th.src = x.url; };
     showTh(); av.onchange = () => { s.avatarId = av.value; showTh(); save(); };
     act.value = s.action || ""; act.oninput = () => { s.action = act.value; save(); };
+    const cap = d.querySelector(".cap"); cap.value = s.cap || ""; cap.onchange = () => { s.cap = cap.value; save(); drawAt(sceneStart(i) + 0.8); };
     svinfo.textContent = s.voiceBuf ? `🔊 Scene voice ${s.voiceBuf.duration.toFixed(1)} s` : "";
     ta.oninput = () => { s.text = ta.value; save(); drawAt(sceneStart(i) + 0.8); };
     num.oninput = () => { s.dur = Math.max(1, parseFloat(num.value) || 1); };
@@ -340,7 +343,7 @@ function setMedia(s, file, done){
   }
 }
 function save(){ store.set("project", { script: $("script").value, brand: $("brand").value, format: $("format").value,
-  scenes: scenes.map(s => ({ text: s.text, dur: s.dur, avatarId: s.avatarId || "", action: s.action || "" })), cta: $("cta").value, contact: $("contact").value }); }
+  scenes: scenes.map(s => ({ text: s.text, dur: s.dur, avatarId: s.avatarId || "", action: s.action || "", cap: s.cap || "" })), cta: $("cta").value, contact: $("contact").value }); }
 
 // ---------- timeline ----------
 function durations(){
@@ -401,7 +404,8 @@ function drawScene(i, local, dur, now){
   } else gradientBg(now);
 
   // caption
-  if (!words(s.text).length) { drawBadge(); return; }
+  const capOn = s.cap === "on" ? true : s.cap === "off" ? false : $("captions").checked;
+  if (!capOn || !words(s.text).length) { drawBadge(); return; }
   const all = words(s.text), fs = Math.round(Math.min(W, H) * (W > H ? 0.07 : 0.075));
   ctx.font = `900 ${fs}px Montserrat, sans-serif`; ctx.textBaseline = "middle"; ctx.textAlign = "left";
   const maxW = W * 0.84, lines = wrap(all, maxW), lh = fs * 1.22, blockH = lines.length * lh;
@@ -564,7 +568,7 @@ $("exportBtn").onclick = exportVideo;
 $("format").onchange = () => { setSize(); save(); };
 $("brand").onchange = () => { setBrandDefaults(true); save(); drawAt(0); };
 ["cta", "contact", "script"].forEach(id => $(id).addEventListener("input", save));
-["karaoke", "endCard", "fitVoice"].forEach(id => $(id).addEventListener("change", () => drawAt(0)));
+["captions", "karaoke", "endCard", "fitVoice"].forEach(id => $(id).addEventListener("change", () => drawAt(0)));
 
 // ---------- Voices + Make me talk (through Netlify: Cartesia, fal.ai, Hedra) ----------
 const LIPSYNC_API = "https://webswan-billing.netlify.app/.netlify/functions/lipsync";
@@ -923,7 +927,7 @@ const saved = store.get("project");
 if (saved) {
   $("script").value = saved.script || ""; $("brand").value = saved.brand || "ws"; $("format").value = saved.format || "9:16";
   $("cta").value = saved.cta || ""; $("contact").value = saved.contact || "";
-  scenes = (saved.scenes || []).map(s => ({ text: s.text, dur: s.dur, media: null, avatarId: s.avatarId || "", action: s.action || "" }));
+  scenes = (saved.scenes || []).map(s => ({ text: s.text, dur: s.dur, media: null, avatarId: s.avatarId || "", action: s.action || "", cap: s.cap || "" }));
 }
 setBrandDefaults(false); renderScenes();
 document.fonts.load("900 40px Montserrat").finally(() => { setSize(); });
