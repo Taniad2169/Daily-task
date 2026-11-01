@@ -259,7 +259,12 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
       <button id="exportBtn" class="red">⬇ Make my video</button>
     </div>
     <div id="status" class="status"></div>
-    <p class="note">Making the video plays it once in real time, so keep this tab open until it finishes. Then upload the file in Tatiana's 🎬 Schedule a video, Content360, or any app.</p>
+    <p class="note">Making the video plays it once in real time, so keep this tab in front until it finishes. It goes into 🎞️ My videos below. Nothing downloads until you press ⬇ Download.</p>
+  </div>
+  <div class="card">
+    <h2>🎞️ My videos</h2>
+    <div id="gallery"><div class="note">Videos you make show here. Watch them, then download the one you like or delete your tests.</div></div>
+    <div class="row" style="margin-top:8px"><button id="galDelAll" class="icon">🗑️ Delete all videos</button></div>
   </div>
 </section>
 </main>
@@ -612,9 +617,8 @@ function exportVideo(){
       if (!chunks.length) { status("⚠️ Nothing was recorded. Keep this tab in front while it records, then try again."); return; }
       const blob = new Blob(chunks, { type: mime.split(";")[0] }), ext = mime.includes("mp4") ? "mp4" : "webm";
       const name = (brand().name + " " + new Date().toISOString().slice(0,10)).replace(/\s+/g, "-") + "." + ext, url = URL.createObjectURL(blob);
-      const link = document.createElement("a"); link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove();
-      $("status").innerHTML = `✅ Your video is ready (${(blob.size / 1048576).toFixed(1)} MB). If it didn't download by itself, <a class="btn" style="margin-top:6px" href="${url}" download="${name}">⬇ Download my video</a>` +
-        (ext === "webm" ? '<br><span class="note">WebM file: most apps accept it; if one doesn\'t, tell Claude.</span>' : "");
+      URL.revokeObjectURL(url);
+      saveVideo({ id: "vid-" + Date.now(), name, ext, blob, size: blob.size, at: Date.now(), secs: Math.round(total()) });
     };
     $("exportBtn").disabled = true; status("🎬 Making your video… about " + Math.ceil(total()) + " seconds. Keep this tab in front until it finishes.");
     rec.start(250);
@@ -847,13 +851,13 @@ $("engine").onchange = talkInfo;
 let avatars = [];  // {id, album, blob, url, at}
 const idb = (() => {
   let dbp = null;
-  const open = () => dbp || (dbp = new Promise((res, rej) => { const r = indexedDB.open("wsvm", 2);
-    r.onupgradeneeded = () => { for (const n of ["avatars", "music"]) if (!r.result.objectStoreNames.contains(n)) r.result.createObjectStore(n, { keyPath: "id" }); };
+  const open = () => dbp || (dbp = new Promise((res, rej) => { const r = indexedDB.open("wsvm", 3);
+    r.onupgradeneeded = () => { for (const n of ["avatars", "music", "videos"]) if (!r.result.objectStoreNames.contains(n)) r.result.createObjectStore(n, { keyPath: "id" }); };
     r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }));
   const run = async (name, mode, fn) => { const db = await open(); return new Promise((res, rej) => {
     const t = db.transaction(name, mode), req = fn(t.objectStore(name)); t.oncomplete = () => res(req && req.result); t.onerror = () => rej(t.error); }); };
   const api = (name) => ({ all: () => run(name, "readonly", st => st.getAll()), put: (o) => run(name, "readwrite", st => st.put(o)), del: (id) => run(name, "readwrite", st => st.delete(id)) });
-  return { ...api("avatars"), music: api("music") };
+  return { ...api("avatars"), music: api("music"), videos: api("videos") };
 })();
 const albumNames = () => { const extra = store.get("albums") || []; return [...new Set(["My photos", ...extra, ...avatars.map(x => x.album)])]; };
 const albumIndex = (x) => avatars.filter(y => y.album === x.album).indexOf(x) + 1;
@@ -1061,6 +1065,49 @@ function showTalk(url){
 talkInfo();
 const _info = info; info = function(){ _info(); talkInfo(); };
 loadAlbum(); loadMusicLib();
+// ----- My videos: keep, watch, download or delete -----
+let gallery = [];
+async function loadGallery(){ try { gallery = ((await idb.videos.all()) || []).sort((a, b) => b.at - a.at); } catch { gallery = []; } renderGallery(); }
+async function saveVideo(v){
+  try { await idb.videos.put(v); } catch {}
+  gallery.unshift(v); renderGallery();
+  status("✅ Saved to 🎞️ My videos below. Watch it, then press ⬇ Download when you're happy (or 🗑️ delete it).");
+  $("gallery").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+function renderGallery(){
+  const box = $("gallery");
+  if (!gallery.length) { box.innerHTML = '<div class="note">Videos you make show here. Watch them, then download the one you like or delete your tests.</div>'; return; }
+  box.innerHTML = "";
+  gallery.forEach((v) => {
+    const url = URL.createObjectURL(v.blob), d = document.createElement("div"); d.className = "scene";
+    d.innerHTML = `<video controls playsinline preload="metadata" style="width:100%;max-height:300px;border-radius:8px;background:#000"></video>
+      <div class="row" style="margin-top:6px;align-items:center">
+        <input type="text" aria-label="Video name" style="flex:2">
+        <a class="btn" style="flex:0 0 auto">⬇ Download</a>
+        <button class="icon" data-a="del">🗑️ Delete</button>
+      </div><div class="mini"></div>`;
+    d.querySelector("video").src = url;
+    const nm = d.querySelector("input"), dl = d.querySelector("a"), del = d.querySelector("button"), mini = d.querySelector(".mini");
+    nm.value = v.name.replace(/\.(mp4|webm)$/, "");
+    const fname = () => (nm.value.trim() || "WebSwan-video").replace(/[^\w\- ]+/g, "").replace(/\s+/g, "-") + "." + v.ext;
+    dl.href = url; dl.download = fname();
+    nm.oninput = () => { dl.download = fname(); v.name = fname(); try { idb.videos.put(v); } catch {} };
+    mini.textContent = `${new Date(v.at).toLocaleString()} · ${v.secs || "?"} s · ${(v.size / 1048576).toFixed(1)} MB · ${v.ext.toUpperCase()}`;
+    del.onclick = async () => {
+      if (!del.dataset.ok) { del.dataset.ok = "1"; del.textContent = "Press again to delete"; setTimeout(() => { delete del.dataset.ok; del.textContent = "🗑️ Delete"; }, 5000); return; }
+      try { await idb.videos.del(v.id); } catch {} URL.revokeObjectURL(url); gallery = gallery.filter(x => x !== v); renderGallery();
+    };
+    box.appendChild(d);
+  });
+}
+$("galDelAll").onclick = async () => {
+  const b = $("galDelAll"); if (!gallery.length) return;
+  if (!b.dataset.ok) { b.dataset.ok = "1"; b.textContent = `Press again to delete all ${gallery.length} videos`; setTimeout(() => { delete b.dataset.ok; b.textContent = "🗑️ Delete all videos"; }, 5000); return; }
+  delete b.dataset.ok; b.textContent = "🗑️ Delete all videos";
+  for (const v of gallery) { try { await idb.videos.del(v.id); } catch {} }
+  gallery = []; renderGallery();
+};
+loadGallery();
 $("transDef").innerHTML = TRANS_OPTS; $("transDef").value = store.get("transDef") || "fade";
 $("transDef").onchange = () => { store.set("transDef", $("transDef").value); };
 
