@@ -1,0 +1,39 @@
+{
+ "v": 1,
+ "title": "Template: virtual assistant sets your meetings",
+ "brand": "ws",
+ "format": "9:16",
+ "template": true,
+ "transDef": "fade",
+ "captions": true,
+ "karaoke": true,
+ "endCard": true,
+ "cta": "Ask us about SwanDesk AI",
+ "contact": "thewebswan.com · (510) 535-4763",
+ "scenes": [
+  {
+   "text": "Met someone great at an event, and promised to call?",
+   "action": "Walking toward the camera, friendly smile",
+   "trans": "",
+   "avatar": "selected"
+  },
+  {
+   "text": "Our virtual assistant makes that call for you.",
+   "action": "Sitting at a desk, relaxed hand gestures",
+   "trans": "slide",
+   "avatar": "selected"
+  },
+  {
+   "text": "She asks how they'd like to meet: Zoom, a phone call, or coffee, and books the time.",
+   "action": "Counting on fingers, smiling",
+   "trans": "circle",
+   "avatar": "selected"
+  },
+  {
+   "text": "You just show up prepared. Ask us about SwanDesk AI.",
+   "action": "Confident smile, nodding",
+   "trans": "stars",
+   "avatar": "selected"
+  }
+ ]
+}

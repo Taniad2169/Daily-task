@@ -1,0 +1,51 @@
+{
+ "v": 1,
+ "title": "Template: Media Network, get found",
+ "brand": "mn",
+ "format": "9:16",
+ "template": true,
+ "transDef": "fade",
+ "captions": true,
+ "karaoke": true,
+ "endCard": true,
+ "cta": "Get found by patients and clients",
+ "contact": "ads.webswanmedianetwork.com · (347) 646-7086",
+ "scenes": [
+  {
+   "text": "Doctors and attorneys: are the right people finding you?",
+   "action": "Looking at the camera with a curious smile",
+   "trans": "",
+   "avatar": "selected"
+  },
+  {
+   "text": "WebSwan Media Network is like a private Yelp, only for doctors and attorneys.",
+   "action": "Walking through an office, hand gestures",
+   "trans": "slide",
+   "avatar": "selected"
+  },
+  {
+   "text": "Patients and clients can leave you reviews right there.",
+   "action": "Smiling and nodding",
+   "trans": "fade",
+   "avatar": "selected"
+  },
+  {
+   "text": "When someone wants to reach you, we email their information straight to your office.",
+   "action": "Sitting at a desk, pointing to a laptop",
+   "trans": "circle",
+   "avatar": "selected"
+  },
+  {
+   "text": "You know exactly who wants to talk to you, and it stays private.",
+   "action": "Confident expression, open hands",
+   "trans": "stars",
+   "avatar": "selected"
+  },
+  {
+   "text": "Call us to get listed today.",
+   "action": "Big smile, pointing at the camera",
+   "trans": "flash",
+   "avatar": "selected"
+  }
+ ]
+}

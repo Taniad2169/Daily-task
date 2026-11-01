@@ -1,0 +1,32 @@
+[
+ {
+  "file": "meet-tania-webswan-family.json",
+  "title": "Meet Tania: The WebSwan family",
+  "template": false,
+  "desc": "Made for you by Claude. 6 scenes · 9:16 · avatar: your selected photo"
+ },
+ {
+  "file": "tpl-media-network-private-yelp.json",
+  "title": "Template: Media Network, get found",
+  "template": true,
+  "desc": "Template, ready to reuse. 6 scenes · 9:16 · avatar: your selected photo"
+ },
+ {
+  "file": "tpl-compliance-ada-tip.json",
+  "title": "Template: ADA website tip for doctors",
+  "template": true,
+  "desc": "Template, ready to reuse. 4 scenes · 9:16 · avatar: your selected photo"
+ },
+ {
+  "file": "tpl-swandesk-meeting-setter.json",
+  "title": "Template: virtual assistant sets your meetings",
+  "template": true,
+  "desc": "Template, ready to reuse. 4 scenes · 9:16 · avatar: your selected photo"
+ },
+ {
+  "file": "tpl-sbpa-phone-app.json",
+  "title": "Template: your own phone app (SBPA)",
+  "template": true,
+  "desc": "Template, ready to reuse. 4 scenes · 9:16 · avatar: your selected photo"
+ }
+]

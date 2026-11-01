@@ -51,6 +51,31 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
 </header>
 <main>
 <section>
+  <div class="card" style="border:2px solid var(--brand)">
+    <h2>⭐ Start here</h2>
+    <details open><summary style="cursor:pointer;font-weight:800">📥 Videos Claude made for you</summary>
+      <div id="claudeList" class="note" style="margin-top:6px">Loading…</div>
+    </details>
+    <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:800">💡 Idea to video (it writes the whole script)</summary>
+      <label for="idea">Your idea</label>
+      <textarea id="idea" style="min-height:70px" placeholder="A 30-second Reel for dentists: why their website needs an ADA check, and how to book a free audit"></textarea>
+      <div class="row">
+        <div><label for="ideaLen">Length</label><select id="ideaLen"><option value="15">15 seconds</option><option value="30" selected>30 seconds</option><option value="45">45 seconds</option><option value="60">1 minute</option><option value="90">90 seconds</option></select></div>
+        <div><label for="ideaLang">Language</label><select id="ideaLang"><option value="en">English</option><option value="pt">Português (Brasil)</option><option value="fr">Français</option><option value="es">Español (Latino)</option><option value="ht">Kreyòl ayisyen</option></select></div>
+      </div>
+      <div class="row" style="margin-top:8px"><button id="ideaBtn">✍️ Write my video</button></div>
+      <div id="ideaStatus" class="status"></div>
+    </details>
+    <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:800">📁 My projects &amp; templates</summary>
+      <div class="row" style="margin-top:6px">
+        <div style="flex:2"><label for="projName">Name this video</label><input id="projName" type="text" placeholder="Media Network ad, November"></div>
+        <div style="flex:0 0 auto"><label>&nbsp;</label><button id="projSave">💾 Save project</button></div>
+        <div style="flex:0 0 auto"><label>&nbsp;</label><button id="projTpl" class="ghost">🧩 Save as template</button></div>
+      </div>
+      <div id="projList" style="margin-top:8px"></div>
+    </details>
+  </div>
+
   <div class="card">
     <h2>1. Brand and size</h2>
     <div class="row">
@@ -77,6 +102,11 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
       <button id="makeScenes">✨ Make scenes</button>
       <div class="note">Each scene gets its time from its words. You can change anything below.</div>
     </div>
+    <div class="row" style="margin-top:8px">
+      <div><label for="trLang">🌍 Translate my scenes to</label><select id="trLang"><option value="pt">Português (Brasil)</option><option value="fr">Français</option><option value="es">Español (Latino)</option><option value="en">English</option><option value="ht">Kreyòl ayisyen</option></select></div>
+      <div style="flex:0 0 auto"><label>&nbsp;</label><button id="trBtn" class="ghost">🌍 Translate</button></div>
+    </div>
+    <div id="trStatus" class="status"></div>
   </div>
 
   <div class="card">
@@ -1119,6 +1149,110 @@ $("galDelAll").onclick = async () => {
 loadGallery();
 $("transDef").innerHTML = TRANS_OPTS; $("transDef").value = store.get("transDef") || "fade";
 $("transDef").onchange = () => { store.set("transDef", $("transDef").value); };
+
+// ---------- projects, templates, Claude's videos, idea to video, translate ----------
+function getProject(title){
+  return { v: 1, title: title || $("projName").value || "My video", brand: $("brand").value, format: $("format").value, script: $("script").value,
+    scenes: scenes.map(s => ({ text: s.text, dur: s.dur, avatarId: s.avatarId || "", action: s.action || "", cap: s.cap || "", trans: s.trans || "" })),
+    cta: $("cta").value, contact: $("contact").value, transDef: $("transDef").value, captions: $("captions").checked, karaoke: $("karaoke").checked, endCard: $("endCard").checked };
+}
+function resolveAvatar(x){ // "Folder name:3" (photo 3 in that folder), "selected", or a saved photo id
+  if (!x) return "";
+  if (avatars.some(a => a.id === x)) return x;
+  if (x === "selected") return selectedAvatar || "";
+  const m = /^(.*):(\d+)$/.exec(x);
+  if (m) { const list = avatars.filter(a => a.album === m[1]); const a = list[parseInt(m[2], 10) - 1]; if (a) return a.id; }
+  return selectedAvatar || "";
+}
+function loadProject(pr){
+  stop();
+  if (pr.brand) $("brand").value = pr.brand;
+  if (pr.format) $("format").value = pr.format;
+  $("script").value = pr.script || (pr.scenes || []).map(x => x.text).join("\n\n");
+  $("projName").value = pr.title || "";
+  if (pr.transDef) $("transDef").value = pr.transDef;
+  if (typeof pr.captions === "boolean") $("captions").checked = pr.captions;
+  if (typeof pr.karaoke === "boolean") $("karaoke").checked = pr.karaoke;
+  if (typeof pr.endCard === "boolean") $("endCard").checked = pr.endCard;
+  setBrandDefaults(true); if (pr.cta) $("cta").value = pr.cta; if (pr.contact) $("contact").value = pr.contact;
+  scenes = (pr.scenes || []).map(x => ({ text: x.text || "", dur: x.dur || autoDur(x.text || ""), media: null, avatarId: resolveAvatar(x.avatarId || x.avatar || "selected"),
+    action: x.action || "", cap: x.cap || "", trans: x.trans || "" }));
+  voice = null; info(); setSize(); renderScenes(); save(); drawAt(Math.min(1, total() / 2));
+  status(`Opened "${pr.title || "project"}". Next: add your voice (step 5), check your avatar in each scene, ▶ Play, then ⬇ Make my video.`);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+const projects = { all: () => store.get("projects") || [], set: (l) => store.set("projects", l) };
+function renderProjects(){
+  const box = $("projList"), list = projects.all();
+  const tpl = list.filter(x => x.template), mine = list.filter(x => !x.template);
+  const row = (x, label) => `<div class="scene" style="padding:8px"><div style="font-weight:800;font-size:13px">${label} ${x.title.replace(/</g, "&lt;")}</div>
+    <div class="mini">${(x.scenes || []).length} scenes · ${new Date(x.at || Date.now()).toLocaleDateString()}</div>
+    <div class="row" style="margin-top:6px"><button class="icon" data-open="${x.id}">📂 Open</button><button class="icon" data-dup="${x.id}">⧉ Copy</button><button class="icon" data-del="${x.id}">🗑️ Delete</button></div></div>`;
+  box.innerHTML = (mine.length ? mine.map(x => row(x, "🎬")).join("") : '<div class="note">No saved projects yet.</div>') +
+    (tpl.length ? '<div style="font-weight:800;margin:10px 0 4px">🧩 My templates</div>' + tpl.map(x => row(x, "🧩")).join("") : "");
+  box.querySelectorAll("[data-open]").forEach(b => b.onclick = () => { const x = projects.all().find(y => y.id === b.dataset.open); if (x) loadProject(x); });
+  box.querySelectorAll("[data-dup]").forEach(b => b.onclick = () => { const l = projects.all(), x = l.find(y => y.id === b.dataset.dup); if (!x) return;
+    l.unshift({ ...JSON.parse(JSON.stringify(x)), id: "pr-" + Date.now(), title: x.title + " (copy)", template: false, at: Date.now() }); projects.set(l); renderProjects(); });
+  box.querySelectorAll("[data-del]").forEach(b => b.onclick = () => {
+    if (!b.dataset.ok) { b.dataset.ok = "1"; b.textContent = "Press again"; setTimeout(() => { delete b.dataset.ok; b.textContent = "🗑️ Delete"; }, 5000); return; }
+    projects.set(projects.all().filter(y => y.id !== b.dataset.del)); renderProjects(); });
+}
+function saveProject(template){
+  if (!scenes.length) return status("Make your scenes first.");
+  const title = $("projName").value.trim() || (template ? "My template" : "My video");
+  const l = projects.all().filter(y => !(y.title === title && !!y.template === !!template));
+  l.unshift({ ...getProject(title), id: "pr-" + Date.now(), template: !!template, at: Date.now() });
+  projects.set(l.slice(0, 60)); renderProjects(); status(template ? `🧩 Saved "${title}" as a template.` : `💾 Saved "${title}" in My projects.`);
+}
+$("projSave").onclick = () => saveProject(false);
+$("projTpl").onclick = () => saveProject(true);
+// videos and templates Claude prepared (files in video-maker/projects/)
+async function loadClaudeList(){
+  const box = $("claudeList");
+  try {
+    const list = await (await fetch("projects/index.json?ts=" + Date.now())).json();
+    if (!list.length) { box.textContent = "Nothing here yet. Ask Claude to make you a video."; return; }
+    box.innerHTML = "";
+    list.forEach(x => {
+      const d = document.createElement("div"); d.className = "scene"; d.style.padding = "8px";
+      d.innerHTML = `<div style="font-weight:800;font-size:13px"></div><div class="mini"></div><div class="row" style="margin-top:6px"><button class="icon">📂 Open this video</button></div>`;
+      d.children[0].textContent = (x.template ? "🧩 " : "🎬 ") + x.title; d.children[1].textContent = x.desc || "";
+      d.querySelector("button").onclick = async () => { try { loadProject(await (await fetch("projects/" + x.file + "?ts=" + Date.now())).json()); } catch { status("That video couldn't be opened."); } };
+      box.appendChild(d);
+    });
+  } catch { box.textContent = "Couldn't load the list right now."; }
+}
+// idea to video (DeepSeek on the server)
+$("ideaBtn").onclick = async () => {
+  const idea = $("idea").value.trim(), st = (m) => { $("ideaStatus").textContent = m; };
+  if (!idea) return st("Write your idea first.");
+  $("ideaBtn").disabled = true; st("Writing your video… (about 15 seconds)");
+  try {
+    const j = await api({ action: "write_script", idea, seconds: $("ideaLen").value, language: $("ideaLang").value, brand: brand().name });
+    loadProject({ title: j.title || "New video", brand: $("brand").value, format: $("format").value, scenes: j.scenes.map(x => ({ text: x.text, action: x.action, avatar: "selected" })) });
+    st("✅ Done! Read each scene and fix anything you want before making the voice. Nothing is made until you say so.");
+  } catch (e) { st("⚠️ " + e.message); }
+  finally { $("ideaBtn").disabled = false; }
+};
+// translate all scenes (keeps the original as a saved project)
+$("trBtn").onclick = async () => {
+  const st = (m) => { $("trStatus").textContent = m; };
+  if (!scenes.length) return st("Make your scenes first.");
+  const lang = $("trLang").value, label = $("trLang").selectedOptions[0].textContent;
+  $("trBtn").disabled = true; st("Translating…");
+  try {
+    const orig = $("projName").value.trim() || "My video";
+    const l = projects.all(); l.unshift({ ...getProject(orig + " (original)"), id: "pr-" + Date.now(), at: Date.now() }); projects.set(l); renderProjects();
+    const j = await api({ action: "translate", texts: scenes.map(s => s.text), language: lang });
+    scenes.forEach((s, i) => { s.text = j.texts[i]; s.voiceBuf = null; });
+    $("script").value = scenes.map(s => s.text).join("\n\n"); $("projName").value = orig + " (" + label + ")";
+    if (["pt", "fr", "es", "en"].includes(lang)) $("ttsLang").value = lang;
+    renderScenes(); save(); drawAt(1);
+    st(`✅ Translated to ${label}. Your original is saved in My projects. Proofread it, then make the voice (your 🧬 clone can speak it).`);
+  } catch (e) { st("⚠️ " + e.message); }
+  finally { $("trBtn").disabled = false; }
+};
+renderProjects(); loadClaudeList();
 
 const saved = store.get("project");
 if (saved) {

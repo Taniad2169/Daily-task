@@ -1,0 +1,39 @@
+{
+ "v": 1,
+ "title": "Template: your own phone app (SBPA)",
+ "brand": "ws",
+ "format": "9:16",
+ "template": true,
+ "transDef": "fade",
+ "captions": true,
+ "karaoke": true,
+ "endCard": true,
+ "cta": "Your practice, one tap away",
+ "contact": "thewebswan.com · (510) 535-4763",
+ "scenes": [
+  {
+   "text": "What if your patients had your practice right on their phone?",
+   "action": "Holding up a phone, smiling",
+   "trans": "",
+   "avatar": "selected"
+  },
+  {
+   "text": "With an SBPA, your own small business phone app, they can.",
+   "action": "Walking, hand gestures",
+   "trans": "zoom",
+   "avatar": "selected"
+  },
+  {
+   "text": "Book, call, and find you in one tap.",
+   "action": "Tapping the phone screen, smiling",
+   "trans": "circle",
+   "avatar": "selected"
+  },
+  {
+   "text": "The WebSwan builds it for you.",
+   "action": "Confident smile at the camera",
+   "trans": "stars",
+   "avatar": "selected"
+  }
+ ]
+}

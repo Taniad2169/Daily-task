@@ -1,0 +1,39 @@
+{
+ "v": 1,
+ "title": "Template: ADA website tip for doctors",
+ "brand": "ds",
+ "format": "9:16",
+ "template": true,
+ "transDef": "fade",
+ "captions": true,
+ "karaoke": true,
+ "endCard": true,
+ "cta": "Book your complimentary website audit",
+ "contact": "webswandigitalsolutions.com",
+ "scenes": [
+  {
+   "text": "Doctors, is your website easy for everyone to use?",
+   "action": "Serious but friendly look at the camera",
+   "trans": "",
+   "avatar": "selected"
+  },
+  {
+   "text": "Accessibility issues can turn patients away and put your practice at risk.",
+   "action": "Sitting at a desk, concerned expression",
+   "trans": "fade",
+   "avatar": "selected"
+  },
+  {
+   "text": "We check your site for ADA, cookie consent and privacy form issues.",
+   "action": "Pointing to a laptop screen",
+   "trans": "wipe",
+   "avatar": "selected"
+  },
+  {
+   "text": "Book your complimentary website audit with WebSwan Digital Solutions.",
+   "action": "Smiling, open hand toward the camera",
+   "trans": "stars",
+   "avatar": "selected"
+  }
+ ]
+}

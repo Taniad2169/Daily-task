@@ -1,0 +1,51 @@
+{
+ "v": 1,
+ "title": "Meet Tania: The WebSwan family",
+ "brand": "ws",
+ "format": "9:16",
+ "template": false,
+ "transDef": "fade",
+ "captions": true,
+ "karaoke": true,
+ "endCard": true,
+ "cta": "Your success is our story to tell",
+ "contact": "thewebswan.com · (510) 535-4763",
+ "scenes": [
+  {
+   "text": "Hi, I'm Tania, founder of The WebSwan.",
+   "action": "Smiling at the camera in a bright modern office, a small wave",
+   "trans": "",
+   "avatar": "selected"
+  },
+  {
+   "text": "I help doctors and attorneys look great online, stay protected, and get found.",
+   "action": "Walking toward the camera with relaxed hand gestures",
+   "trans": "slide",
+   "avatar": "selected"
+  },
+  {
+   "text": "The WebSwan builds your website and your own phone app.",
+   "action": "Sitting at a desk, pointing to a laptop screen",
+   "trans": "circle",
+   "avatar": "selected"
+  },
+  {
+   "text": "WebSwan Digital Solutions checks your website for ADA and privacy risks.",
+   "action": "Leaning slightly forward, serious but warm expression",
+   "trans": "fade",
+   "avatar": "selected"
+  },
+  {
+   "text": "And WebSwan Media Network helps the right patients and clients find you.",
+   "action": "Smiling, open hand gesture toward the camera",
+   "trans": "stars",
+   "avatar": "selected"
+  },
+  {
+   "text": "Your success is our story to tell. Let's talk.",
+   "action": "Confident smile, nodding at the camera",
+   "trans": "flash",
+   "avatar": "selected"
+  }
+ ]
+}
