@@ -146,8 +146,14 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
       <option value="kling_photo">Kling Avatar (photo + my voice, ~6¢/second)</option>
       <option value="kling_clip">💰 Cheapest: Kling Lip Sync (my 2–10 s video clip + my voice, ~3¢)</option>
     </select>
-    <div class="row" style="margin-top:8px">
-      <div><label>&nbsp;</label><label class="btn ghost" style="margin:0;justify-content:center;color:var(--brand);border:1px solid var(--brand);background:transparent">📷 Choose my photo or clip<input id="talkFile" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime" hidden></label></div>
+    <label style="margin-top:10px">👤 My avatar</label>
+    <div class="row" style="align-items:center">
+      <img id="avatarImg" alt="My avatar photo" style="display:none;flex:0 0 96px;width:96px;height:96px;object-fit:cover;border-radius:12px;border:2px solid var(--brand)">
+      <div style="flex:1">
+        <label class="btn ghost" style="margin:0;justify-content:center;color:var(--brand);border:1px solid var(--brand);background:transparent">📷 Upload my avatar photo (or a 2–10 s clip)<input id="talkFile" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime" hidden></label>
+        <p class="note" style="margin:6px 0 0">Your photo is remembered on this computer, so next time it's already here. Best: clear, front-facing, good light, shoulders up (or full body for the Jimmy styles).</p>
+        <button id="avatarClear" class="icon" style="margin-top:6px;display:none">Remove my avatar</button>
+      </div>
     </div>
     <div id="actionBox"><label for="actionPrompt">What I'm doing (tell it exactly, it listens)</label>
       <input id="actionPrompt" type="text" placeholder="Walking through a bright modern office, smiling, then sitting at my desk and using hand gestures"></div>
@@ -595,15 +601,33 @@ function estimate(){ const e = ENG[$("engine").value]; return e.cost(voice ? voi
 function talkInfo(){
   const e = ENG[$("engine").value]; talkConfirm = false; $("talkBtn").textContent = "🗣️ Make me talk";
   $("actionBox").style.display = e.prompt ? "block" : "none"; $("lineBox").style.display = e.line ? "block" : "none";
-  const parts = [talkFile ? "📷 " + talkFile.name + (talkClipSecs ? ` (${talkClipSecs.toFixed(1)} s)` : "") : (e.needs === "video" ? "Choose a 2–10 second video of you." : "Choose a clear, front-facing photo of you.")];
+  const parts = [talkFile ? "📷 " + talkFile.name + (talkClipSecs ? ` (${talkClipSecs.toFixed(1)} s)` : "") : (e.needs === "video" ? "Choose a 2–10 second video of you." : "Upload your avatar photo.")];
   if (e.voice) parts.push(voice ? `Voice ${voice.buffer.duration.toFixed(1)} s` + (voice.buffer.duration > e.max ? ` ⚠️ must be under ${e.max} s for this style` : "") : "Add your voice in step 4.");
   parts.push(`About $${estimate().toFixed(2)}`);
   $("talkInfo").textContent = parts.join(" · ");
 }
 $("engine").onchange = talkInfo;
-$("talkFile").onchange = () => {
-  const f = $("talkFile").files[0]; if (!f) return;
-  talkFile = f; talkClipSecs = 0;
+function showAvatar(f){
+  const img = $("avatarImg");
+  if (f && f.type.startsWith("image")) { img.src = URL.createObjectURL(f); img.style.display = "block"; } else img.style.display = "none";
+  $("avatarClear").style.display = f ? "inline-flex" : "none";
+}
+async function saveAvatar(f){ // shrink to 1280 px JPEG and remember it on this computer
+  try {
+    const im = await createImageBitmap(f), sc = Math.min(1, 1280 / Math.max(im.width, im.height));
+    const c = document.createElement("canvas"); c.width = Math.round(im.width * sc); c.height = Math.round(im.height * sc);
+    c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+    const url = c.toDataURL("image/jpeg", 0.9); localStorage.setItem("wsvm-avatar", url);
+    const blob = await (await fetch(url)).blob(); return new File([blob], "my-avatar.jpg", { type: "image/jpeg" });
+  } catch { return f; }
+}
+(async () => { try { const url = localStorage.getItem("wsvm-avatar"); if (!url) return;
+  const blob = await (await fetch(url)).blob(); talkFile = new File([blob], "my-avatar.jpg", { type: "image/jpeg" }); showAvatar(talkFile); talkInfo(); } catch {} })();
+$("avatarClear").onclick = () => { try { localStorage.removeItem("wsvm-avatar"); } catch {} talkFile = null; showAvatar(null); talkInfo(); };
+$("talkFile").onchange = async () => {
+  let f = $("talkFile").files[0]; if (!f) return;
+  if (f.type.startsWith("image")) f = await saveAvatar(f);
+  talkFile = f; talkClipSecs = 0; showAvatar(f);
   if (f.type.startsWith("video")) { $("engine").value = "kling_clip"; const v = document.createElement("video"); v.preload = "metadata"; v.onloadedmetadata = () => { talkClipSecs = v.duration; talkInfo(); }; v.src = URL.createObjectURL(f); }
   else if ($("engine").value === "kling_clip") $("engine").value = "omnihuman";
   talkInfo();
