@@ -101,25 +101,60 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
       <button id="musicClear" class="icon">Remove</button>
     </div>
     <div id="musicInfo" class="note"></div>
-    <p class="note">Coming next: pick a Cartesia voice (Rachel, Jennifer, Brazilian Portuguese, French, Latino Spanish) instead of recording.</p>
+    <div class="row" style="margin-top:10px"><button id="signInBtn" class="ghost">Sign in with Google (for voices and lip sync)</button></div>
+    <div id="toolsInfo" class="note"></div>
+
+    <label style="margin-top:14px">🧬 My voice clone (Cartesia)</label>
+    <p class="note">Record 15–60 seconds of yourself talking naturally (no music), then save it as your voice. After that, Cartesia can read any script in your voice, even in Portuguese, French or Spanish.</p>
+    <div class="row">
+      <button id="cloneRecBtn" class="ghost">🎙️ Record for my clone</button>
+      <button id="cloneBtn">🧬 Save as my voice</button>
+    </div>
+    <div id="cloneInfo" class="note"></div>
+
+    <label style="margin-top:14px">🗣️ Read my script with a voice</label>
+    <div class="row">
+      <div><label for="ttsLang">Language</label>
+        <select id="ttsLang">
+          <option value="en">English</option>
+          <option value="pt">Português (Brasil)</option>
+          <option value="fr">Français</option>
+          <option value="es">Español (Latino)</option>
+          <option value="ht">Kreyòl ayisyen</option>
+        </select></div>
+      <div><label for="ttsVoice">Voice</label><select id="ttsVoice"><option value="">Sign in to load voices</option></select></div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button id="ttsBtn">🔊 Make my voiceover</button>
+    </div>
+    <div id="htBox" class="note" style="display:none;margin-top:8px">Cartesia doesn't speak Kreyòl yet. Two ways:
+      <b>1)</b> 🎙️ Record your own voice above (the most authentic), or
+      <b>2)</b> make a Kreyòl voice at <a href="https://magichour.ai/products/text-to-speech/haitian-creole" target="_blank" rel="noopener">Magic Hour (Haitian Creole)</a>, download it, then press 📁 Upload voice above.
+      <div class="row" style="margin-top:6px"><button id="copyScript" class="ghost">📋 Copy my script</button><a class="btn" href="https://magichour.ai/products/text-to-speech/haitian-creole" target="_blank" rel="noopener">Open Magic Hour</a></div></div>
+    <div id="ttsStatus" class="status"></div>
   </div>
 
   <div class="card">
-    <h2>5. 🗣️ Make me talk (lip sync)</h2>
-    <p class="note">Your photo or a short video of you + the voice from step 4 → a video where your lips move with your words. Pay per video, no subscription.</p>
-    <div class="row">
-      <div><label for="talkMode">Start from</label>
-        <select id="talkMode">
-          <option value="photo">My photo (about 6¢ per second of voice)</option>
-          <option value="clip">My video clip, 2–10 seconds (about 3¢ per video)</option>
-        </select></div>
-      <div><label>&nbsp;</label><label class="btn ghost" style="margin:0;justify-content:center;color:var(--brand);border:1px solid var(--brand);background:transparent">📷 Choose photo or clip<input id="talkFile" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime" hidden></label></div>
-    </div>
-    <div id="talkInfo" class="note" style="margin-top:6px"></div>
+    <h2>5. 🎬 Make me talk (lip sync)</h2>
+    <p class="note">Your photo or clip + your voice from step 4 → you talking on video. Pay per video, no subscription.</p>
+    <label for="engine">Pick the style</label>
+    <select id="engine">
+      <option value="omnihuman">⭐ Best with my voice: OmniHuman 1.5 (photo, gestures and expressions, ~16¢/second)</option>
+      <option value="veo_myvoice">🎥 Jimmy style + MY voice: Veo moves me (walk, sit, gestures), then my lips sync (voice up to 8 s, ~$0.83)</option>
+      <option value="veo">🎥 Jimmy style: Veo 3.1 (photo, walk, sit, gestures, Veo speaks my line, 8 s, ~$1.20)</option>
+      <option value="hedra">Hedra Character-3 (photo + my voice, ~5¢/second, needs Hedra API key)</option>
+      <option value="kling_photo">Kling Avatar (photo + my voice, ~6¢/second)</option>
+      <option value="kling_clip">💰 Cheapest: Kling Lip Sync (my 2–10 s video clip + my voice, ~3¢)</option>
+    </select>
     <div class="row" style="margin-top:8px">
-      <button id="signInBtn" class="ghost">Sign in with Google</button>
-      <button id="talkBtn">🗣️ Make me talk</button>
+      <div><label>&nbsp;</label><label class="btn ghost" style="margin:0;justify-content:center;color:var(--brand);border:1px solid var(--brand);background:transparent">📷 Choose my photo or clip<input id="talkFile" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/quicktime" hidden></label></div>
     </div>
+    <div id="actionBox"><label for="actionPrompt">What I'm doing (tell it exactly, it listens)</label>
+      <input id="actionPrompt" type="text" placeholder="Walking through a bright modern office, smiling, then sitting at my desk and using hand gestures"></div>
+    <div id="lineBox" style="display:none"><label for="talkLine">What I say (Veo speaks it, keep it under 8 seconds)</label>
+      <input id="talkLine" type="text" placeholder="Is your website ADA compliant? Book your free audit today."></div>
+    <div id="talkInfo" class="note" style="margin-top:6px"></div>
+    <div class="row" style="margin-top:8px"><button id="talkBtn">🗣️ Make me talk</button></div>
     <div id="talkStatus" class="status"></div>
     <div id="talkResult"></div>
   </div>
@@ -363,11 +398,14 @@ function syncVideos(t){
   const p = locate(t);
   scenes.forEach((s, i) => { if (s.media && s.media.type === "video") {
     const v = s.media.el;
-    if (i === p.i) { if (v.paused) { v.currentTime = 0; v.play().catch(() => {}); } }
+    if (i === p.i) { if (v.paused && !v._started) { v._started = true; v.currentTime = 0; v.play().catch(() => {}); } }
     else if (!v.paused) v.pause();
   }});
 }
+let _vidBus = null;
+function vidBus(){ if (!_vidBus) { _vidBus = audioCtx().createGain(); _vidBus.connect(audioCtx().destination); } return _vidBus; }
 function startAudio(dest){
+  if (dest && _vidBus) _vidBus.connect(dest);
   const a = audioCtx(), nodes = [];
   if (voice) { const s = a.createBufferSource(); s.buffer = voice.buffer; s.connect(a.destination); if (dest) s.connect(dest); s.start(); nodes.push(s); }
   if (music) {
@@ -394,7 +432,7 @@ async function play(dest, onEnd){
 function stop(){
   if (!playing) return;
   cancelAnimationFrame(playing.raf); playing.nodes.forEach(n => { try { n.stop(); } catch {} });
-  scenes.forEach(s => s.media && s.media.type === "video" && s.media.el.pause());
+  scenes.forEach(s => { if (s.media && s.media.type === "video") { s.media.el.pause(); s.media.el._started = false; } });
   playing = null;
 }
 function pickMime(){
@@ -455,33 +493,36 @@ $("brand").onchange = () => { setBrandDefaults(true); save(); drawAt(0); };
 ["cta", "contact", "script"].forEach(id => $(id).addEventListener("input", save));
 ["karaoke", "endCard", "fitVoice"].forEach(id => $(id).addEventListener("change", () => drawAt(0)));
 
-// ---------- Make me talk (lip sync through Netlify + fal.ai) ----------
+// ---------- Voices + Make me talk (through Netlify: Cartesia, fal.ai, Hedra) ----------
 const LIPSYNC_API = "https://webswan-billing.netlify.app/.netlify/functions/lipsync";
-let talkFile = null, talkClipSecs = 0, talkConfirm = false;
+const ENG = {
+  omnihuman:   { needs: "image", voice: true,  max: 60, prompt: true,  cost: (v) => Math.max(1, v) * 0.16 },
+  veo_myvoice: { needs: "image", voice: true,  max: 8,  prompt: true,  cost: () => 0.83 },
+  veo:         { needs: "image", voice: false, max: 0,  prompt: true,  line: true, cost: () => 1.20 },
+  hedra:       { needs: "image", voice: true,  max: 60, prompt: true,  cost: (v) => Math.max(1, v) * 0.05 },
+  kling_photo: { needs: "image", voice: true,  max: 60, prompt: true,  cost: (v) => Math.max(1, v) * 0.0562 },
+  kling_clip:  { needs: "video", voice: true,  max: 60, prompt: false, cost: (v, c) => Math.ceil(Math.max(2, c || 10) / 5) * 0.014 }
+};
+let talkFile = null, talkClipSecs = 0, talkConfirm = false, cloneBuf = null, cloneMic = null, myVoices = [];
 const tStatus = (m) => { $("talkStatus").textContent = m || ""; };
-function wavFromBuffer(buf){ // mono 24 kHz 16-bit WAV, small enough for upload (60 s ≈ 2.9 MB)
-  const rate = 24000, len = Math.ceil(buf.duration * rate), out = new Int16Array(len), ch = buf.numberOfChannels, src = [];
+const vStatus = (m) => { $("ttsStatus").textContent = m || ""; };
+function wavFromBuffer(buf, maxSec){ // mono 24 kHz 16-bit WAV
+  const rate = 24000, dur = Math.min(buf.duration, maxSec || 600), len = Math.ceil(dur * rate), out = new Int16Array(len), ch = buf.numberOfChannels, src = [];
   for (let c = 0; c < ch; c++) src.push(buf.getChannelData(c));
-  for (let i = 0; i < len; i++) { const p = i * buf.sampleRate / rate, k = Math.min(buf.length - 1, Math.floor(p)); let v = 0; for (let c = 0; c < ch; c++) v += src[c][k]; v /= ch; out[i] = Math.max(-1, Math.min(1, v)) * 0x7fff; }
-  const ab = new ArrayBuffer(44 + len * 2), dv = new DataView(ab), w = (o, s) => [...s].forEach((c, i) => dv.setUint8(o + i, c.charCodeAt(0)));
+  for (let i = 0; i < len; i++) { const k = Math.min(buf.length - 1, Math.floor(i * buf.sampleRate / rate)); let v = 0; for (let c = 0; c < ch; c++) v += src[c][k]; v /= ch; out[i] = Math.max(-1, Math.min(1, v)) * 0x7fff; }
+  const ab = new ArrayBuffer(44 + len * 2), dv = new DataView(ab), w = (o, t) => [...t].forEach((c, i) => dv.setUint8(o + i, c.charCodeAt(0)));
   w(0, "RIFF"); dv.setUint32(4, 36 + len * 2, true); w(8, "WAVE"); w(12, "fmt "); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
   dv.setUint32(24, rate, true); dv.setUint32(28, rate * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true); w(36, "data"); dv.setUint32(40, len * 2, true);
   new Int16Array(ab, 44).set(out); return new Blob([ab], { type: "audio/wav" });
 }
-function estimate(){
-  if (!voice) return null;
-  return $("talkMode").value === "clip" ? Math.ceil(Math.max(2, talkClipSecs || 10) / 5) * 0.014 : Math.max(1, voice.buffer.duration) * 0.0562;
-}
-function talkInfo(){
-  const e = estimate(); talkConfirm = false; $("talkBtn").textContent = "🗣️ Make me talk";
-  $("talkInfo").textContent = (talkFile ? "📷 " + talkFile.name + (talkClipSecs ? ` (${talkClipSecs.toFixed(1)} s)` : "") : "No photo or clip yet.") +
-    (voice ? ` · Voice ${voice.buffer.duration.toFixed(1)} s` : " · Record or upload your voice in step 4.") + (e != null && talkFile ? ` · Estimated cost about $${e.toFixed(2)}` : "");
-}
+const blobToB64 = (blob) => new Promise((res) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.readAsDataURL(blob); });
 async function api(body){
   const token = window.vmToken ? await window.vmToken() : null;
   if (!token) throw new Error("Please sign in with Google first.");
-  const r = await fetch(LIPSYNC_API, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: JSON.stringify(body) });
-  if (r.status === 404) throw new Error("Make me talk goes live after the Netlify deploy on Nov 5.");
+  let r;
+  try { r = await fetch(LIPSYNC_API, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: JSON.stringify(body) }); }
+  catch { throw new Error("Can't reach the Video Maker server yet. It goes live after the Netlify deploy on Nov 5."); }
+  if (r.status === 404) throw new Error("This goes live after the Netlify deploy on Nov 5.");
   const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || "Something went wrong (" + r.status + ").");
   return j;
 }
@@ -491,41 +532,112 @@ async function upload(blob, name){
   if (!r.ok) throw new Error("Upload failed (" + r.status + ").");
   return file_url;
 }
-$("talkMode").onchange = talkInfo;
+
+// ----- voices -----
+async function loadVoices(){
+  const lang = $("ttsLang").value; $("htBox").style.display = lang === "ht" ? "block" : "none";
+  $("ttsBtn").disabled = lang === "ht";
+  if (lang === "ht") { $("ttsVoice").innerHTML = '<option value="">Use Magic Hour or your own recording</option>'; return; }
+  try {
+    const j = await api({ action: "voices_list", language: lang }); myVoices = j.myVoices || [];
+    $("ttsVoice").innerHTML = myVoices.map(v => `<option value="${v.id}">🧬 ${v.name}</option>`).join("") +
+      (j.voices || []).map(v => `<option value="${v.id}">${v.name}</option>`).join("") || '<option value="">No voices found</option>';
+  } catch (e) { $("ttsVoice").innerHTML = '<option value="">' + e.message + '</option>'; }
+}
+window.vmOnSignIn = async () => {
+  loadVoices();
+  try { const s = await api({ action: "status_check" });
+    $("toolsInfo").textContent = `Connected: voices ${s.cartesia ? "✅" : "❌"} · lip sync ${s.fal ? "✅" : "❌ (add FAL_KEY)"} · Hedra ${s.hedra ? "✅" : "➖"} · spent today $${s.spentToday} of $${s.dailyCap}`;
+  } catch (e) { $("toolsInfo").textContent = e.message; }
+};
+$("ttsLang").onchange = loadVoices;
+$("copyScript").onclick = () => { try { navigator.clipboard.writeText($("script").value); vStatus("Script copied. Paste it into Magic Hour."); } catch { vStatus("Select your script and copy it."); } };
+$("ttsBtn").onclick = async () => {
+  const text = scenes.length ? scenes.map(s => s.text).filter(Boolean).join(" ") : $("script").value.trim();
+  if (!text) return vStatus("Write your script first.");
+  if (!$("ttsVoice").value) return vStatus("Pick a voice (sign in first).");
+  $("ttsBtn").disabled = true; vStatus("Making your voiceover…");
+  try {
+    const j = await api({ action: "tts", text, voice_id: $("ttsVoice").value, language: $("ttsLang").value });
+    const bytes = Uint8Array.from(atob(j.wav_base64), c => c.charCodeAt(0));
+    voice = { buffer: await audioCtx().decodeAudioData(bytes.buffer), name: $("ttsVoice").selectedOptions[0].textContent };
+    info(); vStatus("✅ Voiceover ready. Press Play to hear it with your scenes.");
+  } catch (e) { vStatus("⚠️ " + e.message); }
+  finally { $("ttsBtn").disabled = $("ttsLang").value === "ht"; }
+};
+$("cloneRecBtn").onclick = async () => {
+  if (cloneMic) { cloneMic.stop(); return; }
+  try {
+    const st = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }), rec = new MediaRecorder(st), ch = [];
+    rec.ondataavailable = (e) => ch.push(e.data);
+    rec.onstop = async () => {
+      st.getTracks().forEach(t => t.stop()); cloneMic = null; $("cloneRecBtn").textContent = "🎙️ Record for my clone"; $("cloneRecBtn").classList.remove("rec");
+      try { cloneBuf = await audioCtx().decodeAudioData(await new Blob(ch).arrayBuffer()); $("cloneInfo").textContent = `Recorded ${cloneBuf.duration.toFixed(0)} seconds.` + (cloneBuf.duration < 15 ? " Try for at least 15 seconds." : " Press 🧬 Save as my voice."); }
+      catch { $("cloneInfo").textContent = "The recording couldn't be read. Try again."; }
+    };
+    rec.start(); cloneMic = rec; $("cloneRecBtn").textContent = "⏹ Stop"; $("cloneRecBtn").classList.add("rec");
+    $("cloneInfo").textContent = "Recording… talk naturally, like you're explaining your services to a client.";
+  } catch { $("cloneInfo").textContent = "Microphone access was blocked. Allow it in the address bar and try again."; }
+};
+$("cloneBtn").onclick = async () => {
+  if (!cloneBuf) return ($("cloneInfo").textContent = "Record yourself first.");
+  if (cloneBuf.duration < 10) return ($("cloneInfo").textContent = "Please record at least 10 seconds.");
+  $("cloneBtn").disabled = true; $("cloneInfo").textContent = "Saving your voice…";
+  try {
+    const j = await api({ action: "voice_clone", name: "Tania (my voice)", language: "en", wav_base64: await blobToB64(wavFromBuffer(cloneBuf, 60)) });
+    $("cloneInfo").textContent = "✅ Your voice is saved. It's at the top of the Voice list (🧬)."; await loadVoices();
+  } catch (e) { $("cloneInfo").textContent = "⚠️ " + e.message; }
+  finally { $("cloneBtn").disabled = false; }
+};
+
+// ----- make me talk -----
+function estimate(){ const e = ENG[$("engine").value]; return e.cost(voice ? voice.buffer.duration : 8, talkClipSecs); }
+function talkInfo(){
+  const e = ENG[$("engine").value]; talkConfirm = false; $("talkBtn").textContent = "🗣️ Make me talk";
+  $("actionBox").style.display = e.prompt ? "block" : "none"; $("lineBox").style.display = e.line ? "block" : "none";
+  const parts = [talkFile ? "📷 " + talkFile.name + (talkClipSecs ? ` (${talkClipSecs.toFixed(1)} s)` : "") : (e.needs === "video" ? "Choose a 2–10 second video of you." : "Choose a clear, front-facing photo of you.")];
+  if (e.voice) parts.push(voice ? `Voice ${voice.buffer.duration.toFixed(1)} s` + (voice.buffer.duration > e.max ? ` ⚠️ must be under ${e.max} s for this style` : "") : "Add your voice in step 4.");
+  parts.push(`About $${estimate().toFixed(2)}`);
+  $("talkInfo").textContent = parts.join(" · ");
+}
+$("engine").onchange = talkInfo;
 $("talkFile").onchange = () => {
   const f = $("talkFile").files[0]; if (!f) return;
-  const isVid = f.type.startsWith("video"); $("talkMode").value = isVid ? "clip" : "photo";
   talkFile = f; talkClipSecs = 0;
-  if (isVid) { const v = document.createElement("video"); v.preload = "metadata"; v.onloadedmetadata = () => { talkClipSecs = v.duration; talkInfo(); if (v.duration < 2 || v.duration > 10) tStatus("Your clip must be 2 to 10 seconds. Trim it on your phone and choose it again."); }; v.src = URL.createObjectURL(f); }
+  if (f.type.startsWith("video")) { $("engine").value = "kling_clip"; const v = document.createElement("video"); v.preload = "metadata"; v.onloadedmetadata = () => { talkClipSecs = v.duration; talkInfo(); }; v.src = URL.createObjectURL(f); }
+  else if ($("engine").value === "kling_clip") $("engine").value = "omnihuman";
   talkInfo();
 };
 $("talkBtn").onclick = async () => {
+  const engine = $("engine").value, e = ENG[engine];
   if (!talkFile) return tStatus("Choose your photo or clip first.");
-  if (!voice) return tStatus("Record or upload your voice in step 4 first.");
-  if (voice.buffer.duration > 60) return tStatus("Your voice must be 60 seconds or less.");
-  const mode = $("talkMode").value;
-  if (mode === "clip" && (talkClipSecs < 2 || talkClipSecs > 10)) return tStatus("Your clip must be 2 to 10 seconds.");
-  if ((mode === "clip") !== talkFile.type.startsWith("video")) return tStatus(mode === "clip" ? "Choose a video clip for this option." : "Choose a photo for this option.");
+  if ((e.needs === "video") !== talkFile.type.startsWith("video")) return tStatus(e.needs === "video" ? "This style needs a video clip." : "This style needs a photo.");
+  if (e.needs === "video" && (talkClipSecs < 2 || talkClipSecs > 10)) return tStatus("Your clip must be 2 to 10 seconds.");
+  if (e.voice && !voice) return tStatus("Add your voice in step 4 first (record, upload, or make a voiceover).");
+  if (e.voice && voice.buffer.duration > e.max) return tStatus(`For this style your voice must be under ${e.max} seconds. Split it into shorter scenes.`);
+  if (e.line && !$("talkLine").value.trim()) return tStatus("Write what you say.");
   if (!talkConfirm) { talkConfirm = true; $("talkBtn").textContent = `✅ Yes, make it (about $${estimate().toFixed(2)})`; tStatus("Press again to confirm."); return; }
   talkConfirm = false; $("talkBtn").disabled = true; $("talkResult").innerHTML = "";
   try {
-    tStatus("Uploading your " + (mode === "clip" ? "clip" : "photo") + " and voice…");
+    tStatus("Uploading…");
     const mediaUrl = await upload(talkFile, talkFile.name);
-    const audioUrl = await upload(wavFromBuffer(voice.buffer), "voice.wav");
-    const job = await api({ action: "submit", mode, seconds: voice.buffer.duration, clip_seconds: talkClipSecs, audio_url: audioUrl, [mode === "clip" ? "video_url" : "image_url"]: mediaUrl });
-    tStatus(`Making your talking video (about $${job.estimate})… this usually takes a few minutes. You can keep working.`);
-    for (let k = 0; k < 120; k++) {
+    const audioUrl = e.voice ? await upload(wavFromBuffer(voice.buffer), "voice.wav") : "";
+    const job = await api({ action: "submit", engine, seconds: voice ? voice.buffer.duration : 0, clip_seconds: talkClipSecs, audio_url: audioUrl,
+      action_prompt: $("actionPrompt").value, line: $("talkLine").value, aspect: $("format").value,
+      [e.needs === "video" ? "video_url" : "image_url"]: mediaUrl });
+    tStatus(`Making your video (about $${job.estimate})… usually a few minutes. You can keep working.`);
+    for (let k = 0; k < 150; k++) {
       await new Promise(r => setTimeout(r, 6000));
       const s = await api({ action: "check", request_id: job.request_id });
       if (s.status === "COMPLETED") { showTalk(s.video_url); return; }
-      if (s.status === "FAILED") throw new Error(s.error || "The video didn't come out. Try a clearer, front-facing photo.");
-      tStatus("Still working… " + (s.position != null ? "place in line: " + s.position : s.status.toLowerCase().replace("_", " ")));
+      if (s.status === "FAILED") throw new Error(s.error || "It didn't come out. Try a clearer, front-facing photo.");
+      tStatus("Still working… " + (s.step ? s.step + " · " : "") + (s.position != null ? "place in line: " + s.position : String(s.status || "").toLowerCase().replace("_", " ")));
     }
     throw new Error("It's taking too long. Check again in a few minutes.");
-  } catch (e) { tStatus("⚠️ " + e.message); }
+  } catch (err) { tStatus("⚠️ " + err.message); }
   finally { $("talkBtn").disabled = false; $("talkBtn").textContent = "🗣️ Make me talk"; }
 };
-async function showTalk(url){
+function showTalk(url){
   tStatus("✅ Your talking video is ready!");
   const box = $("talkResult");
   box.innerHTML = `<video controls playsinline style="width:100%;max-height:360px;border-radius:10px;background:#000;margin-top:8px"></video>
@@ -535,7 +647,12 @@ async function showTalk(url){
     try {
       const blob = await (await fetch(url)).blob(), f = new File([blob], "talking-video.mp4", { type: "video/mp4" });
       const s = { text: "", dur: 5, media: null, lock: true }; scenes.unshift(s);
-      setMedia(s, f, () => { s.dur = Math.round((s.media.el.duration || 5) * 10) / 10; s.media.el.muted = true; renderScenes(); drawAt(1); status("Talking video added as Scene 1. Your voice from step 4 plays with it."); });
+      setMedia(s, f, () => {
+        s.dur = Math.round((s.media.el.duration || 5) * 10) / 10; s.ownAudio = true;
+        const v = s.media.el; v.muted = false; v.loop = false; audioCtx().createMediaElementSource(v).connect(vidBus());
+        voice = null; info(); renderScenes(); drawAt(1);
+        status("Talking video added as Scene 1, with its own sound (your voice is inside it now).");
+      });
     } catch { tStatus("Couldn't add it here. Download it, then add it to a scene with 🖼️ Photo or video."); }
   };
 }
@@ -560,7 +677,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from
 const app = initializeApp({ apiKey: 'AIzaSyDEbrLgE5Bl5bA5znP0R7UL_Lqi_2uERs0', authDomain: 'webswan-voice-studio.firebaseapp.com', projectId: 'webswan-voice-studio', appId: '1:135333947873:web:4bd432e3bd6f1779ad8aa0' });
 const auth = getAuth(app); let user = null;
 const btn = document.getElementById('signInBtn');
-onAuthStateChanged(auth, (u) => { user = u; btn.textContent = u ? '✅ ' + u.email : 'Sign in with Google'; });
+onAuthStateChanged(auth, (u) => { user = u; btn.textContent = u ? '✅ ' + u.email : 'Sign in with Google (for voices and lip sync)'; if (u && window.vmOnSignIn) window.vmOnSignIn(); });
 btn.onclick = async () => { if (user) return; try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch (e) { document.getElementById('talkStatus').textContent = 'Sign-in was cancelled or blocked.'; } };
 window.vmToken = async () => (user ? user.getIdToken() : null);
 </script>
