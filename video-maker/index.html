@@ -277,7 +277,7 @@ function makeScenes(){
   if (!raw) { status("Write your script first."); return; }
   let parts = raw.split(/\n\s*\n/).map(s => s.replace(/\s+/g, " ").trim()).filter(Boolean);
   if (parts.length === 1) parts = (raw.match(/[^.!?]+[.!?]*/g) || [raw]).map(s => s.trim()).filter(Boolean);
-  scenes = parts.map(t => ({ text: t, dur: autoDur(t), media: null }));
+  scenes = parts.map(t => ({ text: t, dur: autoDur(t), media: null, avatarId: (typeof selectedAvatar !== "undefined" && selectedAvatar) || "" }));
   renderScenes(); save(); drawAt(durations()[0] * 0.9); status(scenes.length + " scenes ready. Press Play to preview.");
 }
 function renderScenes(){
@@ -395,10 +395,12 @@ function roundRect(x, y, w, h, r){ ctx.beginPath(); ctx.moveTo(x+r, y); ctx.arcT
 
 function drawScene(i, local, dur, now){
   const W = cv.width, H = cv.height, s = scenes[i], b = brand();
-  const hasMedia = !!(s.media);
+  const av = !s.media && s.avatarId ? avatars.find(x => x.id === s.avatarId) : null;
+  const bgEl = s.media ? s.media.el : (av && av.img && av.img.complete ? av.img : null);
+  const hasMedia = !!bgEl;
   if (hasMedia) {
     ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
-    cover(s.media.el, W, H, s.media.type === "image" ? 1 + 0.08 * (local / dur) : 1);
+    cover(bgEl, W, H, !s.media || s.media.type === "image" ? 1 + 0.08 * (local / dur) : 1);
     const g = ctx.createLinearGradient(0, H*0.45, 0, H); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,.65)");
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   } else gradientBg(now);
@@ -517,21 +519,28 @@ function pickMime(){
   return opts.find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || "";
 }
 function exportVideo(){
-  if (!scenes.length) { status("Make your scenes first."); return; }
-  const mime = pickMime(); if (!mime) { status("This browser can't record video. Please use Chrome."); return; }
-  const a = audioCtx(), dest = a.createMediaStreamDestination();
-  const stream = new MediaStream([...cv.captureStream(30).getVideoTracks(), ...dest.stream.getAudioTracks()]);
-  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8_000_000 }), chunks = [];
-  rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
-  rec.onstop = () => {
-    const blob = new Blob(chunks, { type: mime.split(";")[0] }), ext = mime.includes("mp4") ? "mp4" : "webm";
-    const name = (brand().name + " " + new Date().toISOString().slice(0,10)).replace(/\s+/g, "-") + "." + ext;
-    const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = name; link.click();
-    $("exportBtn").disabled = false; status("✅ Done! " + name + " is in your Downloads." + (ext === "webm" ? " (WebM: most apps accept it; if one doesn't, tell Claude.)" : ""));
-  };
-  $("exportBtn").disabled = true; status("🎬 Making your video… " + Math.ceil(total()) + " seconds. Keep this tab open.");
-  rec.start(250);
-  play(dest, () => setTimeout(() => rec.stop(), 300));
+  if (!scenes.length) { status("Make your scenes first (step 2)."); return; }
+  const mime = pickMime(); if (!mime) { status("This browser can't record video. Please use Google Chrome."); return; }
+  let rec, chunks = [];
+  try {
+    const a = audioCtx(), dest = a.createMediaStreamDestination();
+    const stream = new MediaStream([...cv.captureStream(30).getVideoTracks(), ...dest.stream.getAudioTracks()]);
+    rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8_000_000 });
+    rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+    rec.onerror = (e) => { $("exportBtn").disabled = false; status("⚠️ Recording stopped: " + (e.error && e.error.message || "unknown error") + ". Try again with this tab in front."); };
+    rec.onstop = () => {
+      $("exportBtn").disabled = false;
+      if (!chunks.length) { status("⚠️ Nothing was recorded. Keep this tab in front while it records, then try again."); return; }
+      const blob = new Blob(chunks, { type: mime.split(";")[0] }), ext = mime.includes("mp4") ? "mp4" : "webm";
+      const name = (brand().name + " " + new Date().toISOString().slice(0,10)).replace(/\s+/g, "-") + "." + ext, url = URL.createObjectURL(blob);
+      const link = document.createElement("a"); link.href = url; link.download = name; document.body.appendChild(link); link.click(); link.remove();
+      $("status").innerHTML = `✅ Your video is ready (${(blob.size / 1048576).toFixed(1)} MB). If it didn't download by itself, <a class="btn" style="margin-top:6px" href="${url}" download="${name}">⬇ Download my video</a>` +
+        (ext === "webm" ? '<br><span class="note">WebM file: most apps accept it; if one doesn\'t, tell Claude.</span>' : "");
+    };
+    $("exportBtn").disabled = true; status("🎬 Making your video… about " + Math.ceil(total()) + " seconds. Keep this tab in front until it finishes.");
+    rec.start(250);
+    play(dest, () => setTimeout(() => { try { rec.stop(); } catch {} }, 300)).then(ok => { if (ok === false) { try { rec.stop(); } catch {} } });
+  } catch (e) { $("exportBtn").disabled = false; status("⚠️ Couldn't start recording: " + e.message); }
 }
 
 // ---------- audio inputs ----------
@@ -735,6 +744,7 @@ const idb = (() => {
 const albumNames = () => { const extra = store.get("albums") || []; return [...new Set(["My photos", ...extra, ...avatars.map(x => x.album)])]; };
 const albumIndex = (x) => avatars.filter(y => y.album === x.album).indexOf(x) + 1;
 let selectedAvatar = store.get("selectedAvatar") || "";
+function withImg(x){ x.img = new Image(); x.img.onload = () => { if (!playing) drawAt(0); }; x.img.src = x.url; return x; }
 async function shrink(f){
   const im = await createImageBitmap(f), sc = Math.min(1, 1280 / Math.max(im.width, im.height));
   const c = document.createElement("canvas"); c.width = Math.round(im.width * sc); c.height = Math.round(im.height * sc);
@@ -746,7 +756,7 @@ async function loadAlbum(){
     const old = localStorage.getItem("wsvm-avatar"); // move the single avatar from before into the album
     if (old) { const blob = await (await fetch(old)).blob(); await idb.put({ id: "av-" + Date.now(), album: "My photos", blob, at: Date.now() }); localStorage.removeItem("wsvm-avatar"); }
   } catch {}
-  try { avatars = ((await idb.all()) || []).sort((a, b) => a.at - b.at).map(x => ({ ...x, url: URL.createObjectURL(x.blob) })); }
+  try { avatars = ((await idb.all()) || []).sort((a, b) => a.at - b.at).map(x => withImg({ ...x, url: URL.createObjectURL(x.blob) })); }
   catch { avatars = []; $("albumInfo").textContent = "This browser can't save photos (private window?). They'll work until you close the page."; }
   if (!avatars.some(x => x.id === selectedAvatar)) selectedAvatar = (avatars[0] || {}).id || "";
   renderAlbum(); renderScenes(); pickAvatar(selectedAvatar);
@@ -784,7 +794,7 @@ $("albumFiles").onchange = async () => {
   $("albumInfo").textContent = "Saving " + files.length + " photo(s)…";
   for (const f of files) {
     try { const blob = await shrink(f), x = { id: "av-" + Date.now() + "-" + Math.random().toString(36).slice(2, 7), album, blob, at: Date.now() };
-      try { await idb.put(x); } catch {} avatars.push({ ...x, url: URL.createObjectURL(blob) }); last = x.id; } catch {}
+      try { await idb.put(x); } catch {} avatars.push(withImg({ ...x, url: URL.createObjectURL(blob) })); last = x.id; } catch {}
   }
   $("albumFiles").value = ""; if (last) pickAvatar(last); renderAlbum(); renderScenes();
 };
