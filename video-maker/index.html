@@ -257,6 +257,7 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
       <button id="playBtn">▶ Play</button>
       <button id="stopBtn" class="ghost">■ Stop</button>
       <button id="exportBtn" class="red">⬇ Make my video</button>
+      <button id="newVideoBtn" class="icon">🧹 Clear and start a new video</button>
     </div>
     <div id="status" class="status"></div>
     <p class="note">Making the video plays it once in real time, so keep this tab in front until it finishes. It goes into 🎞️ My videos below. Nothing downloads until you press ⬇ Download.</p>
@@ -619,6 +620,7 @@ function exportVideo(){
       const name = (brand().name + " " + new Date().toISOString().slice(0,10)).replace(/\s+/g, "-") + "." + ext, url = URL.createObjectURL(blob);
       URL.revokeObjectURL(url);
       saveVideo({ id: "vid-" + Date.now(), name, ext, blob, size: blob.size, at: Date.now(), secs: Math.round(total()) });
+      drawAt(0);
     };
     $("exportBtn").disabled = true; status("🎬 Making your video… about " + Math.ceil(total()) + " seconds. Keep this tab in front until it finishes.");
     rec.start(250);
@@ -690,6 +692,13 @@ $("clipFiles").onchange = async (e) => {
 $("playBtn").onclick = async () => { if (await play()) status("Playing preview…"); };
 $("stopBtn").onclick = () => { stop(); status(""); };
 $("exportBtn").onclick = exportVideo;
+$("newVideoBtn").onclick = () => {
+  const b = $("newVideoBtn");
+  if (!b.dataset.ok) { b.dataset.ok = "1"; b.textContent = "Press again: clears the preview, script, scenes and voice (My videos stay)"; setTimeout(() => { delete b.dataset.ok; b.textContent = "🧹 Clear and start a new video"; }, 6000); return; }
+  delete b.dataset.ok; b.textContent = "🧹 Clear and start a new video";
+  stop(); scenes = []; voice = null; $("script").value = ""; $("talkResult").innerHTML = ""; tStatus(""); info(); renderScenes(); save(); drawAt(0);
+  status("Cleared. Write a new script to start your next video.");
+};
 $("format").onchange = () => { setSize(); save(); };
 $("brand").onchange = () => { setBrandDefaults(true); save(); drawAt(0); };
 ["cta", "contact", "script"].forEach(id => $(id).addEventListener("input", save));
