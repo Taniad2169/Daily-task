@@ -304,6 +304,10 @@ function renderScenes(){
         <button class="icon" data-a="srec">🎙️ Record this scene</button>
         <button class="icon" data-a="stalk" style="border-color:var(--brand);color:var(--brand)">🗣️ Make this scene talk</button>
       </div>
+      <div class="row jimmy" style="margin-top:6px;display:none;align-items:end">
+        <div><label>🔈 This video's own sound</label><select class="vsnd"><option value="off">Off (use my new voice)</option><option value="on">On (keep its sound)</option></select></div>
+        <div><label>&nbsp;</label><button class="icon" data-a="fixlips" style="border-color:var(--brand);color:var(--brand)">👄 Fix the lips to my new words (~3¢)</button></div>
+      </div>
       <div class="mini"></div><div class="mini svinfo"></div>`;
     const ta = d.querySelector("textarea"), num = d.querySelector("input[type=number]"), fi = d.querySelector("input[type=file]"), mini = d.querySelector(".mini");
     ta.value = s.text; num.value = s.dur;
@@ -314,11 +318,18 @@ function renderScenes(){
     const showTh = () => { const x = avatars.find(y => y.id === av.value); th.style.display = x ? "block" : "none"; if (x) th.src = x.url; };
     showTh(); av.onchange = () => { s.avatarId = av.value; showTh(); save(); };
     act.value = s.action || ""; act.oninput = () => { s.action = act.value; save(); };
+    const jm = d.querySelector(".jimmy"), vsnd = d.querySelector(".vsnd");
+    if (s.media && s.media.type === "video" && !s.ownAudio) {
+      jm.style.display = "flex"; vsnd.value = s.vidSound ? "on" : "off";
+      vsnd.onchange = () => { s.vidSound = vsnd.value === "on"; const v = s.media.el;
+        if (s.vidSound && !v._wired) { audioCtx().createMediaElementSource(v).connect(vidBus()); v._wired = true; }
+        v.muted = !s.vidSound; };
+    }
     const cap = d.querySelector(".cap"); cap.value = s.cap || ""; cap.onchange = () => { s.cap = cap.value; save(); drawAt(sceneStart(i) + 0.8); };
     svinfo.textContent = s.voiceBuf ? `🔊 Scene voice ${s.voiceBuf.duration.toFixed(1)} s` : "";
     ta.oninput = () => { s.text = ta.value; save(); drawAt(sceneStart(i) + 0.8); };
     num.oninput = () => { s.dur = Math.max(1, parseFloat(num.value) || 1); };
-    fi.onchange = () => { const f = fi.files[0]; if (f) setMedia(s, f, () => { mini.textContent = "Background: " + f.name; drawAt(sceneStart(i) + 0.8); }); };
+    fi.onchange = () => { const f = fi.files[0]; if (f) { s.ownAudio = false; s.lock = false; setMedia(s, f, () => { if (s.media.type === "video" && s.media.el.duration) s.dur = Math.round(s.media.el.duration * 10) / 10; renderScenes(); drawAt(sceneStart(i) + 0.8); }); } };
     d.querySelectorAll("button[data-a]").forEach(b => b.onclick = () => {
       const a = b.dataset.a;
       if (a === "del") scenes.splice(i, 1);
@@ -328,6 +339,7 @@ function renderScenes(){
       if (a === "svoice") return sceneVoice(s, svinfo);
       if (a === "srec") return sceneRecord(s, b, svinfo);
       if (a === "stalk") return sceneTalk(s, i, svinfo);
+      if (a === "fixlips") return fixLips(s, i, svinfo);
       renderScenes(); save(); drawAt(0);
     });
     box.appendChild(d);
@@ -337,7 +349,7 @@ function setMedia(s, file, done){
   const url = URL.createObjectURL(file);
   if (file.type.startsWith("video")) {
     const v = document.createElement("video"); v.src = url; v.muted = true; v.playsInline = true; v.loop = true; v.preload = "auto";
-    v.onloadeddata = () => { s.media = { type: "video", el: v, name: file.name }; done(); };
+    v.onloadeddata = () => { s.media = { type: "video", el: v, name: file.name }; s.mediaFile = file; s.vidSound = false; done(); };
   } else {
     const im = new Image(); im.onload = () => { s.media = { type: "image", el: im, name: file.name }; done(); }; im.src = url;
   }
@@ -348,6 +360,8 @@ function save(){ store.set("project", { script: $("script").value, brand: $("bra
 // ---------- timeline ----------
 function durations(){
   let d = scenes.map(s => s.dur);
+  const sceneVoices = scenes.some(x => x.voiceBuf && !x.ownAudio);
+  if (sceneVoices) return scenes.map(s => s.ownAudio ? s.dur : Math.max(s.dur, s.voiceBuf ? s.voiceBuf.duration + 0.4 : 0));
   if (voice && $("fitVoice").checked && scenes.length && !scenes.some(x => x.ownAudio)) {
     const locked = scenes.reduce((a, s) => a + (s.lock ? s.dur : 0), 0);
     const target = Math.max(1.2, voice.buffer.duration + 0.6 - locked);
@@ -486,7 +500,10 @@ function vidBus(){ if (!_vidBus) { _vidBus = audioCtx().createGain(); _vidBus.co
 function startAudio(dest){
   if (dest && _vidBus) _vidBus.connect(dest);
   const a = audioCtx(), nodes = [];
-  if (voice && !scenes.some(x => x.ownAudio)) { const s = a.createBufferSource(); s.buffer = voice.buffer; s.connect(a.destination); if (dest) s.connect(dest); s.start(); nodes.push(s); }
+  // each scene's own voice plays at the start of its scene
+  const starts = durations().reduce((acc, d, i) => (acc.push(i ? acc[i - 1] + durations()[i - 1] : 0), acc), []);
+  scenes.forEach((sc, i) => { if (sc.voiceBuf && !sc.ownAudio) { const n = a.createBufferSource(); n.buffer = sc.voiceBuf; n.connect(a.destination); if (dest) n.connect(dest); n.start(a.currentTime + starts[i] + 0.1); nodes.push(n); } });
+  if (voice && !scenes.some(x => x.ownAudio || x.voiceBuf)) { const s = a.createBufferSource(); s.buffer = voice.buffer; s.connect(a.destination); if (dest) s.connect(dest); s.start(); nodes.push(s); }
   if (music) {
     const s = a.createBufferSource(), g = a.createGain(); s.buffer = music.buffer; s.loop = true;
     g.gain.value = $("musicVol").value / 100; const T = total();
@@ -863,6 +880,21 @@ async function sceneRecord(s, btn, el){
       try { s.voiceBuf = await audioCtx().decodeAudioData(await new Blob(ch).arrayBuffer()); el.textContent = `🎙️ Scene voice ${s.voiceBuf.duration.toFixed(1)} s`; } catch { el.textContent = "Couldn't read the recording. Try again."; } };
     rec.start(); s._rec = rec; btn.textContent = "⏹ Stop"; btn.classList.add("rec"); el.textContent = "Recording… read this scene, then press Stop.";
   } catch { el.textContent = "Microphone access was blocked. Allow it in the address bar."; }
+}
+// Fix someone else's video (like Jimmy's): keep the motion, put my corrected words on the lips (Kling Lip Sync, ~3¢)
+async function fixLips(s, i, el){
+  if (!s.mediaFile) return (el.textContent = "Add the video to this scene first (🖼️ Photo or video).");
+  const len = s.media.el.duration || 0;
+  if (len < 2 || len > 10) return (el.textContent = `Lip fixing works on clips of 2 to 10 seconds (this one is ${len.toFixed(1)} s). Trim it on your phone first.`);
+  if (!s.voiceBuf) return (el.textContent = "Fix the words in this scene's text, then press 🔊 Voice (or 🎙️ Record) to make the new voice first.");
+  if (s.voiceBuf.duration > len + 0.5) el.textContent = `Heads-up: your new voice (${s.voiceBuf.duration.toFixed(1)} s) is longer than the clip (${len.toFixed(1)} s), so the end may be cut. `;
+  const cost = Math.ceil(Math.max(2, len) / 5) * 0.014;
+  if (!s._fixOk) { s._fixOk = true; el.textContent += `Press 👄 again to confirm (about $${cost.toFixed(2)}).`; setTimeout(() => { s._fixOk = false; }, 15000); return; }
+  s._fixOk = false;
+  try {
+    const url = await runTalk({ engine: "kling_clip", file: s.mediaFile, voiceBuf: s.voiceBuf, clipSecs: len, say: (m) => { el.textContent = m; } });
+    await putTalkingVideo(s, url); renderScenes(); drawAt(sceneStart(i) + 0.5); status(`Scene ${i + 1}: the lips now match your new words.`);
+  } catch (err) { el.textContent = "⚠️ " + err.message; }
 }
 async function sceneTalk(s, i, el){
   const why = sceneCheck(s); if (why) return (el.textContent = why);
