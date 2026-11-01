@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WebSwan Video Maker</title>
+<link rel="icon" href="../favicon-32x32.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f4f8fc;--card:#fff;--ink:#0f2236;--muted:#5b6b7c;--line:#d9e4ef;--brand:#339cde;--brand2:#1182f0;--soft:#93e5fa}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b1622;--card:#122233;--ink:#e8f1fa;--muted:#9fb3c6;--line:#24384c}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Montserrat,system-ui,sans-serif;font-size:15px}
+header{background:var(--brand2);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+header img{height:34px;background:#fff;border-radius:8px;padding:3px 6px}
+header h1{font-size:20px;margin:0;font-weight:800}
+header a{color:#fff;margin-left:auto;font-size:13px}
+main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;padding:16px;max-width:1400px;margin:0 auto}
+@media (max-width:900px){main{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 10px;font-weight:800;color:var(--brand2)}
+label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin:8px 0 4px}
+input[type=text],textarea,select,input[type=number]{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--bg);color:var(--ink);font:inherit}
+textarea{min-height:120px;resize:vertical}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+.row>*{flex:1;min-width:120px}
+button,.btn{background:var(--brand);color:#fff;border:0;border-radius:9px;padding:9px 14px;font:inherit;font-weight:700;cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+button.ghost{background:transparent;color:var(--brand);border:1px solid var(--brand)}
+button.red{background:#d11a1a}
+button:disabled{opacity:.5;cursor:not-allowed}
+.scene{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:10px}
+.scene .top{display:flex;gap:8px;align-items:center;margin-bottom:6px;font-weight:800;font-size:13px}
+.scene .top span{margin-right:auto}
+.scene textarea{min-height:60px}
+.scene .mini{font-size:12px;color:var(--muted)}
+.icon{background:transparent;color:var(--muted);border:1px solid var(--line);padding:4px 8px;font-size:12px}
+#stage{position:sticky;top:10px}
+canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000;border-radius:12px;display:block}
+.status{font-size:13px;color:var(--muted);margin-top:8px;min-height:18px}
+.check{display:flex;gap:8px;align-items:center;font-size:13px;font-weight:600;margin:6px 0}
+.note{font-size:12px;color:var(--muted);line-height:1.5}
+.rec{animation:pulse 1s infinite}@keyframes pulse{50%{opacity:.6}}
+</style>
+</head>
+<body>
+<header>
+  <img src="ws-logo.png" alt="The WebSwan">
+  <h1>WebSwan Video Maker</h1>
+  <a href="../index.html">← Back to WorkPilot</a>
+</header>
+<main>
+<section>
+  <div class="card">
+    <h2>1. Brand and size</h2>
+    <div class="row">
+      <div><label for="brand">Brand</label>
+        <select id="brand">
+          <option value="ws">The WebSwan</option>
+          <option value="ds">WebSwan Digital Solutions</option>
+          <option value="mn">WebSwan Media Network</option>
+        </select></div>
+      <div><label for="format">Size</label>
+        <select id="format">
+          <option value="9:16">Vertical 9:16 (Reels, TikTok, Shorts)</option>
+          <option value="1:1">Square 1:1 (Instagram, Facebook)</option>
+          <option value="16:9">Wide 16:9 (YouTube, website)</option>
+        </select></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>2. Your script</h2>
+    <label for="script">Write or paste your script. A blank line starts a new scene.</label>
+    <textarea id="script" placeholder="Is your website ADA compliant?&#10;&#10;Most doctors' websites fail basic accessibility checks.&#10;&#10;Get your complimentary audit from WebSwan Digital Solutions."></textarea>
+    <div class="row" style="margin-top:8px">
+      <button id="makeScenes">✨ Make scenes</button>
+      <div class="note">Each scene gets its time from its words. You can change anything below.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>3. Scenes</h2>
+    <div id="scenes"><div class="note">Your scenes will show here.</div></div>
+  </div>
+
+  <div class="card">
+    <h2>4. Voice and music</h2>
+    <label>Voiceover (your own voice, any language: English, Kreyòl, Português, Français, Español)</label>
+    <div class="row">
+      <button id="recBtn" class="ghost">🎙️ Record my voice</button>
+      <label class="btn ghost" style="margin:0;justify-content:center;color:var(--brand);border:1px solid var(--brand);background:transparent">📁 Upload voice<input id="voiceFile" type="file" accept="audio/*" hidden></label>
+      <button id="voiceClear" class="icon">Remove</button>
+    </div>
+    <div id="voiceInfo" class="note"></div>
+    <div class="check"><input type="checkbox" id="fitVoice" checked><label for="fitVoice" style="margin:0">Fit the scenes to my voice length</label></div>
+    <label>Background music</label>
+    <div class="row">
+      <label class="btn ghost" style="margin:0;justify-content:center;color:var(--brand);border:1px solid var(--brand);background:transparent">🎵 Upload music<input id="musicFile" type="file" accept="audio/*" hidden></label>
+      <div><label for="musicVol">Music volume</label><input id="musicVol" type="range" min="0" max="100" value="25" style="width:100%"></div>
+      <button id="musicClear" class="icon">Remove</button>
+    </div>
+    <div id="musicInfo" class="note"></div>
+    <p class="note">Coming next: pick a Cartesia voice (Rachel, Jennifer, Brazilian Portuguese, French, Latino Spanish) instead of recording.</p>
+  </div>
+
+  <div class="card">
+    <h2>5. Captions and ending</h2>
+    <div class="check"><input type="checkbox" id="karaoke" checked><label for="karaoke" style="margin:0">Words pop in one by one (great for Reels)</label></div>
+    <div class="check"><input type="checkbox" id="endCard" checked><label for="endCard" style="margin:0">Add an ending card with my logo</label></div>
+    <div class="row">
+      <div><label for="cta">Ending headline</label><input id="cta" type="text"></div>
+      <div><label for="contact">Ending contact line</label><input id="contact" type="text"></div>
+    </div>
+  </div>
+</section>
+
+<section id="stage">
+  <div class="card">
+    <h2>Preview</h2>
+    <canvas id="cv" width="1080" height="1920"></canvas>
+    <div class="row" style="margin-top:10px">
+      <button id="playBtn">▶ Play</button>
+      <button id="stopBtn" class="ghost">■ Stop</button>
+      <button id="exportBtn" class="red">⬇ Make my video</button>
+    </div>
+    <div id="status" class="status"></div>
+    <p class="note">Making the video plays it once in real time, so keep this tab open until it finishes. Then upload the file in Tatiana's 🎬 Schedule a video, Content360, or any app.</p>
+  </div>
+</section>
+</main>
+
+<script>
+(() => {
+const $ = (id) => document.getElementById(id);
+const cv = $("cv"), ctx = cv.getContext("2d");
+const BRANDS = {
+  ws: { name: "The WebSwan", c1: "#1182f0", c2: "#339cde", c3: "#93e5fa", cta: "Websites, phone apps and software", contact: "thewebswan.com · (510) 535-4763" },
+  ds: { name: "WebSwan Digital Solutions", c1: "#0d5fb8", c2: "#1182f0", c3: "#6ca1d4", cta: "Book your complimentary website audit", contact: "webswandigitalsolutions.com" },
+  mn: { name: "WebSwan Media Network", c1: "#0b2f5c", c2: "#339cde", c3: "#93e5fa", cta: "Get found by patients and clients", contact: "ads.webswanmedianetwork.com · (347) 646-7086" }
+};
+const SIZES = { "9:16": [1080, 1920], "1:1": [1080, 1080], "16:9": [1920, 1080] };
+const END_LEN = 3.5, FADE = 0.4;
+
+const logo = new Image(); logo.src = "ws-logo.png";
+let scenes = [];          // {text, dur, media:{type,el,url,name}|null}
+let voice = null, music = null; // {buffer, name}
+let ac = null, playing = null;
+
+const store = { get(k){ try { return JSON.parse(localStorage.getItem("wsvm-"+k)); } catch { return null; } },
+                set(k,v){ try { localStorage.setItem("wsvm-"+k, JSON.stringify(v)); } catch {} } };
+
+function brand(){ return BRANDS[$("brand").value]; }
+function status(m){ $("status").textContent = m || ""; }
+function audioCtx(){ if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)(); return ac; }
+const words = (t) => t.trim().split(/\s+/).filter(Boolean);
+const autoDur = (t) => Math.max(2.5, Math.round((words(t).length / 2.6 + 1) * 10) / 10);
+
+function setSize(){ const [w,h] = SIZES[$("format").value]; cv.width = w; cv.height = h; drawAt(0); }
+function setBrandDefaults(force){
+  const b = brand();
+  if (force || !$("cta").value) $("cta").value = b.cta;
+  if (force || !$("contact").value) $("contact").value = b.contact;
+}
+
+// ---------- scenes UI ----------
+function makeScenes(){
+  const raw = $("script").value.trim();
+  if (!raw) { status("Write your script first."); return; }
+  let parts = raw.split(/\n\s*\n/).map(s => s.replace(/\s+/g, " ").trim()).filter(Boolean);
+  if (parts.length === 1) parts = (raw.match(/[^.!?]+[.!?]*/g) || [raw]).map(s => s.trim()).filter(Boolean);
+  scenes = parts.map(t => ({ text: t, dur: autoDur(t), media: null }));
+  renderScenes(); save(); drawAt(durations()[0] * 0.9); status(scenes.length + " scenes ready. Press Play to preview.");
+}
+function renderScenes(){
+  const box = $("scenes"); box.innerHTML = "";
+  if (!scenes.length) { box.innerHTML = '<div class="note">Your scenes will show here.</div>'; return; }
+  scenes.forEach((s, i) => {
+    const d = document.createElement("div"); d.className = "scene";
+    d.innerHTML = `<div class="top"><span>Scene ${i+1}</span>
+      <button class="icon" data-a="up">↑</button><button class="icon" data-a="down">↓</button><button class="icon" data-a="del">✕</button></div>
+      <textarea aria-label="Scene ${i+1} text"></textarea>
+      <div class="row" style="margin-top:6px">
+        <div><label>Seconds</label><input type="number" min="1" max="60" step="0.5"></div>
+        <div><label>Background</label><label class="btn ghost" style="margin:0;justify-content:center;color:var(--brand);border:1px solid var(--brand);background:transparent">🖼️ Photo or video<input type="file" accept="image/*,video/*" hidden></label></div>
+        <div><label>&nbsp;</label><button class="icon" data-a="clearbg">Brand colors</button></div>
+      </div><div class="mini"></div>`;
+    const ta = d.querySelector("textarea"), num = d.querySelector("input[type=number]"), fi = d.querySelector("input[type=file]"), mini = d.querySelector(".mini");
+    ta.value = s.text; num.value = s.dur;
+    mini.textContent = s.media ? "Background: " + s.media.name : "Background: brand colors";
+    ta.oninput = () => { s.text = ta.value; save(); drawAt(sceneStart(i) + 0.8); };
+    num.oninput = () => { s.dur = Math.max(1, parseFloat(num.value) || 1); };
+    fi.onchange = () => { const f = fi.files[0]; if (f) setMedia(s, f, () => { mini.textContent = "Background: " + f.name; drawAt(sceneStart(i) + 0.8); }); };
+    d.querySelectorAll("button[data-a]").forEach(b => b.onclick = () => {
+      const a = b.dataset.a;
+      if (a === "del") scenes.splice(i, 1);
+      if (a === "up" && i > 0) [scenes[i-1], scenes[i]] = [scenes[i], scenes[i-1]];
+      if (a === "down" && i < scenes.length - 1) [scenes[i+1], scenes[i]] = [scenes[i], scenes[i+1]];
+      if (a === "clearbg") s.media = null;
+      renderScenes(); save(); drawAt(0);
+    });
+    box.appendChild(d);
+  });
+}
+function setMedia(s, file, done){
+  const url = URL.createObjectURL(file);
+  if (file.type.startsWith("video")) {
+    const v = document.createElement("video"); v.src = url; v.muted = true; v.playsInline = true; v.loop = true; v.preload = "auto";
+    v.onloadeddata = () => { s.media = { type: "video", el: v, name: file.name }; done(); };
+  } else {
+    const im = new Image(); im.onload = () => { s.media = { type: "image", el: im, name: file.name }; done(); }; im.src = url;
+  }
+}
+function save(){ store.set("project", { script: $("script").value, brand: $("brand").value, format: $("format").value,
+  scenes: scenes.map(s => ({ text: s.text, dur: s.dur })), cta: $("cta").value, contact: $("contact").value }); }
+
+// ---------- timeline ----------
+function durations(){
+  let d = scenes.map(s => s.dur);
+  if (voice && $("fitVoice").checked && scenes.length) {
+    const target = voice.buffer.duration + 0.6;
+    const w = scenes.map(s => Math.max(1, words(s.text).length)), tw = w.reduce((a,b) => a+b, 0);
+    d = w.map(x => Math.max(1.2, target * x / tw));
+  }
+  return d;
+}
+function total(){ const d = durations(); return d.reduce((a,b) => a+b, 0) + ($("endCard").checked ? END_LEN : 0); }
+function sceneStart(i){ return durations().slice(0, i).reduce((a,b) => a+b, 0); }
+function locate(t){
+  const d = durations(); let acc = 0;
+  for (let i = 0; i < d.length; i++) { if (t < acc + d[i]) return { i, local: t - acc, dur: d[i] }; acc += d[i]; }
+  return { i: -1, local: t - acc, dur: END_LEN };
+}
+
+// ---------- drawing ----------
+function cover(el, w, h, zoom){
+  const iw = el.videoWidth || el.naturalWidth, ih = el.videoHeight || el.naturalHeight;
+  if (!iw || !ih) return;
+  const s = Math.max(w / iw, h / ih) * zoom, dw = iw * s, dh = ih * s;
+  ctx.drawImage(el, (w - dw) / 2, (h - dh) / 2, dw, dh);
+}
+function gradientBg(t){
+  const W = cv.width, H = cv.height, b = brand(), a = t * 0.15;
+  const g = ctx.createLinearGradient(W/2 - Math.cos(a)*W, H/2 - Math.sin(a)*H, W/2 + Math.cos(a)*W, H/2 + Math.sin(a)*H);
+  g.addColorStop(0, b.c1); g.addColorStop(0.6, b.c2); g.addColorStop(1, b.c3);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  ctx.globalAlpha = 0.12; ctx.fillStyle = "#fff";
+  for (let k = 0; k < 3; k++) {
+    const r = Math.min(W, H) * (0.25 + k * 0.12);
+    ctx.beginPath(); ctx.arc(W * (0.2 + 0.3*k) + Math.sin(t*0.4 + k)*40, H * (0.25 + 0.25*k) + Math.cos(t*0.3 + k)*40, r, 0, Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+function wrap(list, maxW){
+  const lines = []; let cur = [];
+  for (const w of list) {
+    const test = cur.concat(w).join(" ");
+    if (cur.length && ctx.measureText(test).width > maxW) { lines.push(cur); cur = [w]; } else cur.push(w);
+  }
+  if (cur.length) lines.push(cur); return lines;
+}
+function roundRect(x, y, w, h, r){ ctx.beginPath(); ctx.moveTo(x+r, y); ctx.arcTo(x+w, y, x+w, y+h, r); ctx.arcTo(x+w, y+h, x, y+h, r); ctx.arcTo(x, y+h, x, y, r); ctx.arcTo(x, y, x+w, y, r); ctx.closePath(); }
+
+function drawScene(i, local, dur, now){
+  const W = cv.width, H = cv.height, s = scenes[i], b = brand();
+  const hasMedia = !!(s.media);
+  if (hasMedia) {
+    ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
+    cover(s.media.el, W, H, s.media.type === "image" ? 1 + 0.08 * (local / dur) : 1);
+    const g = ctx.createLinearGradient(0, H*0.45, 0, H); g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,.65)");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  } else gradientBg(now);
+
+  // caption
+  const all = words(s.text), fs = Math.round(Math.min(W, H) * (W > H ? 0.07 : 0.075));
+  ctx.font = `900 ${fs}px Montserrat, sans-serif`; ctx.textBaseline = "middle"; ctx.textAlign = "left";
+  const maxW = W * 0.84, lines = wrap(all, maxW), lh = fs * 1.22, blockH = lines.length * lh;
+  const cy = hasMedia ? H * 0.74 : H * 0.5, y0 = cy - blockH / 2 + lh / 2;
+  const shown = $("karaoke").checked ? Math.min(all.length, Math.floor(all.length * Math.min(1, local / (dur * 0.8))) + 1) : all.length;
+  if (hasMedia) {
+    const bw = Math.max(...lines.map(l => ctx.measureText(l.join(" ")).width)) + fs * 1.2;
+    ctx.fillStyle = "rgba(11,31,54,.55)"; roundRect((W - bw) / 2, y0 - lh/2 - fs*0.35, bw, blockH + fs*0.7, fs*0.4); ctx.fill();
+  }
+  let n = 0;
+  lines.forEach((line, li) => {
+    const lw = ctx.measureText(line.join(" ")).width; let x = (W - lw) / 2; const y = y0 + li * lh;
+    line.forEach((w) => {
+      const ww = ctx.measureText(w + " ").width;
+      if (n < shown) {
+        const current = $("karaoke").checked && n === shown - 1 && local < dur * 0.8;
+        ctx.lineWidth = fs * 0.12; ctx.strokeStyle = "rgba(0,0,0,.35)"; ctx.strokeText(w, x, y);
+        ctx.fillStyle = current ? b.c3 : "#fff"; ctx.fillText(w, x, y);
+      }
+      x += ww; n++;
+    });
+  });
+  drawBadge();
+}
+function drawBadge(){
+  const W = cv.width, H = cv.height, pad = Math.min(W, H) * 0.04, lh = Math.min(W, H) * 0.075;
+  if (logo.complete && logo.naturalWidth) {
+    const lw = lh * logo.naturalWidth / logo.naturalHeight;
+    ctx.fillStyle = "rgba(255,255,255,.92)"; roundRect(pad, pad, lw + lh*0.4, lh*1.3, lh*0.25); ctx.fill();
+    ctx.drawImage(logo, pad + lh*0.2, pad + lh*0.15, lw, lh);
+  }
+}
+function drawEnd(local){
+  const W = cv.width, H = cv.height, b = brand(), m = Math.min(W, H);
+  gradientBg(local + 10);
+  const a = Math.min(1, local / 0.5); ctx.globalAlpha = a;
+  if (logo.complete && logo.naturalWidth) {
+    const lh = m * 0.2, lw = lh * logo.naturalWidth / logo.naturalHeight, sc = 0.9 + 0.1 * a;
+    ctx.fillStyle = "#fff"; roundRect(W/2 - (lw*sc)/2 - m*0.04, H*0.36 - (lh*sc)/2 - m*0.03, lw*sc + m*0.08, lh*sc + m*0.06, m*0.04); ctx.fill();
+    ctx.drawImage(logo, W/2 - (lw*sc)/2, H*0.36 - (lh*sc)/2, lw*sc, lh*sc);
+  }
+  ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = "#fff";
+  ctx.font = `800 ${Math.round(m*0.05)}px Montserrat, sans-serif`; ctx.fillText(b.name, W/2, H*0.53);
+  ctx.font = `900 ${Math.round(m*0.058)}px Montserrat, sans-serif`;
+  const lines = wrap(words($("cta").value), W*0.86);
+  lines.forEach((l, k) => ctx.fillText(l.join(" "), W/2, H*0.63 + k * m*0.07));
+  ctx.font = `700 ${Math.round(m*0.04)}px Montserrat, sans-serif`; ctx.fillStyle = b.c3 === "#93e5fa" ? "#e9fbff" : "#fff";
+  ctx.fillText($("contact").value, W/2, H*0.63 + lines.length * m*0.07 + m*0.04);
+  ctx.globalAlpha = 1; ctx.textAlign = "left";
+}
+function drawAt(t){
+  const W = cv.width, H = cv.height;
+  if (!scenes.length) {
+    gradientBg(t); ctx.fillStyle = "#fff"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.font = `800 ${Math.round(Math.min(W,H)*0.05)}px Montserrat, sans-serif`; ctx.fillText("Your video shows here", W/2, H/2); ctx.textAlign = "left"; drawBadge(); return;
+  }
+  const p = locate(t);
+  if (p.i === -1) { if ($("endCard").checked) drawEnd(p.local); else drawScene(scenes.length-1, durations().at(-1), durations().at(-1), t); return; }
+  if (p.i > 0 && p.local < FADE) {
+    const d = durations(); drawScene(p.i - 1, d[p.i-1], d[p.i-1], t);
+    ctx.globalAlpha = p.local / FADE; drawScene(p.i, p.local, p.dur, t); ctx.globalAlpha = 1;
+  } else drawScene(p.i, p.local, p.dur, t);
+}
+
+// ---------- playback / export ----------
+function syncVideos(t){
+  const p = locate(t);
+  scenes.forEach((s, i) => { if (s.media && s.media.type === "video") {
+    const v = s.media.el;
+    if (i === p.i) { if (v.paused) { v.currentTime = 0; v.play().catch(() => {}); } }
+    else if (!v.paused) v.pause();
+  }});
+}
+function startAudio(dest){
+  const a = audioCtx(), nodes = [];
+  if (voice) { const s = a.createBufferSource(); s.buffer = voice.buffer; s.connect(a.destination); if (dest) s.connect(dest); s.start(); nodes.push(s); }
+  if (music) {
+    const s = a.createBufferSource(), g = a.createGain(); s.buffer = music.buffer; s.loop = true;
+    g.gain.value = $("musicVol").value / 100; const T = total();
+    g.gain.setValueAtTime(g.gain.value, a.currentTime + Math.max(0, T - 1.5)); g.gain.linearRampToValueAtTime(0, a.currentTime + T);
+    s.connect(g); g.connect(a.destination); if (dest) g.connect(dest); s.start(); nodes.push(s);
+  }
+  return nodes;
+}
+async function play(dest, onEnd){
+  stop(); if (!scenes.length) { status("Make your scenes first."); return false; }
+  const a = audioCtx(); try { await a.resume(); } catch {}
+  const nodes = startAudio(dest), t0 = performance.now(), T = total();
+  playing = { nodes, raf: 0, onEnd };
+  const tick = () => {
+    if (!playing) return;
+    const t = (performance.now() - t0) / 1000;
+    if (t >= T) { drawAt(T - 0.01); const cb = playing.onEnd; stop(); if (cb) cb(); return; }
+    syncVideos(t); drawAt(t); playing.raf = requestAnimationFrame(tick);
+  };
+  tick(); return true;
+}
+function stop(){
+  if (!playing) return;
+  cancelAnimationFrame(playing.raf); playing.nodes.forEach(n => { try { n.stop(); } catch {} });
+  scenes.forEach(s => s.media && s.media.type === "video" && s.media.el.pause());
+  playing = null;
+}
+function pickMime(){
+  const opts = ["video/mp4;codecs=avc1.42E01E,mp4a.40.2", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm"];
+  return opts.find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || "";
+}
+function exportVideo(){
+  if (!scenes.length) { status("Make your scenes first."); return; }
+  const mime = pickMime(); if (!mime) { status("This browser can't record video. Please use Chrome."); return; }
+  const a = audioCtx(), dest = a.createMediaStreamDestination();
+  const stream = new MediaStream([...cv.captureStream(30).getVideoTracks(), ...dest.stream.getAudioTracks()]);
+  const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 8_000_000 }), chunks = [];
+  rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+  rec.onstop = () => {
+    const blob = new Blob(chunks, { type: mime.split(";")[0] }), ext = mime.includes("mp4") ? "mp4" : "webm";
+    const name = (brand().name + " " + new Date().toISOString().slice(0,10)).replace(/\s+/g, "-") + "." + ext;
+    const link = document.createElement("a"); link.href = URL.createObjectURL(blob); link.download = name; link.click();
+    $("exportBtn").disabled = false; status("✅ Done! " + name + " is in your Downloads." + (ext === "webm" ? " (WebM: most apps accept it; if one doesn't, tell Claude.)" : ""));
+  };
+  $("exportBtn").disabled = true; status("🎬 Making your video… " + Math.ceil(total()) + " seconds. Keep this tab open.");
+  rec.start(250);
+  play(dest, () => setTimeout(() => rec.stop(), 300));
+}
+
+// ---------- audio inputs ----------
+async function loadAudio(file){ const buf = await file.arrayBuffer(); return audioCtx().decodeAudioData(buf); }
+function info(){
+  $("voiceInfo").textContent = voice ? `🎙️ ${voice.name} · ${voice.buffer.duration.toFixed(1)} seconds` : "";
+  $("musicInfo").textContent = music ? `🎵 ${music.name}` : "";
+}
+$("voiceFile").onchange = async (e) => { const f = e.target.files[0]; if (!f) return; try { voice = { buffer: await loadAudio(f), name: f.name }; info(); drawAt(0); } catch { status("That audio file couldn't be opened."); } };
+$("musicFile").onchange = async (e) => { const f = e.target.files[0]; if (!f) return; try { music = { buffer: await loadAudio(f), name: f.name }; info(); } catch { status("That audio file couldn't be opened."); } };
+$("voiceClear").onclick = () => { voice = null; info(); };
+$("musicClear").onclick = () => { music = null; info(); };
+let mic = null;
+$("recBtn").onclick = async () => {
+  if (mic) { mic.rec.stop(); return; }
+  try {
+    const st = await navigator.mediaDevices.getUserMedia({ audio: true }), rec = new MediaRecorder(st), ch = [];
+    rec.ondataavailable = (e) => ch.push(e.data);
+    rec.onstop = async () => {
+      st.getTracks().forEach(t => t.stop()); mic = null; $("recBtn").textContent = "🎙️ Record my voice"; $("recBtn").classList.remove("rec");
+      try { voice = { buffer: await audioCtx().decodeAudioData(await new Blob(ch).arrayBuffer()), name: "My recording" }; info(); status("Voice saved. Press Play to hear it with your scenes."); }
+      catch { status("The recording couldn't be read. Please try again."); }
+    };
+    rec.start(); mic = { rec }; $("recBtn").textContent = "⏹ Stop recording"; $("recBtn").classList.add("rec");
+    status("Recording… read your script, then press Stop.");
+  } catch { status("Microphone access was blocked. Allow it in the address bar and try again."); }
+};
+
+// ---------- wiring ----------
+$("makeScenes").onclick = makeScenes;
+$("playBtn").onclick = async () => { if (await play()) status("Playing preview…"); };
+$("stopBtn").onclick = () => { stop(); status(""); };
+$("exportBtn").onclick = exportVideo;
+$("format").onchange = () => { setSize(); save(); };
+$("brand").onchange = () => { setBrandDefaults(true); save(); drawAt(0); };
+["cta", "contact", "script"].forEach(id => $(id).addEventListener("input", save));
+["karaoke", "endCard", "fitVoice"].forEach(id => $(id).addEventListener("change", () => drawAt(0)));
+
+const saved = store.get("project");
+if (saved) {
+  $("script").value = saved.script || ""; $("brand").value = saved.brand || "ws"; $("format").value = saved.format || "9:16";
+  $("cta").value = saved.cta || ""; $("contact").value = saved.contact || "";
+  scenes = (saved.scenes || []).map(s => ({ text: s.text, dur: s.dur, media: null }));
+}
+setBrandDefaults(false); renderScenes();
+document.fonts.load("900 40px Montserrat").finally(() => { setSize(); });
+logo.onload = () => drawAt(0);
+})();
+</script>
+</body>
+</html>
