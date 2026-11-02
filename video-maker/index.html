@@ -58,31 +58,6 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
 </nav>
 <main>
 <section>
-  <div class="card" id="s-start" style="border:2px solid var(--brand)">
-    <h2>⭐ Start here</h2>
-    <details open><summary style="cursor:pointer;font-weight:800">📥 Videos Claude made for you</summary>
-      <div id="claudeList" class="note" style="margin-top:6px">Loading…</div>
-    </details>
-    <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:800">💡 Idea to video (it writes the whole script)</summary>
-      <label for="idea">Your idea</label>
-      <textarea id="idea" style="min-height:70px" placeholder="A 30-second Reel for dentists: why their website needs an ADA check, and how to book a free audit"></textarea>
-      <div class="row">
-        <div><label for="ideaLen">Length</label><select id="ideaLen"><option value="15">15 seconds</option><option value="30" selected>30 seconds</option><option value="45">45 seconds</option><option value="60">1 minute</option><option value="90">90 seconds</option></select></div>
-        <div><label for="ideaLang">Language</label><select id="ideaLang"><option value="en">English</option><option value="pt">Português (Brasil)</option><option value="fr">Français</option><option value="es">Español (Latino)</option><option value="ht">Kreyòl ayisyen</option></select></div>
-      </div>
-      <div class="row" style="margin-top:8px"><button id="ideaBtn">✍️ Write my video</button></div>
-      <div id="ideaStatus" class="status"></div>
-    </details>
-    <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:800">📁 My projects &amp; templates</summary>
-      <div class="row" style="margin-top:6px">
-        <div style="flex:2"><label for="projName">Name this video</label><input id="projName" type="text" placeholder="Media Network ad, November"></div>
-        <div style="flex:0 0 auto"><label>&nbsp;</label><button id="projSave">💾 Save project</button></div>
-        <div style="flex:0 0 auto"><label>&nbsp;</label><button id="projTpl" class="ghost">🧩 Save as template</button></div>
-      </div>
-      <div id="projList" style="margin-top:8px"></div>
-    </details>
-  </div>
-
   <div class="card" id="s-brand">
     <h2>1. Brand and size</h2>
     <div class="row">
@@ -125,21 +100,6 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
     <div id="scenes"><div class="note">Your scenes will show here.</div></div>
   </div>
 
-</section>
-
-<section id="stage">
-  <div class="card" id="s-preview">
-    <h2>Preview</h2>
-    <canvas id="cv" width="1080" height="1920"></canvas>
-    <div class="row" style="margin-top:10px">
-      <button id="playBtn">▶ Play</button>
-      <button id="stopBtn" class="ghost">■ Stop</button>
-      <button id="exportBtn" class="red">⬇ Make my video</button>
-      <button id="newVideoBtn" class="icon">🧹 Clear and start a new video</button>
-    </div>
-    <div id="status" class="status"></div>
-    <p class="note">Making the video plays it once in real time, so keep this tab in front until it finishes. It goes into 🎞️ My videos below. Nothing downloads until you press ⬇ Download.</p>
-  </div>
   <div class="card" id="s-voice">
     <h2>4. Voice and music</h2>
     <label>Voiceover (your own voice, any language: English, Kreyòl, Português, Français, Español)</label>
@@ -300,6 +260,46 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
       <div><label for="contact">Ending contact line</label><input id="contact" type="text"></div>
     </div>
   </div>
+</section>
+
+<section id="stage">
+  <div class="card" id="s-preview">
+    <h2>Preview</h2>
+    <canvas id="cv" width="1080" height="1920"></canvas>
+    <div class="row" style="margin-top:10px">
+      <button id="playBtn">▶ Play</button>
+      <button id="stopBtn" class="ghost">■ Stop</button>
+      <button id="exportBtn" class="red">⬇ Make my video</button>
+      <button id="newVideoBtn" class="icon">🧹 Clear and start a new video</button>
+    </div>
+    <div id="status" class="status"></div>
+    <p class="note">Making the video plays it once in real time, so keep this tab in front until it finishes. It goes into 🎞️ My videos below. Nothing downloads until you press ⬇ Download.</p>
+  </div>
+  <div class="card" id="s-start" style="border:2px solid var(--brand)">
+    <h2>⭐ Start here</h2>
+    <details open><summary style="cursor:pointer;font-weight:800">📥 Videos Claude made for you</summary>
+      <div id="claudeList" class="note" style="margin-top:6px">Loading…</div>
+    </details>
+    <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:800">💡 Idea to video (it writes the whole script)</summary>
+      <label for="idea">Your idea</label>
+      <textarea id="idea" style="min-height:70px" placeholder="A 30-second Reel for dentists: why their website needs an ADA check, and how to book a free audit"></textarea>
+      <div class="row">
+        <div><label for="ideaLen">Length</label><select id="ideaLen"><option value="15">15 seconds</option><option value="30" selected>30 seconds</option><option value="45">45 seconds</option><option value="60">1 minute</option><option value="90">90 seconds</option></select></div>
+        <div><label for="ideaLang">Language</label><select id="ideaLang"><option value="en">English</option><option value="pt">Português (Brasil)</option><option value="fr">Français</option><option value="es">Español (Latino)</option><option value="ht">Kreyòl ayisyen</option></select></div>
+      </div>
+      <div class="row" style="margin-top:8px"><button id="ideaBtn">✍️ Write my video</button></div>
+      <div id="ideaStatus" class="status"></div>
+    </details>
+    <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:800">📁 My projects &amp; templates</summary>
+      <div class="row" style="margin-top:6px">
+        <div style="flex:2"><label for="projName">Name this video</label><input id="projName" type="text" placeholder="Media Network ad, November"></div>
+        <div style="flex:0 0 auto"><label>&nbsp;</label><button id="projSave">💾 Save project</button></div>
+        <div style="flex:0 0 auto"><label>&nbsp;</label><button id="projTpl" class="ghost">🧩 Save as template</button></div>
+      </div>
+      <div id="projList" style="margin-top:8px"></div>
+    </details>
+  </div>
+
   <div class="card" id="s-videos">
     <h2>🎞️ My videos</h2>
     <div id="gallery"><div class="note">Videos you make show here. Watch them, then download the one you like or delete your tests.</div></div>
