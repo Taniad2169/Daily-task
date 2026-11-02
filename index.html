@@ -2192,6 +2192,12 @@
                             <label for="leadFormOrigin"><i class="fas fa-route"></i> Where did this lead start?</label>
                             <select id="leadFormOrigin"></select>
                         </div>
+                        <div class="field-group" id="leadFormRefWrap" style="display:none;">
+                            <label for="leadFormRefName"><i class="fas fa-handshake"></i> Referred by (name)</label>
+                            <input type="text" id="leadFormRefName" placeholder="Who sent this lead?" maxlength="120" />
+                            <label for="leadFormRefPhone" style="margin-top:6px;"><i class="fas fa-phone"></i> Referrer's phone</label>
+                            <input type="tel" id="leadFormRefPhone" placeholder="(555) 555-5555" maxlength="30" />
+                        </div>
                         <div class="field-group" data-hlkey="leadForm-agent" id="leadFormAgentWrap" style="display:none;">
                             <label for="leadFormAgent"><i class="fas fa-robot"></i> Which Voice Studio agent?</label>
                             <select id="leadFormAgent"></select>
@@ -2853,9 +2859,13 @@
             const fillSelect = (sel, list, val, blank) => { sel.innerHTML = list.map(o => `<option value="${o}">${o || blank}</option>`).join(''); sel.value = val || ''; };
             fillSelect(leadFormOrigin, LEAD_ORIGINS, '', '— choose —');
             fillSelect(leadFormAgent, VOICE_AGENTS, '', '— choose agent —');
-            const syncAgentWrap = () => { document.getElementById('leadFormAgentWrap').style.display = leadFormOrigin.value === VS_ORIGIN ? '' : 'none'; if (leadFormOrigin.value !== VS_ORIGIN) leadFormAgent.value = ''; };
+            const leadFormRefName = document.getElementById('leadFormRefName'), leadFormRefPhone = document.getElementById('leadFormRefPhone');
+            const syncAgentWrap = () => {
+                document.getElementById('leadFormAgentWrap').style.display = leadFormOrigin.value === VS_ORIGIN ? '' : 'none'; if (leadFormOrigin.value !== VS_ORIGIN) leadFormAgent.value = '';
+                document.getElementById('leadFormRefWrap').style.display = leadFormOrigin.value === 'Referral' ? '' : 'none'; if (leadFormOrigin.value !== 'Referral') { leadFormRefName.value = ''; leadFormRefPhone.value = ''; }
+            };
             leadFormOrigin.addEventListener('change', syncAgentWrap);
-            const originText = (l) => l.origin ? l.origin + (l.origin === VS_ORIGIN && l.agent ? ' – ' + l.agent : '') : '';
+            const originText = (l) => l.origin ? l.origin + (l.origin === VS_ORIGIN && l.agent ? ' – ' + l.agent : '') + (l.origin === 'Referral' && (l.refName || l.refPhone) ? ' – ' + [l.refName, l.refPhone].filter(Boolean).join(', ') : '') : '';
             // Extra facts added to the comment when a lead leaves WorkPilot (sheet, calendar, CRM)
             const leadExtras = (l) => [l.contact ? 'Doctor/lawyer: ' + l.contact : '', originText(l) ? 'Source: ' + originText(l) : ''].filter(Boolean).join(' · ');
             const commentWithExtras = (l) => [leadExtras(l), l.comment || ''].filter(Boolean).join('\n');
@@ -4392,7 +4402,9 @@
                     url: leadFormUrl.value.trim(),
                     comment: leadFormComment.value.trim(),
                     origin: leadFormOrigin.value,
-                    agent: leadFormOrigin.value === VS_ORIGIN ? leadFormAgent.value : ''
+                    agent: leadFormOrigin.value === VS_ORIGIN ? leadFormAgent.value : '',
+                    refName: leadFormOrigin.value === 'Referral' ? leadFormRefName.value.trim() : '',
+                    refPhone: leadFormOrigin.value === 'Referral' ? leadFormRefPhone.value.trim() : ''
                 };
             }
 
@@ -4732,6 +4744,8 @@
                     comment: comment || '',
                     origin: leadFormOrigin.value,
                     agent: leadFormOrigin.value === VS_ORIGIN ? leadFormAgent.value : '',
+                    refName: leadFormOrigin.value === 'Referral' ? leadFormRefName.value.trim() : '',
+                    refPhone: leadFormOrigin.value === 'Referral' ? leadFormRefPhone.value.trim() : '',
                     dropdown: 'call back',
                     customDropdown: '',
                     completed: true
@@ -4801,9 +4815,16 @@
                         const os = document.createElement('select'); fillSelect(os, LEAD_ORIGINS, lead.origin || '', '— choose —');
                         const as = document.createElement('select'); fillSelect(as, VOICE_AGENTS, lead.agent || '', '— which agent? —');
                         as.style.marginTop = '6px'; as.style.display = lead.origin === VS_ORIGIN ? '' : 'none';
-                        os.addEventListener('change', () => { lead.origin = os.value; if (os.value !== VS_ORIGIN) { lead.agent = ''; as.value = ''; } as.style.display = os.value === VS_ORIGIN ? '' : 'none'; saveToStorage(); renderLeadStats(); });
+                        const rn = document.createElement('input'), rp = document.createElement('input');
+                        rn.type = 'text'; rn.placeholder = 'Referred by (name)'; rn.maxLength = 120; rn.value = lead.refName || '';
+                        rp.type = 'tel'; rp.placeholder = "Referrer's phone"; rp.maxLength = 30; rp.value = lead.refPhone || '';
+                        [rn, rp].forEach(x => { x.style.marginTop = '6px'; x.style.display = lead.origin === 'Referral' ? '' : 'none'; });
+                        rn.addEventListener('input', () => { lead.refName = rn.value; saveToStorage(); });
+                        rp.addEventListener('input', () => { lead.refPhone = rp.value; saveToStorage(); });
+                        os.addEventListener('change', () => { lead.origin = os.value; if (os.value !== VS_ORIGIN) { lead.agent = ''; as.value = ''; } as.style.display = os.value === VS_ORIGIN ? '' : 'none';
+                            [rn, rp].forEach(x => x.style.display = os.value === 'Referral' ? '' : 'none'); saveToStorage(); renderLeadStats(); });
                         as.addEventListener('change', () => { lead.agent = as.value; saveToStorage(); renderLeadStats(); });
-                        og.appendChild(os); og.appendChild(as); grid.appendChild(og);
+                        og.appendChild(os); og.appendChild(as); og.appendChild(rn); og.appendChild(rp); grid.appendChild(og);
                     }
                     grid.appendChild(createField('Phone', 'tel', lead.phone, (val) => { lead.phone = val; saveToStorage(); }, `lead-${lead.id}-phone`));
                     grid.appendChild(createField('Email', 'email', lead.email, (val) => { lead.email = val; saveToStorage(); }, `lead-${lead.id}-email`));
