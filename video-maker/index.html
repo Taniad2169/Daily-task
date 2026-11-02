@@ -137,6 +137,7 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
     <h2>5. Voice and music</h2>
     <label>Voiceover (your own voice, any language: English, Kreyòl, Português, Français, Español)</label>
     <div class="row">
+      <button id="tpBtn">📜 Teleprompter: record scene by scene</button>
       <button id="recBtn" class="ghost">🎙️ Record my voice</button>
       <label class="btn ghost" style="margin:0;justify-content:center;color:var(--brand);border:1px solid var(--brand);background:transparent">📁 Upload voice<input id="voiceFile" type="file" accept="audio/*" hidden></label>
       <button id="voiceClear" class="icon">Remove</button>
@@ -299,6 +300,23 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
   </div>
 </section>
 </main>
+<div id="tp" style="display:none;position:fixed;inset:0;z-index:50;background:rgba(6,20,36,.96);color:#fff;padding:20px 16px;overflow:auto">
+  <div style="max-width:900px;margin:0 auto">
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <b id="tpCount" style="font-size:18px"></b>
+      <span id="tpInfo" style="color:#93e5fa;font-size:14px"></span>
+      <button id="tpClose" class="icon" style="margin-left:auto;color:#fff;border-color:#fff">✕ Close</button>
+    </div>
+    <div id="tpText" style="font-size:clamp(26px,5vw,48px);font-weight:800;line-height:1.35;margin:28px 0;min-height:40vh"></div>
+    <div class="row">
+      <button id="tpPrev" class="ghost" style="color:#fff;border-color:#fff">← Back</button>
+      <button id="tpRec" class="red" style="font-size:18px">🔴 Record this scene</button>
+      <button id="tpPlay" class="ghost" style="color:#fff;border-color:#fff">▶ Listen</button>
+      <button id="tpNext" style="font-size:18px">Next →</button>
+    </div>
+    <p style="color:#9fb3c6;font-size:13px">Press 🔴, read the words in your normal voice, press ⏹. Not happy? Press 🔴 again to redo it. Each scene keeps its own recording.</p>
+  </div>
+</div>
 
 <script>
 (() => {
@@ -722,6 +740,36 @@ $("clipFiles").onchange = async (e) => {
 $("playBtn").onclick = async () => { if (await play()) status("Playing preview…"); };
 $("stopBtn").onclick = () => { stop(); status(""); };
 $("exportBtn").onclick = exportVideo;
+// ----- teleprompter: record each scene's voice while reading it big on screen -----
+let tpI = 0, tpStream = null, tpRec = null;
+function tpShow(){
+  const s = scenes[tpI]; $("tpCount").textContent = `Scene ${tpI + 1} of ${scenes.length}`;
+  $("tpText").textContent = s.text || "(no words in this scene)";
+  $("tpInfo").textContent = s.voiceBuf ? `✅ Recorded ${s.voiceBuf.duration.toFixed(1)} s` : "Not recorded yet";
+  $("tpPrev").disabled = tpI === 0; $("tpNext").textContent = tpI === scenes.length - 1 ? "✅ Done" : "Next →";
+}
+$("tpBtn").onclick = async () => {
+  if (!scenes.length) return status("Make or open your scenes first.");
+  try { tpStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
+  catch { return status("Microphone access was blocked. Allow it in the address bar and try again."); }
+  tpI = Math.max(0, scenes.findIndex(s => !s.voiceBuf)); if (tpI < 0) tpI = 0;
+  $("tp").style.display = "block"; tpShow();
+};
+function tpEnd(){ if (tpRec) { try { tpRec.stop(); } catch {} } if (tpStream) tpStream.getTracks().forEach(t => t.stop()); tpStream = null; $("tp").style.display = "none"; renderScenes(); drawAt(0);
+  const n = scenes.filter(s => s.voiceBuf).length; status(`${n} of ${scenes.length} scenes have your voice. Press ▶ Play to hear the whole video.`); }
+$("tpClose").onclick = tpEnd;
+$("tpPrev").onclick = () => { if (tpRec) return; tpI = Math.max(0, tpI - 1); tpShow(); };
+$("tpNext").onclick = () => { if (tpRec) return; if (tpI >= scenes.length - 1) return tpEnd(); tpI++; tpShow(); };
+$("tpPlay").onclick = () => { const s = scenes[tpI]; if (s.voiceBuf) playBuf(s.voiceBuf); };
+$("tpRec").onclick = () => {
+  if (tpRec) { tpRec.stop(); return; }
+  const ch = [], s = scenes[tpI]; tpRec = new MediaRecorder(tpStream);
+  tpRec.ondataavailable = (e) => ch.push(e.data);
+  tpRec.onstop = async () => { tpRec = null; $("tpRec").textContent = "🔴 Record this scene";
+    try { s.voiceBuf = await audioCtx().decodeAudioData(await new Blob(ch).arrayBuffer()); } catch { $("tpInfo").textContent = "Couldn't read that recording. Try again."; return; }
+    voice = null; info(); tpShow(); };
+  tpRec.start(); $("tpRec").textContent = "⏹ Stop"; $("tpInfo").textContent = "Recording… read the words, then press ⏹";
+};
 $("newVideoBtn").onclick = () => {
   const b = $("newVideoBtn");
   if (!b.dataset.ok) { b.dataset.ok = "1"; b.textContent = "Press again: clears the preview, script, scenes and voice (My videos stay)"; setTimeout(() => { delete b.dataset.ok; b.textContent = "🧹 Clear and start a new video"; }, 6000); return; }
