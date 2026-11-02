@@ -2164,8 +2164,12 @@
                     <h3><i class="fas fa-leaf" style="color:#0077b6;"></i> Lead Form</h3>
                     <div class="lead-form-grid">
                         <div class="field-group" data-hlkey="leadForm-name">
-                            <label><i class="fas fa-user"></i> Name</label>
-                            <input type="text" id="leadFormName" placeholder="Enter full name..." />
+                            <label><i class="fas fa-building"></i> Company / practice name</label>
+                            <input type="text" id="leadFormName" placeholder="e.g. Smith Family Dental" />
+                        </div>
+                        <div class="field-group" data-hlkey="leadForm-contact">
+                            <label><i class="fas fa-user-doctor"></i> Doctor / lawyer name</label>
+                            <input type="text" id="leadFormContact" placeholder="e.g. Dr. Jane Smith or Atty. John Doe" />
                         </div>
                         <div class="field-group" data-hlkey="leadForm-phone">
                             <label><i class="fas fa-phone"></i> Phone</label>
@@ -2181,8 +2185,16 @@
                         </div>
                         <div class="field-group full-width" data-hlkey="leadForm-comment">
                             <label><i class="fas fa-comment"></i> Notes / Comments</label>
-                            <textarea id="leadFormComment" placeholder="Add any additional notes..." maxlength="1200" style="min-height:80px;"></textarea>
-                            <div class="word-counter" id="leadFormWordCount">0 / 200 words</div>
+                            <textarea id="leadFormComment" placeholder="Add any additional notes..." maxlength="45000" style="min-height:80px;resize:vertical;"></textarea>
+                            <div class="word-counter" id="leadFormWordCount">0 / 6000 words</div>
+                        </div>
+                        <div class="field-group" data-hlkey="leadForm-origin">
+                            <label for="leadFormOrigin"><i class="fas fa-route"></i> Where did this lead start?</label>
+                            <select id="leadFormOrigin"></select>
+                        </div>
+                        <div class="field-group" data-hlkey="leadForm-agent" id="leadFormAgentWrap" style="display:none;">
+                            <label for="leadFormAgent"><i class="fas fa-robot"></i> Which Voice Studio agent?</label>
+                            <select id="leadFormAgent"></select>
                         </div>
                     </div>
                     <div class="lead-form-actions">
@@ -2193,6 +2205,7 @@
                         <button class="btn" id="crmBtn" style="background:#e91e63;color:white;border-color:#e91e63;"><i class="fas fa-database"></i> CRM</button>
                         <button class="btn btn-outline" id="clearFormBtn"><i class="fas fa-undo"></i> Clear Form</button>
                     </div>
+                    <div id="leadStats" style="margin-top:10px;font-size:13px;"></div>
                     <!-- ===== TWO-WAY GOOGLE SHEET SYNC ===== -->
                     <div class="sheet-sync-bar" id="sheetSyncBar">
                         <label for="sheetTargetSelect"><i class="fas fa-table"></i> Lead sheet</label>
@@ -2829,6 +2842,32 @@
             const leadFormUrl = document.getElementById('leadFormUrl');
             const leadFormComment = document.getElementById('leadFormComment');
             const leadFormWordCount = document.getElementById('leadFormWordCount');
+            const leadFormContact = document.getElementById('leadFormContact');
+            const leadFormOrigin = document.getElementById('leadFormOrigin');
+            const leadFormAgent = document.getElementById('leadFormAgent');
+            const LEAD_WORDS = 6000, LEAD_CHARS = 45000;
+            // Where a lead started, for statistics. "AI agent (Voice Studio)" also records which agent.
+            const LEAD_ORIGINS = ['', 'AI agent (Voice Studio)', 'Telemarketing call', 'Lead Prospector', 'My own call (Tania)', 'Social media', 'Referral', 'Website / inbound', 'Email', 'Other'];
+            const VOICE_AGENTS = ['', 'Rebecca', 'Monica', 'George', 'Jennifer', 'Alek'];
+            const VS_ORIGIN = 'AI agent (Voice Studio)';
+            const fillSelect = (sel, list, val, blank) => { sel.innerHTML = list.map(o => `<option value="${o}">${o || blank}</option>`).join(''); sel.value = val || ''; };
+            fillSelect(leadFormOrigin, LEAD_ORIGINS, '', '— choose —');
+            fillSelect(leadFormAgent, VOICE_AGENTS, '', '— choose agent —');
+            const syncAgentWrap = () => { document.getElementById('leadFormAgentWrap').style.display = leadFormOrigin.value === VS_ORIGIN ? '' : 'none'; if (leadFormOrigin.value !== VS_ORIGIN) leadFormAgent.value = ''; };
+            leadFormOrigin.addEventListener('change', syncAgentWrap);
+            const originText = (l) => l.origin ? l.origin + (l.origin === VS_ORIGIN && l.agent ? ' – ' + l.agent : '') : '';
+            // Extra facts added to the comment when a lead leaves WorkPilot (sheet, calendar, CRM)
+            const leadExtras = (l) => [l.contact ? 'Doctor/lawyer: ' + l.contact : '', originText(l) ? 'Source: ' + originText(l) : ''].filter(Boolean).join(' · ');
+            const commentWithExtras = (l) => [leadExtras(l), l.comment || ''].filter(Boolean).join('\n');
+            function renderLeadStats() {
+                const box = document.getElementById('leadStats'); if (!box) return;
+                const by = {}, ag = {}; let n = 0;
+                leads.forEach(l => { if (!l.origin) return; n++; by[l.origin] = (by[l.origin] || 0) + 1; if (l.origin === VS_ORIGIN) { const a = l.agent || 'Agent not set'; ag[a] = (ag[a] || 0) + 1; } });
+                if (!n) { box.innerHTML = '<span style="color:#718096">📊 Pick "Where did this lead start?" on your leads to see your statistics here.</span>'; return; }
+                const chip = (k, v, c) => `<span style="display:inline-block;margin:3px 4px 0 0;padding:3px 9px;border-radius:999px;background:${c};font-weight:600">${k}: ${v}</span>`;
+                box.innerHTML = '<b>📊 Lead sources</b> (' + n + ' leads)<br>' + Object.entries(by).sort((a, b) => b[1] - a[1]).map(([k, v]) => chip(k, v + ' (' + Math.round(v * 100 / n) + '%)', '#e6f4fb')).join('') +
+                    (Object.keys(ag).length ? '<br><b>🤖 Voice Studio agents</b><br>' + Object.entries(ag).sort((a, b) => b[1] - a[1]).map(([k, v]) => chip(k, v, '#efe7fb')).join('') : '');
+            }
 
             const copyLinkBtn = document.getElementById('copyLinkBtn');
             const shareLinkBtn = document.getElementById('shareLinkBtn');
@@ -2884,8 +2923,8 @@
 
             function updateLeadFormWordCounter() {
                 const words = countWords(leadFormComment.value);
-                leadFormWordCount.textContent = `${words} / 200 words`;
-                leadFormWordCount.style.color = words > 200 ? '#b22222' : '#2c7da0';
+                leadFormWordCount.textContent = `${words} / ${LEAD_WORDS} words`;
+                leadFormWordCount.style.color = words > LEAD_WORDS ? '#b22222' : '#2c7da0';
             }
 
             function updateBriefingWordCounter() {
@@ -3237,11 +3276,13 @@
                     phone: leadFormPhone.value.trim(),
                     email: leadFormEmail.value.trim(),
                     url: leadFormUrl.value.trim(),
-                    comment: leadFormComment.value.trim()
+                    comment: leadFormComment.value.trim(),
+                    contact: leadFormContact.value.trim()
                 };
                 if (Object.values(currentForm).some(Boolean)) {
                     message += '👤 *CURRENT CONTACT FORM*\n';
-                    message += `   Name: ${currentForm.name || 'Not entered'}\n`;
+                    message += `   Company: ${currentForm.name || 'Not entered'}\n`;
+                    message += `   Doctor/lawyer: ${currentForm.contact || 'Not entered'}\n`;
                     message += `   Phone: ${currentForm.phone || 'Not entered'}\n`;
                     message += `   Email: ${currentForm.email || 'Not entered'}\n`;
                     message += `   URL: ${currentForm.url || 'Not entered'}\n`;
@@ -4345,15 +4386,18 @@
             function getLeadFormData() {
                 return {
                     name: leadFormName.value.trim(),
+                    contact: leadFormContact.value.trim(),
                     phone: leadFormPhone.value.trim(),
                     email: leadFormEmail.value.trim(),
                     url: leadFormUrl.value.trim(),
-                    comment: leadFormComment.value.trim()
+                    comment: leadFormComment.value.trim(),
+                    origin: leadFormOrigin.value,
+                    agent: leadFormOrigin.value === VS_ORIGIN ? leadFormAgent.value : ''
                 };
             }
 
             function hasLeadFormData(lead) {
-                return Object.values(lead).some(value => value);
+                return ['name', 'contact', 'phone', 'email', 'url', 'comment'].some(k => lead[k]);
             }
 
             function buildLeadDetails(lead) {
@@ -4397,7 +4441,7 @@
                             phone: lead.phone,
                             email: lead.email,
                             url: lead.url,
-                            comment: lead.comment,
+                            comment: commentWithExtras(lead),
                             eventDate: lead.eventDate || '',
                             eventTime: lead.eventTime || ''
                         }),
@@ -4612,7 +4656,7 @@
                     const response = await fetch(base, {
                         method: 'POST',
                         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify({ action: 'append', sheet: target.key, lead: { name: lead.name || '', phone: lead.phone || '', email: lead.email || '', url: lead.url || '', comment: lead.comment || '' } })
+                        body: JSON.stringify({ action: 'append', sheet: target.key, lead: { name: lead.name || '', phone: lead.phone || '', email: lead.email || '', url: lead.url || '', comment: commentWithExtras(lead) } })
                     });
                     const data = await response.json();
                     if (!data || !data.ok) throw new Error((data && data.error) || 'The sheet did not confirm the save.');
@@ -4629,10 +4673,10 @@
             const ALEK_QUEUE_URL = 'https://docs.google.com/spreadsheets/d/1FnmZogC-s2m9AORZLVQsy7dwzPGaGsu0mRW3rR2FNl8/edit';
             async function pushLeadToAlekQueue(lead) {
                 const clean = v => String(v || '').replace(/[\t\r\n]+/g, ' ').trim();
-                const notes = [lead.comment, lead.url ? 'Website: ' + lead.url : ''].filter(Boolean).join(' · ');
+                const notes = [leadExtras(lead), lead.comment, lead.url ? 'Website: ' + lead.url : ''].filter(Boolean).join(' · ');
                 // A Row ID, B Prospect, C Contact, D Phone, E Email, F City/state, G Time zone, H Brand, I Topic,
                 // J Who Tania spoke to, K Goal, L Comment/script, M Callback, N Claude, O ChatGPT, P STATUS
-                const row = ['', lead.name, '', lead.phone, lead.email, '', '', '', '', '', 'Appointment', notes, '', '', '', 'PENDING'].map(clean).join('\t');
+                const row = ['', lead.name, lead.contact || '', lead.phone, lead.email, '', '', '', '', '', 'Appointment', notes, '', '', '', 'PENDING'].map(clean).join('\t');
                 let copied = false;
                 try { await navigator.clipboard.writeText(row); copied = true; } catch (e) {
                     try { const ta = document.createElement('textarea'); ta.value = row; document.body.appendChild(ta); ta.select(); copied = document.execCommand('copy'); ta.remove(); } catch (_) {}
@@ -4660,7 +4704,7 @@
             }
 
             function openLeadInCRM(lead) {
-                const leadData = `?name=${encodeURIComponent(lead.name || '')}&phone=${encodeURIComponent(lead.phone || '')}&email=${encodeURIComponent(lead.email || '')}&url=${encodeURIComponent(lead.url || '')}&comment=${encodeURIComponent(lead.comment || '')}`;
+                const leadData = `?name=${encodeURIComponent(lead.name || '')}&phone=${encodeURIComponent(lead.phone || '')}&email=${encodeURIComponent(lead.email || '')}&url=${encodeURIComponent(lead.url || '')}&comment=${encodeURIComponent(commentWithExtras(lead))}`;
                 window.open(WEBSWAN_CRM_URL + leadData, '_blank', 'noopener,noreferrer');
                 showToast('Opening CRM... Remember to mark as "Hot Lead" before saving! 🔥', 'success');
             }
@@ -4671,19 +4715,23 @@
                 const email = leadFormEmail.value.trim();
                 const url = leadFormUrl.value.trim();
                 const comment = leadFormComment.value.trim();
+                const contact = leadFormContact.value.trim();
 
-                if (!name && !phone && !email && !url && !comment) {
+                if (!name && !contact && !phone && !email && !url && !comment) {
                     showToast('Please fill in at least one field.', 'error');
                     return;
                 }
 
                 const newLead = {
                     id: nextId++,
-                    name: name || 'No name',
+                    name: name || contact || 'No name',
+                    contact: contact,
                     phone: phone || 'No phone',
                     email: email || 'No email',
                     url: url || 'No URL',
                     comment: comment || '',
+                    origin: leadFormOrigin.value,
+                    agent: leadFormOrigin.value === VS_ORIGIN ? leadFormAgent.value : '',
                     dropdown: 'call back',
                     customDropdown: '',
                     completed: true
@@ -4691,7 +4739,7 @@
 
                 leads.push(newLead);
 
-                const displayText = `${name || 'No name'} - ${phone || 'No phone'} (${email || 'No email'})`;
+                const displayText = `${name || 'No name'}${contact ? ' (' + contact + ')' : ''} - ${phone || 'No phone'} (${email || 'No email'})${originText(newLead) ? ' · ' + originText(newLead) : ''}`;
                 completedItems.push({
                     id: Date.now(),
                     type: 'lead',
@@ -4710,6 +4758,7 @@
                 leadFormEmail.value = '';
                 leadFormUrl.value = '';
                 leadFormComment.value = '';
+                leadFormContact.value = ''; leadFormOrigin.value = ''; syncAgentWrap();
                 updateLeadFormWordCounter();
 
                 showToast('✅ Lead submitted and completed!', 'success');
@@ -4721,12 +4770,14 @@
                 leadFormEmail.value = '';
                 leadFormUrl.value = '';
                 leadFormComment.value = '';
+                leadFormContact.value = ''; leadFormOrigin.value = ''; syncAgentWrap();
                 updateLeadFormWordCounter();
                 showToast('🧹 Form cleared!', 'success');
             }
 
             // ----- RENDER LEADS -----
             function renderLeads() {
+                try { renderLeadStats(); } catch (e) {}
                 if (!container) return;
                 container.innerHTML = '';
                 if (leads.length === 0) {
@@ -4742,7 +4793,18 @@
                     const grid = document.createElement('div');
                     grid.className = 'lead-grid';
 
-                    grid.appendChild(createField('Name', 'text', lead.name, (val) => { lead.name = val; saveToStorage(); }, `lead-${lead.id}-name`));
+                    grid.appendChild(createField('Company / practice', 'text', lead.name, (val) => { lead.name = val; saveToStorage(); }, `lead-${lead.id}-name`));
+                    grid.appendChild(createField('Doctor / lawyer', 'text', lead.contact || '', (val) => { lead.contact = val; saveToStorage(); }, `lead-${lead.id}-contact`));
+                    {
+                        const og = document.createElement('div'); og.className = 'field-group'; og.dataset.hlkey = `lead-${lead.id}-origin`;
+                        og.innerHTML = '<label>Where it started</label>';
+                        const os = document.createElement('select'); fillSelect(os, LEAD_ORIGINS, lead.origin || '', '— choose —');
+                        const as = document.createElement('select'); fillSelect(as, VOICE_AGENTS, lead.agent || '', '— which agent? —');
+                        as.style.marginTop = '6px'; as.style.display = lead.origin === VS_ORIGIN ? '' : 'none';
+                        os.addEventListener('change', () => { lead.origin = os.value; if (os.value !== VS_ORIGIN) { lead.agent = ''; as.value = ''; } as.style.display = os.value === VS_ORIGIN ? '' : 'none'; saveToStorage(); renderLeadStats(); });
+                        as.addEventListener('change', () => { lead.agent = as.value; saveToStorage(); renderLeadStats(); });
+                        og.appendChild(os); og.appendChild(as); grid.appendChild(og);
+                    }
                     grid.appendChild(createField('Phone', 'tel', lead.phone, (val) => { lead.phone = val; saveToStorage(); }, `lead-${lead.id}-phone`));
                     grid.appendChild(createField('Email', 'email', lead.email, (val) => { lead.email = val; saveToStorage(); }, `lead-${lead.id}-email`));
                     grid.appendChild(createField('URL', 'url', lead.url, (val) => { lead.url = val; saveToStorage(); }, `lead-${lead.id}-url`));
@@ -4794,18 +4856,18 @@
                     commentGroup.className = 'field-group comment-box';
                     commentGroup.dataset.hlkey = `lead-${lead.id}-comment`;
                     const commentLabel = document.createElement('label');
-                    commentLabel.innerHTML = '<i class="fas fa-comment"></i> Lead comment (200 words)';
+                    commentLabel.innerHTML = '<i class="fas fa-comment"></i> Lead comment (6000 words)';
                     const textarea = document.createElement('textarea');
                     textarea.placeholder = 'Add details...';
                     textarea.value = lead.comment || '';
-                    textarea.maxLength = 1200;
+                    textarea.maxLength = LEAD_CHARS; textarea.style.resize = 'vertical';
                     const wordCounter = document.createElement('div');
                     wordCounter.className = 'word-counter';
 
                     function updateLeadWordCounter() {
                         const words = countWords(textarea.value);
-                        wordCounter.textContent = `${words} / 200 words`;
-                        wordCounter.style.color = words > 200 ? '#b22222' : '#2c7da0';
+                        wordCounter.textContent = `${words} / ${LEAD_WORDS} words`;
+                        wordCounter.style.color = words > LEAD_WORDS ? '#b22222' : '#2c7da0';
                     }
                     textarea.addEventListener('input', () => {
                         lead.comment = textarea.value;
@@ -5441,7 +5503,7 @@
 
             function pushTmLeadToForm(lead) {
                 if (!lead) return;
-                const hasFormData = [leadFormName, leadFormPhone, leadFormEmail, leadFormUrl, leadFormComment].some(f => f.value.trim());
+                const hasFormData = [leadFormName, leadFormContact, leadFormPhone, leadFormEmail, leadFormUrl, leadFormComment].some(f => f.value.trim());
                 if (hasFormData && !confirm('The Lead Form already has information in it. Replace it with this telemarketing lead?')) return;
 
                 const clean = (v) => (v === undefined || v === null) ? '' : String(v).trim();
@@ -5450,9 +5512,8 @@
 
                 // Everything without its own field goes into Comments, labeled
                 const notes = [];
-                if (clean(lead.decisionMakerName) && clean(lead.name) && clean(lead.name) !== clean(lead.decisionMakerName)) notes.push('Contact: ' + clean(lead.name));
+                if (clean(lead.decisionMakerName) && clean(lead.name) && clean(lead.name) !== clean(lead.decisionMakerName) && clean(lead.name) !== clean(lead.companyName)) notes.push('Contact: ' + clean(lead.name));
                 if (clean(lead.decisionMakerRole)) notes.push('Role: ' + clean(lead.decisionMakerRole));
-                if (clean(lead.companyName)) notes.push('Company: ' + clean(lead.companyName));
                 if (clean(lead.industry)) notes.push('Industry: ' + clean(lead.industry));
                 if (clean(lead.serviceInterested)) notes.push('Service: ' + clean(lead.serviceInterested));
                 if (clean(lead.category)) notes.push('Status: ' + clean(lead.category));
@@ -5460,11 +5521,15 @@
                 if (clean(lead.telemarketerId)) notes.push('Telemarketer: ' + clean(lead.telemarketerId));
                 notes.push('Source: ' + (lead.source === 'prospector' ? 'Lead Prospector' : lead.sheetLabel ? 'Google Sheet - ' + lead.sheetLabel : 'Telemarketing') + (lead.timestamp ? ' (' + new Date(lead.timestamp).toLocaleDateString() + ')' : ''));
 
-                leadFormName.value = clean(lead.decisionMakerName) || clean(lead.name) || clean(lead.companyName);
+                leadFormName.value = clean(lead.companyName) || clean(lead.name) || clean(lead.decisionMakerName);
+                leadFormContact.value = clean(lead.decisionMakerName) || (clean(lead.companyName) && clean(lead.name) !== clean(lead.companyName) ? clean(lead.name) : '');
+                const tmAgent = VOICE_AGENTS.find(a => a && new RegExp('\\b' + a + '\\b', 'i').test(clean(lead.telemarketerId)));
+                leadFormOrigin.value = tmAgent ? VS_ORIGIN : lead.source === 'prospector' ? 'Lead Prospector' : lead.sheetLabel ? '' : 'Telemarketing call';
+                syncAgentWrap(); leadFormAgent.value = tmAgent || '';
                 leadFormPhone.value = clean(lead.phone);
                 leadFormEmail.value = clean(lead.email);
                 leadFormUrl.value = url;
-                leadFormComment.value = notes.join('\n').slice(0, leadFormComment.maxLength > 0 ? leadFormComment.maxLength : 1200);
+                leadFormComment.value = notes.join('\n').slice(0, leadFormComment.maxLength > 0 ? leadFormComment.maxLength : LEAD_CHARS);
                 updateLeadFormWordCounter();
 
                 const id = String(lead.id);
@@ -6095,6 +6160,7 @@
                     leadFormEmail.value = '';
                     leadFormUrl.value = '';
                     leadFormComment.value = '';
+                    leadFormContact.value = ''; leadFormOrigin.value = ''; syncAgentWrap();
                     noteContentInput.value = '';
                     closeCurrentNote();
                     const translatorInputElClear = document.getElementById('translatorInput');
