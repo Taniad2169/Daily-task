@@ -84,9 +84,15 @@
    "avatar": "selected"
   },
   {
-   "text": "At The WebSwan, we build websites and SBPA phone apps that work for you, with AI working inside, not just AI on the label.",
-   "action": "Walking through a bright office, smiling",
+   "text": "As a web developer, I code my AI-powered websites myself, so the AI is built in and working for you, not just a label.",
+   "action": "Sitting at her desk typing code on a laptop, then turning to the camera with a proud smile",
    "trans": "circle",
+   "avatar": "selected"
+  },
+  {
+   "text": "At The WebSwan, we build websites and SBPA phone apps that keep working for your practice, day and night.",
+   "action": "Walking through a bright office, smiling",
+   "trans": "slide",
    "avatar": "selected"
   },
   {
