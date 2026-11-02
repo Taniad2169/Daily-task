@@ -34,8 +34,10 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .scene .top span{margin-right:auto}
 .scene textarea{min-height:60px}
 .scene .mini{font-size:12px;color:var(--muted)}
+#jump a.icon{text-decoration:none;display:inline-flex;border-radius:9px}
 .icon{background:transparent;color:var(--muted);border:1px solid var(--line);padding:4px 8px;font-size:12px}
-#stage{position:sticky;top:10px}
+#stage{position:sticky;top:56px}
+[id^="s-"]{scroll-margin-top:60px}
 canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000;border-radius:12px;display:block}
 .status{font-size:13px;color:var(--muted);margin-top:8px;min-height:18px}
 .check{display:flex;gap:8px;align-items:center;font-size:13px;font-weight:600;margin:6px 0}
@@ -49,9 +51,14 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
   <h1>WebSwan Video Maker</h1>
   <a href="../index.html">← Back to WorkPilot</a>
 </header>
+<nav id="jump" style="position:sticky;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--line);padding:8px 16px;display:flex;gap:6px;overflow-x:auto;white-space:nowrap">
+  <a class="icon" href="#s-start">⭐ Start</a><a class="icon" href="#s-script">📝 Script</a><a class="icon" href="#s-avatars">👤 Avatars</a><a class="icon" href="#s-scenes">🎬 Scenes</a>
+  <a class="icon" href="#s-voice" style="border-color:var(--brand);color:var(--brand)">🎙️ Voice &amp; music</a><a class="icon" href="#s-talk">🗣️ Lip sync</a><a class="icon" href="#s-captions">💬 Captions</a>
+  <a class="icon" href="#s-preview">▶ Preview</a><a class="icon" href="#s-videos">🎞️ My videos</a>
+</nav>
 <main>
 <section>
-  <div class="card" style="border:2px solid var(--brand)">
+  <div class="card" id="s-start" style="border:2px solid var(--brand)">
     <h2>⭐ Start here</h2>
     <details open><summary style="cursor:pointer;font-weight:800">📥 Videos Claude made for you</summary>
       <div id="claudeList" class="note" style="margin-top:6px">Loading…</div>
@@ -76,7 +83,7 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
     </details>
   </div>
 
-  <div class="card">
+  <div class="card" id="s-brand">
     <h2>1. Brand and size</h2>
     <div class="row">
       <div><label for="brand">Brand</label>
@@ -94,7 +101,7 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
     </div>
   </div>
 
-  <div class="card">
+  <div class="card" id="s-script">
     <h2>2. Your script</h2>
     <label for="script">Write or paste your script. A blank line starts a new scene.</label>
     <textarea id="script" placeholder="Is your website ADA compliant?&#10;&#10;Most doctors' websites fail basic accessibility checks.&#10;&#10;Get your complimentary audit from WebSwan Digital Solutions."></textarea>
@@ -109,7 +116,7 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
     <div id="trStatus" class="status"></div>
   </div>
 
-  <div class="card">
+  <div class="card" id="s-avatars">
     <h2>3. 👤 My avatar album</h2>
     <p class="note">Keep your avatar photos in folders. One folder can be one video: give each scene a different photo of you.</p>
     <div class="row">
@@ -124,7 +131,7 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
     <div id="albumInfo" class="note" style="margin-top:6px"></div>
   </div>
 
-  <div class="card">
+  <div class="card" id="s-scenes">
     <h2>4. Scenes</h2>
     <div class="row" style="margin-bottom:10px">
       <label class="btn ghost" style="margin:0;justify-content:center;color:var(--brand);border:1px solid var(--brand);background:transparent">📁 Add clips &amp; photos as new scenes<input id="clipFiles" type="file" accept="video/*,image/*" multiple hidden></label>
@@ -133,7 +140,7 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
     <div id="scenes"><div class="note">Your scenes will show here.</div></div>
   </div>
 
-  <div class="card">
+  <div class="card" id="s-voice">
     <h2>5. Voice and music</h2>
     <label>Voiceover (your own voice, any language: English, Kreyòl, Português, Français, Español)</label>
     <div class="row">
@@ -235,7 +242,7 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
     <div id="ttsStatus" class="status"></div>
   </div>
 
-  <div class="card">
+  <div class="card" id="s-talk">
     <h2>6. 🎬 Make me talk (lip sync)</h2>
     <p class="note">Your photo or clip + your voice from step 5 → you talking on video. Pay per video, no subscription.</p>
     <label for="engine">Pick the style</label>
@@ -266,7 +273,7 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
     <div id="talkResult"></div>
   </div>
 
-  <div class="card">
+  <div class="card" id="s-captions">
     <h2>7. Captions and ending</h2>
     <div class="check"><input type="checkbox" id="captions" checked><label for="captions" style="margin:0">Show captions (you can still turn them on or off for each scene)</label></div>
     <div class="row" style="margin-bottom:6px"><div><label for="transDef">✨ Transition between scenes</label>
@@ -281,7 +288,7 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
 </section>
 
 <section id="stage">
-  <div class="card">
+  <div class="card" id="s-preview">
     <h2>Preview</h2>
     <canvas id="cv" width="1080" height="1920"></canvas>
     <div class="row" style="margin-top:10px">
@@ -293,7 +300,7 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
     <div id="status" class="status"></div>
     <p class="note">Making the video plays it once in real time, so keep this tab in front until it finishes. It goes into 🎞️ My videos below. Nothing downloads until you press ⬇ Download.</p>
   </div>
-  <div class="card">
+  <div class="card" id="s-videos">
     <h2>🎞️ My videos</h2>
     <div id="gallery"><div class="note">Videos you make show here. Watch them, then download the one you like or delete your tests.</div></div>
     <div class="row" style="margin-top:8px"><button id="galDelAll" class="icon">🗑️ Delete all videos</button></div>
