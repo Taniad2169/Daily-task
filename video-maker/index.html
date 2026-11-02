@@ -36,7 +36,7 @@ button:disabled{opacity:.5;cursor:not-allowed}
 .scene .mini{font-size:12px;color:var(--muted)}
 #jump a.icon{text-decoration:none;display:inline-flex;border-radius:9px}
 .icon{background:transparent;color:var(--muted);border:1px solid var(--line);padding:4px 8px;font-size:12px}
-#stage{position:sticky;top:56px}
+#stage{}
 [id^="s-"]{scroll-margin-top:60px}
 canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000;border-radius:12px;display:block}
 .status{font-size:13px;color:var(--muted);margin-top:8px;min-height:18px}
@@ -116,23 +116,8 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
     <div id="trStatus" class="status"></div>
   </div>
 
-  <div class="card" id="s-avatars">
-    <h2>3. 👤 My avatar album</h2>
-    <p class="note">Keep your avatar photos in folders. One folder can be one video: give each scene a different photo of you.</p>
-    <div class="row">
-      <div><label for="albumSel">Folder</label><select id="albumSel"></select></div>
-      <div style="flex:0 0 auto"><label>&nbsp;</label><button id="albumNew" class="ghost">➕ New folder</button></div>
-    </div>
-    <div class="row" style="margin-top:8px">
-      <label class="btn" style="margin:0;justify-content:center">📷 Upload my avatar photos<input id="albumFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden></label>
-      <button id="albumAssign" class="ghost">🎬 Give each scene a photo from this folder</button>
-    </div>
-    <div id="albumGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;margin-top:10px"></div>
-    <div id="albumInfo" class="note" style="margin-top:6px"></div>
-  </div>
-
   <div class="card" id="s-scenes">
-    <h2>4. Scenes</h2>
+    <h2>3. Scenes</h2>
     <div class="row" style="margin-bottom:10px">
       <label class="btn ghost" style="margin:0;justify-content:center;color:var(--brand);border:1px solid var(--brand);background:transparent">📁 Add clips &amp; photos as new scenes<input id="clipFiles" type="file" accept="video/*,image/*" multiple hidden></label>
       <div class="note">Pick several clips at once, like in Canva. Each becomes a scene, in order. Use ↑ ↓ to reorder.</div>
@@ -140,8 +125,23 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
     <div id="scenes"><div class="note">Your scenes will show here.</div></div>
   </div>
 
+</section>
+
+<section id="stage">
+  <div class="card" id="s-preview">
+    <h2>Preview</h2>
+    <canvas id="cv" width="1080" height="1920"></canvas>
+    <div class="row" style="margin-top:10px">
+      <button id="playBtn">▶ Play</button>
+      <button id="stopBtn" class="ghost">■ Stop</button>
+      <button id="exportBtn" class="red">⬇ Make my video</button>
+      <button id="newVideoBtn" class="icon">🧹 Clear and start a new video</button>
+    </div>
+    <div id="status" class="status"></div>
+    <p class="note">Making the video plays it once in real time, so keep this tab in front until it finishes. It goes into 🎞️ My videos below. Nothing downloads until you press ⬇ Download.</p>
+  </div>
   <div class="card" id="s-voice">
-    <h2>5. Voice and music</h2>
+    <h2>4. Voice and music</h2>
     <label>Voiceover (your own voice, any language: English, Kreyòl, Português, Français, Español)</label>
     <div class="row">
       <button id="tpBtn">📜 Teleprompter: record scene by scene</button>
@@ -242,9 +242,24 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
     <div id="ttsStatus" class="status"></div>
   </div>
 
+  <div class="card" id="s-avatars">
+    <h2>5. 👤 My avatar album</h2>
+    <p class="note">Keep your avatar photos in folders. One folder can be one video: give each scene a different photo of you.</p>
+    <div class="row">
+      <div><label for="albumSel">Folder</label><select id="albumSel"></select></div>
+      <div style="flex:0 0 auto"><label>&nbsp;</label><button id="albumNew" class="ghost">➕ New folder</button></div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <label class="btn" style="margin:0;justify-content:center">📷 Upload my avatar photos<input id="albumFiles" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden></label>
+      <button id="albumAssign" class="ghost">🎬 Give each scene a photo from this folder</button>
+    </div>
+    <div id="albumGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;margin-top:10px"></div>
+    <div id="albumInfo" class="note" style="margin-top:6px"></div>
+  </div>
+
   <div class="card" id="s-talk">
     <h2>6. 🎬 Make me talk (lip sync)</h2>
-    <p class="note">Your photo or clip + your voice from step 5 → you talking on video. Pay per video, no subscription.</p>
+    <p class="note">Your photo or clip + your voice from step 4 → you talking on video. Pay per video, no subscription.</p>
     <label for="engine">Pick the style</label>
     <select id="engine">
       <option value="omnihuman">⭐ Best with my voice: OmniHuman 1.5 (photo, gestures and expressions, ~16¢/second)</option>
@@ -258,7 +273,7 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
     <div class="row" style="align-items:center">
       <img id="avatarImg" alt="Selected avatar" style="display:none;flex:0 0 96px;width:96px;height:96px;object-fit:cover;border-radius:12px;border:2px solid var(--brand)">
       <div style="flex:1">
-        <p class="note" style="margin:0 0 6px">Uses the photo you tapped in your 👤 avatar album (step 3). For the cheapest style, upload a 2–10 s video of you instead.</p>
+        <p class="note" style="margin:0 0 6px">Uses the photo you tapped in your 👤 avatar album (step 5). For the cheapest style, upload a 2–10 s video of you instead.</p>
         <label class="btn ghost" style="margin:0;justify-content:center;color:var(--brand);border:1px solid var(--brand);background:transparent">🎞️ Use a 2–10 s video clip instead<input id="talkFile" type="file" accept="video/mp4,video/quicktime" hidden></label>
       </div>
     </div>
@@ -284,21 +299,6 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
       <div><label for="cta">Ending headline</label><input id="cta" type="text"></div>
       <div><label for="contact">Ending contact line</label><input id="contact" type="text"></div>
     </div>
-  </div>
-</section>
-
-<section id="stage">
-  <div class="card" id="s-preview">
-    <h2>Preview</h2>
-    <canvas id="cv" width="1080" height="1920"></canvas>
-    <div class="row" style="margin-top:10px">
-      <button id="playBtn">▶ Play</button>
-      <button id="stopBtn" class="ghost">■ Stop</button>
-      <button id="exportBtn" class="red">⬇ Make my video</button>
-      <button id="newVideoBtn" class="icon">🧹 Clear and start a new video</button>
-    </div>
-    <div id="status" class="status"></div>
-    <p class="note">Making the video plays it once in real time, so keep this tab in front until it finishes. It goes into 🎞️ My videos below. Nothing downloads until you press ⬇ Download.</p>
   </div>
   <div class="card" id="s-videos">
     <h2>🎞️ My videos</h2>
@@ -935,8 +935,8 @@ function estimate(){ const e = ENG[$("engine").value]; return e.cost(voice ? voi
 function talkInfo(){
   const e = ENG[$("engine").value]; talkConfirm = false; $("talkBtn").textContent = "🗣️ Make me talk (one video)";
   $("actionBox").style.display = e.prompt ? "block" : "none"; $("lineBox").style.display = e.line ? "block" : "none";
-  const parts = [talkFile ? "📷 " + talkFile.name + (talkClipSecs ? ` (${talkClipSecs.toFixed(1)} s)` : "") : (e.needs === "video" ? "Choose a 2–10 second video of you." : "Tap a photo in your 👤 avatar album (step 3).")];
-  if (e.voice) parts.push(voice ? `Voice ${voice.buffer.duration.toFixed(1)} s` + (voice.buffer.duration > e.max ? ` ⚠️ must be under ${e.max} s for this style` : "") : "Add your voice in step 5.");
+  const parts = [talkFile ? "📷 " + talkFile.name + (talkClipSecs ? ` (${talkClipSecs.toFixed(1)} s)` : "") : (e.needs === "video" ? "Choose a 2–10 second video of you." : "Tap a photo in your 👤 avatar album (step 5).")];
+  if (e.voice) parts.push(voice ? `Voice ${voice.buffer.duration.toFixed(1)} s` + (voice.buffer.duration > e.max ? ` ⚠️ must be under ${e.max} s for this style` : "") : "Add your voice in step 4.");
   parts.push(`About $${estimate().toFixed(2)}`);
   $("talkInfo").textContent = parts.join(" · ");
 }
@@ -1060,8 +1060,8 @@ function sceneCheck(s){
 }
 async function sceneVoice(s, el){
   const text = s.text.trim(); if (!text) return (el.textContent = "Write this scene's words first.");
-  if ($("ttsLang").value === "ht") return (el.textContent = "For Kreyòl, use 🎙️ Record this scene (or a Magic Hour file in step 5).");
-  if (!$("ttsVoice").value) return (el.textContent = "Pick a voice from your library in step 5 first (sign in).");
+  if ($("ttsLang").value === "ht") return (el.textContent = "For Kreyòl, use 🎙️ Record this scene (or a Magic Hour file in step 4).");
+  if (!$("ttsVoice").value) return (el.textContent = "Pick a voice from your library in step 4 first (sign in).");
   el.textContent = "Making this scene's voice…";
   try { s.voiceBuf = await speak(text, $("ttsVoice").value, $("ttsLang").value); el.textContent = `🔊 Scene voice ${s.voiceBuf.duration.toFixed(1)} s`;
   } catch (err) { el.textContent = "⚠️ " + err.message; }
@@ -1106,7 +1106,7 @@ async function sceneTalk(s, i, el){
 $("allTalkBtn").onclick = async () => {
   const engine = $("engine").value, e = ENG[engine];
   const todo = scenes.filter(s => !s.ownAudio && s.avatarId);
-  if (!todo.length) return tStatus("Give your scenes an 👤 avatar first (step 3: 🎬 Give each scene a photo).");
+  if (!todo.length) return tStatus("Give your scenes an 👤 avatar first (step 5: 🎬 Give each scene a photo).");
   if (e.voice && $("ttsLang").value !== "ht" && $("ttsVoice").value) {
     for (const s of todo) if (!s.voiceBuf && s.text.trim()) { tStatus(`Making the voice for scene ${scenes.indexOf(s) + 1}…`); try { await sceneVoice(s, { set textContent(v) {} }); } catch {} }
   }
@@ -1130,10 +1130,10 @@ $("allTalkBtn").onclick = async () => {
 };
 $("talkBtn").onclick = async () => {
   const engine = $("engine").value, e = ENG[engine];
-  if (!talkFile) return tStatus(e.needs === "video" ? "Upload a 2–10 s video clip." : "Tap a photo in your 👤 avatar album (step 3).");
+  if (!talkFile) return tStatus(e.needs === "video" ? "Upload a 2–10 s video clip." : "Tap a photo in your 👤 avatar album (step 5).");
   if ((e.needs === "video") !== talkFile.type.startsWith("video")) return tStatus(e.needs === "video" ? "This style needs a video clip." : "This style needs a photo: tap one in your album.");
   if (e.needs === "video" && (talkClipSecs < 2 || talkClipSecs > 10)) return tStatus("Your clip must be 2 to 10 seconds.");
-  if (e.voice && !voice) return tStatus("Add your voice in step 5 first (record, upload, or make a voiceover).");
+  if (e.voice && !voice) return tStatus("Add your voice in step 4 first (record, upload, or make a voiceover).");
   if (e.voice && voice.buffer.duration > e.max) return tStatus(`For this style your voice must be under ${e.max} seconds. Use scenes for longer videos.`);
   if (e.line && !$("talkLine").value.trim()) return tStatus("Write what you say.");
   if (!talkConfirm) { talkConfirm = true; $("talkBtn").textContent = `✅ Yes, make it (about $${estimate().toFixed(2)})`; tStatus("Press again to confirm."); return; }
@@ -1233,7 +1233,7 @@ function loadProject(pr){
   scenes = (pr.scenes || []).map(x => ({ text: x.text || "", dur: x.dur || autoDur(x.text || ""), media: null, avatarId: resolveAvatar(x.avatarId || x.avatar || "selected"),
     action: x.action || "", cap: x.cap || "", trans: x.trans || "" }));
   voice = null; info(); setSize(); renderScenes(); save(); drawAt(Math.min(1, total() / 2));
-  status(`Opened "${pr.title || "project"}". Next: add your voice (step 5), check your avatar in each scene, ▶ Play, then ⬇ Make my video.`);
+  status(`Opened "${pr.title || "project"}". Next: add your voice (step 4), check your avatar in each scene, ▶ Play, then ⬇ Make my video.`);
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 const projects = { all: () => store.get("projects") || [], set: (l) => store.set("projects", l) };
