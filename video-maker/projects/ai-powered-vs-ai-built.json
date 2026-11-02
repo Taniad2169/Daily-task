@@ -1,0 +1,99 @@
+{
+ "v": 1,
+ "title": "AI-powered vs. AI-built websites",
+ "brand": "ws",
+ "format": "9:16",
+ "template": false,
+ "transDef": "fade",
+ "captions": true,
+ "karaoke": true,
+ "endCard": true,
+ "cta": "AI working inside your website, not just on the label",
+ "contact": "thewebswan.com · (510) 535-4763",
+ "scenes": [
+  {
+   "text": "Is your website AI-powered, or was it just built with AI? They're not the same thing.",
+   "action": "Looking at the camera with a curious smile, one eyebrow raised",
+   "trans": "",
+   "avatar": "selected"
+  },
+  {
+   "text": "Lately, a lot of people say their website is AI-powered because they used AI to make it.",
+   "action": "Walking slowly toward the camera, relaxed hand gestures",
+   "trans": "slide",
+   "avatar": "selected"
+  },
+  {
+   "text": "But using AI to build something doesn't make it AI-powered.",
+   "action": "Shaking her head gently, friendly smile",
+   "trans": "fade",
+   "avatar": "selected"
+  },
+  {
+   "text": "Think about it this way. If I use AI to make this video, the video isn't AI-powered. It just plays.",
+   "action": "Pointing to herself, then opening her hands",
+   "trans": "circle",
+   "avatar": "selected"
+  },
+  {
+   "text": "A car built by robots in a factory isn't a self-driving car. It still needs you behind the wheel.",
+   "action": "Sitting at a desk, hand gestures explaining",
+   "trans": "fade",
+   "avatar": "selected"
+  },
+  {
+   "text": "An AI-built website is the same. AI helped write the words or design the pages. Once it's live, it just sits there.",
+   "action": "Pointing to a laptop screen on the desk",
+   "trans": "wipe",
+   "avatar": "selected"
+  },
+  {
+   "text": "An AI-powered website keeps working for you after it's live.",
+   "action": "Leaning forward, confident expression",
+   "trans": "zoom",
+   "avatar": "selected"
+  },
+  {
+   "text": "It can answer your visitors' questions any time of day, even at two in the morning.",
+   "action": "Counting on her fingers, smiling",
+   "trans": "fade",
+   "avatar": "selected"
+  },
+  {
+   "text": "It can book appointments, take messages, and send them straight to you.",
+   "action": "Tapping a phone screen, then looking up at the camera",
+   "trans": "slide",
+   "avatar": "selected"
+  },
+  {
+   "text": "It can follow up with new leads, so nobody slips through the cracks.",
+   "action": "Nodding, hand gesture forward",
+   "trans": "fade",
+   "avatar": "selected"
+  },
+  {
+   "text": "Built with AI means AI helped make it. Powered by AI means AI works inside it, every day.",
+   "action": "Standing, one hand to each side as if comparing two things",
+   "trans": "stars",
+   "avatar": "selected"
+  },
+  {
+   "text": "So ask your web designer: what does the AI on my site actually do for my patients and clients?",
+   "action": "Raising a finger, friendly but serious",
+   "trans": "fade",
+   "avatar": "selected"
+  },
+  {
+   "text": "At The WebSwan, we build websites and SBPA phone apps that work for you, with AI working inside, not just AI on the label.",
+   "action": "Walking through a bright office, smiling",
+   "trans": "circle",
+   "avatar": "selected"
+  },
+  {
+   "text": "Want to see the difference on your own site? Call The WebSwan and let's talk.",
+   "action": "Big smile, pointing at the camera",
+   "trans": "flash",
+   "avatar": "selected"
+  }
+ ]
+}
