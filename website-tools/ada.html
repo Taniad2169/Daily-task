@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>ADA Generator · WebSwan Website Tools</title>
+<link rel="icon" href="../favicon-32x32.png">
+<style>
+:root{--blue:#1182f0;--brand:#339cde;--soft:#6ca1d4;--ice:#93e5fa;--ink:#12324a;--muted:#5b7186;--line:#d5e4f1;--bg:#eef6fc;--ok:#0b7a43;--okbg:#e2f6ea;--warn:#8a5a00;--warnbg:#fff3d6;--rec:#1d4ed8;--recbg:#e0ebff}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg)}
+header{background:var(--blue);color:#fff;padding:14px 20px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+header h1{margin:0;font-size:20px}
+header .sub{opacity:.9;font-size:13px}
+nav.tools{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+nav.tools a,nav.tools span{color:#fff;text-decoration:none;font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px;border:1px solid rgba(255,255,255,.5)}
+nav.tools a.on{background:#fff;color:var(--blue)}
+nav.tools span{opacity:.65}
+main{max-width:1180px;margin:0 auto;padding:18px 16px 60px;display:grid;grid-template-columns:400px 1fr;gap:18px}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-bottom:16px}
+h2{font-size:17px;margin:0 0 10px;color:var(--blue)}
+label{display:block;font-size:12px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);margin:10px 0 4px}
+input,select,textarea{width:100%;font:inherit;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:#f8fbfe;color:var(--ink)}
+textarea{min-height:70px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:0;border-radius:999px;padding:9px 16px;font:600 14px system-ui,sans-serif;cursor:pointer;background:var(--blue);color:#fff;text-decoration:none}
+.btn.ghost{background:#fff;color:var(--blue);border:1px solid var(--soft)}
+.btn.small{padding:6px 12px;font-size:13px}
+.btns{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.tabs button{border:1px solid var(--soft);background:#fff;color:var(--blue);border-radius:999px;padding:7px 14px;font:600 14px system-ui,sans-serif;cursor:pointer}
+.tabs button[aria-selected=true]{background:var(--blue);color:#fff;border-color:var(--blue)}
+pre{background:#0f2537;color:#e6f4ff;padding:12px 14px;border-radius:12px;overflow:auto;font-size:13px;white-space:pre-wrap;word-break:break-all}
+.note{background:#f3f9ff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px;color:var(--muted)}
+.warnbox{background:var(--warnbg);border:1px solid #f0d28c;color:var(--warn);border-radius:12px;padding:10px 12px;font-size:13px}
+table.check{width:100%;border-collapse:collapse;font-size:14px}
+table.check td{border-top:1px solid var(--line);padding:8px 6px;vertical-align:top}
+table.check select{width:auto;min-width:170px;padding:6px 8px}
+.pill{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:3px 10px}
+.pill.done{background:var(--okbg);color:var(--ok)}.pill.review{background:var(--warnbg);color:var(--warn)}.pill.rec{background:var(--recbg);color:var(--rec)}.pill.na{background:#eef1f4;color:#5b6570}
+.steps li{margin:4px 0}
+.saved{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.saved button{border:1px solid var(--line);background:#f8fbfe;border-radius:999px;padding:5px 10px;font-size:13px;cursor:pointer}
+#report{border:2px solid var(--soft);border-radius:14px;overflow:hidden;background:#fff}
+#report .rh{background:var(--blue);color:#fffafa;padding:18px 22px}
+#report .rh h3{margin:0;font-size:20px}
+#report .rb{padding:16px 22px}
+#report h4{color:var(--blue);margin:16px 0 6px}
+#report ul{margin:4px 0 0 18px;padding:0}
+#statementOut{border:1px solid var(--line);border-radius:12px;padding:14px 18px;background:#fff}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#12324a;color:#fff;padding:9px 16px;border-radius:999px;font-weight:600;display:none;z-index:9}
+@media print{
+  body{background:#fff}header,.noprint,aside,.tabs,.toast{display:none!important}
+  main{display:block;padding:0}.card{border:0;padding:0}
+  .panel{display:none!important}.panel.printme{display:block!important}
+  #report{border-color:var(--soft)}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>♿ ADA Generator</h1><div class="sub">WebSwan Digital Solutions · internal tool · built on your Swan accessibility widget</div></div>
+  <nav class="tools" aria-label="Website tools">
+    <a class="on" href="ada.html" aria-current="page">ADA Generator</a>
+    <span title="Coming next">Cookie &amp; Privacy Banner</span>
+    <span title="Coming next">Image Alt Text</span>
+    <span title="Coming next">Schema Markup</span>
+    <a href="../">← WorkPilot</a>
+  </nav>
+</header>
+
+<main>
+<aside>
+  <div class="card">
+    <h2>1. Client</h2>
+    <div class="saved" id="savedList"></div>
+    <label for="biz">Business / practice name</label><input id="biz" placeholder="Smith Family Dental">
+    <div class="row">
+      <div><label for="site">Website</label><input id="site" placeholder="https://smithdental.com"></div>
+      <div><label for="industry">Industry</label>
+        <select id="industry"><option value="medical">Doctor / medical</option><option value="dental">Dentist</option><option value="chiro">Chiropractor</option><option value="therapy">Therapy / mental health</option><option value="legal">Law firm / attorney</option><option value="business">Other business</option></select></div>
+    </div>
+    <div class="row">
+      <div><label for="platform">Website platform</label>
+        <select id="platform"><option value="siteswan">SiteSwan</option><option value="wix">Wix</option><option value="godaddy">GoDaddy</option><option value="square">Square</option><option value="squarespace">Squarespace</option><option value="wordpress">WordPress</option><option value="shopify">Shopify</option><option value="webflow">Webflow</option><option value="html">Custom HTML (The WebSwan)</option></select></div>
+      <div><label for="state">State</label><select id="state"><option value="">Choose…</option><option value="CA">California</option><option value="CT">Connecticut</option><option value="FL">Florida</option><option value="GA">Georgia</option><option value="IL">Illinois</option><option value="NV">Nevada</option><option value="NJ">New Jersey</option><option value="NY">New York</option><option value="PA">Pennsylvania</option><option value="TX">Texas</option><option value="UT">Utah</option><option value="VA">Virginia</option><option value="other">Other state</option></select></div>
+    </div>
+    <div class="row">
+      <div><label for="email">Accessibility contact email</label><input id="email" type="email" placeholder="office@smithdental.com"></div>
+      <div><label for="phone">Phone</label><input id="phone" placeholder="(555) 555-5555"></div>
+    </div>
+    <label for="medicaid">Takes Medicaid or other HHS federal funding?</label>
+    <select id="medicaid"><option value="unknown">Not sure</option><option value="yes">Yes</option><option value="no">No</option></select>
+    <label for="hours">Hours for accessibility help</label><input id="hours" placeholder="Mon–Fri, 9 AM–5 PM Pacific">
+    <label for="address">Mailing address (optional)</label><input id="address" placeholder="123 Main St, City, ST">
+  </div>
+
+  <div class="card">
+    <h2>2. Widget setup</h2>
+    <label for="pkg">What WebSwan is installing</label>
+    <select id="pkg"><option value="ada">ADA toolbar only</option><option value="both">ADA toolbar + cookie consent banner</option></select>
+    <div class="row">
+      <div><label for="color">Button color</label><input id="color" type="color" value="#339cde" style="height:42px;padding:4px"></div>
+      <div><label for="pos">ADA button side</label><select id="pos"><option value="right">Right</option><option value="left">Left</option></select></div>
+    </div>
+    <label for="brandText">Panel heading</label><input id="brandText" value="Accessibility tools">
+    <label for="stmtUrl">Where the statement will live</label><input id="stmtUrl" placeholder="/accessibility">
+    <label for="privacyUrl">Privacy policy link (cookie banner)</label><input id="privacyUrl" placeholder="https://smithdental.com/privacy">
+    <label for="installDate">Install / review date</label><input id="installDate" type="date">
+    <div class="btns">
+      <button class="btn" id="saveBtn" type="button">💾 Save client</button>
+      <button class="btn ghost" id="newBtn" type="button">＋ New client</button>
+    </div>
+  </div>
+</aside>
+
+<section>
+  <div class="tabs noprint" role="tablist">
+    <button role="tab" data-tab="howto" aria-selected="true">📘 How to use</button>
+    <button role="tab" data-tab="install" aria-selected="false">⚙️ Install code</button>
+    <button role="tab" data-tab="check" aria-selected="false">✅ Checklist</button>
+    <button role="tab" data-tab="statement" aria-selected="false">📄 Statement</button>
+    <button role="tab" data-tab="report" aria-selected="false">📊 Client report</button>
+  </div>
+
+  <div class="panel card" id="p-howto">
+    <h2>How to use the ADA Generator</h2>
+    <ol class="steps">
+      <li><b>Fill in the client</b> on the left: business name, website, industry, platform, state and the email/phone people can use for accessibility help. Pick <b>ADA toolbar only</b> or <b>ADA + cookie banner</b> (what they paid for).</li>
+      <li><b>Install code tab:</b> copy the code and paste it on their site using the steps for their platform (SiteSwan, Wix, GoDaddy…). Open the live site and check the ♿ button works.</li>
+      <li><b>Approve the website</b> in your widget dashboard (button on the Install tab) so it keeps running, and send the signed-agreement link if they haven't signed.</li>
+      <li><b>Checklist tab:</b> mark each item honestly. Only mark <i>Done by WebSwan</i> what you actually did. Everything else stays <i>Needs review</i> or <i>Recommended</i>; those become upsells (alt text, forms, captions, monthly review).</li>
+      <li><b>Statement tab:</b> download the statement page or copy it, and publish it on their site at the address you chose (for example /accessibility). Ask the client to have their attorney look it over.</li>
+      <li><b>Client report tab:</b> press <b>Save as PDF</b>, then <b>Email draft to client</b> and attach the PDF.</li>
+      <li><b>Save client</b> so you can open them again next month for the review.</li>
+    </ol>
+    <div class="warnbox" style="margin-top:10px"><b>Never say "fully ADA compliant" or "guaranteed."</b> Say: "We installed an accessibility toolbar and statement and reviewed your site; here's what's done and what still needs work." The state notes on the Checklist and report tell the client why it matters in their state.</div>
+    <h2 style="margin-top:18px">States you work in</h2>
+    <div id="stateList" class="note"></div>
+  </div>
+
+  <div class="panel card" id="p-install" hidden>
+    <h2>Install code</h2>
+    <p class="note">One line that points to your widget. Your widget code stays in one place, so every client gets updates and you can pause or block a site from your <a href="https://taniad2169.github.io/access-link/dashboard.html" target="_blank" rel="noopener">widget dashboard</a>.</p>
+    <label>ADA toolbar</label><pre id="adaCode"></pre>
+    <div class="btns"><button class="btn small" data-copy="adaCode" type="button">Copy ADA code</button></div>
+    <div id="cookieWrap"><label>Cookie consent banner</label><pre id="cookieCode"></pre>
+      <div class="btns"><button class="btn small" data-copy="cookieCode" type="button">Copy cookie code</button></div></div>
+    <h2 style="margin-top:18px">Where to paste it</h2>
+    <ol class="steps" id="platformSteps"></ol>
+    <h2 style="margin-top:18px">After installing</h2>
+    <ol class="steps">
+      <li>Open the website, check the ♿ button shows and every option works (and the cookie banner, if installed).</li>
+      <li>Open your <a href="https://taniad2169.github.io/access-link/dashboard.html" target="_blank" rel="noopener">widget dashboard</a> and press <b>Approve</b> next to the new website.</li>
+      <li>Send the client the signed agreement link from <a href="https://taniad2169.github.io/access-link/welcome.html" target="_blank" rel="noopener">welcome.html</a> if they haven't signed yet.</li>
+      <li>Publish the accessibility statement (Statement tab) at the address you chose, then send the client report.</li>
+    </ol>
+  </div>
+
+  <div class="panel card" id="p-check" hidden>
+    <h2>Accessibility checklist</h2>
+    <div id="stateNote" class="warnbox" style="margin-bottom:10px"></div>
+    <p class="note">Mark each item honestly. <span class="pill done">Done by WebSwan</span> items go into the statement as work completed. <span class="pill review">Needs review</span> and <span class="pill rec">Recommended</span> items become "Known limitations" and next steps. Nothing here certifies the website.</p>
+    <table class="check"><tbody id="checkRows"></tbody></table>
+    <label for="limits">Other known problems (optional)</label>
+    <textarea id="limits" placeholder="e.g. Older PDF price list is not screen-reader friendly; a phone alternative is available."></textarea>
+  </div>
+
+  <div class="panel card" id="p-statement" hidden>
+    <h2>Accessibility statement</h2>
+    <div class="warnbox">Written from what WebSwan actually installed and checked. It does not claim the site conforms to WCAG. Ask the client to have their own attorney review it before publishing.</div>
+    <div class="btns noprint">
+      <button class="btn small" id="copyStmtHtml" type="button">Copy as HTML</button>
+      <button class="btn small ghost" id="copyStmtText" type="button">Copy as text</button>
+      <button class="btn small ghost" id="dlStmt" type="button">Download .html page</button>
+    </div>
+    <div id="statementOut" style="margin-top:12px"></div>
+  </div>
+
+  <div class="panel card" id="p-report" hidden>
+    <div class="btns noprint" style="margin:0 0 12px"><button class="btn small" id="printBtn" type="button">🖨️ Save as PDF</button><button class="btn small ghost" id="mailBtn" type="button">✉️ Email draft to client</button></div>
+    <div id="report"></div>
+  </div>
+</section>
+</main>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const toast = m => { const t = $('toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 2400); };
+  const store = { get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+  const WIDGET = 'https://taniad2169.github.io/access-link/widget.js', COOKIE = 'https://taniad2169.github.io/access-link/cookie.js';
+
+  // What the toolbar gives visitors (from the widget itself), used in the statement and report
+  const TOOLBAR = ['four text-size levels', 'a readable font with adjustable line height and text spacing', 'link highlighting', 'high-contrast and grayscale modes', 'pausing animations', 'a large cursor and a visible keyboard focus', 'hiding media', 'a "skip to main content" link', 'quick profiles for vision, reading and low motion'];
+
+  const CHECKS = [
+    { k: 'toolbar', t: 'Accessibility toolbar installed and tested on the live site', def: 'done', work: 'We provide an accessibility toolbar on every page that lets visitors adjust the site to their needs: ' + TOOLBAR.join(', ') + '.' },
+    { k: 'statement', t: 'Accessibility statement published with a real contact', def: 'done', work: 'We publish this accessibility statement with a way to contact us for help.' },
+    { k: 'keyboard', t: 'Keyboard: menus, buttons and forms work without a mouse', def: 'review', work: 'We checked that menus, buttons and forms can be reached and used with a keyboard.', limit: 'Some parts of the site may not yet work fully with a keyboard alone.' },
+    { k: 'contrast', t: 'Color contrast of text and buttons', def: 'review', work: 'We reviewed the color contrast of text and buttons.', limit: 'Some text or buttons may not yet have enough color contrast.' },
+    { k: 'alt', t: 'Images have text descriptions (alt text)', def: 'review', work: 'We added or reviewed text descriptions for meaningful images.', limit: 'Some images may not yet have text descriptions.' },
+    { k: 'forms', t: 'Forms have labels and clear error messages', def: 'review', work: 'We reviewed that form fields have labels and clear error messages.', limit: 'Some form fields may not yet have clear labels or error messages.' },
+    { k: 'headings', t: 'Headings and page structure make sense to screen readers', def: 'review', work: 'We reviewed page headings and structure for screen readers.', limit: 'Some pages may not yet have a clear heading structure.' },
+    { k: 'links', t: 'Links and buttons describe where they go', def: 'review', work: 'We reviewed that links and buttons describe where they lead.', limit: 'Some links or buttons may not clearly describe where they lead.' },
+    { k: 'media', t: 'Videos have captions; audio has transcripts', def: 'na', work: 'We provide captions for videos and transcripts for audio.', limit: 'Some videos or audio may not yet have captions or transcripts.' },
+    { k: 'pdf', t: 'PDFs and documents are accessible (or offered another way)', def: 'na', work: 'We offer documents in accessible formats or another way on request.', limit: 'Some PDFs or documents may not be accessible to screen readers; we provide them another way on request.' },
+    { k: 'booking', t: 'Online booking / intake / payment works for everyone', def: 'rec', work: 'We reviewed online booking, intake and payment for accessibility.', limit: 'Online booking, intake or payment may have accessibility barriers; staff can help by phone or email.' },
+    { k: 'thirdparty', t: 'Third-party tools (maps, chat, reviews, booking) checked', def: 'rec', work: 'We reviewed third-party tools on the site.', limit: 'Third-party tools on the site (such as maps, chat, review or booking widgets) are provided by other companies and may not be fully accessible.' },
+    { k: 'manual', t: 'Manual screen-reader test (NVDA / VoiceOver)', def: 'rec', work: 'We tested key pages with a screen reader.', limit: 'The site has not yet had a full manual screen-reader review.' },
+    { k: 'monitor', t: 'Re-check after website changes (monthly review)', def: 'rec', work: 'We re-check the site after changes as part of a recurring review.' }
+  ];
+  const STATES = {
+    CA: { n: 'California', t: 'One of the highest-risk states. ADA website claims are often filed together with California\'s Unruh Civil Rights Act, which allows statutory damages of at least $4,000 per violation, plus attorney fees.' },
+    NY: { n: 'New York', t: 'Year after year one of the states with the most ADA website lawsuits. Claims are often joined with the New York State and New York City Human Rights Laws.' },
+    FL: { n: 'Florida', t: 'Consistently among the top states for ADA website lawsuits in federal court.' },
+    NJ: { n: 'New Jersey', t: 'Federal ADA claims can be joined with the New Jersey Law Against Discrimination (NJLAD), which covers places open to the public.' },
+    PA: { n: 'Pennsylvania', t: 'Many ADA website lawsuits are filed in Pennsylvania federal courts; the Pennsylvania Human Relations Act also covers public accommodations.' },
+    IL: { n: 'Illinois', t: 'Federal ADA claims can be joined with the Illinois Human Rights Act, which covers places open to the public.' },
+    CT: { n: 'Connecticut', t: 'Connecticut\'s own anti-discrimination law covers places open to the public, alongside the federal ADA.' },
+    TX: { n: 'Texas', t: 'The federal ADA applies to businesses open to the public; Texas courts have seen a steady number of website accessibility cases.' },
+    GA: { n: 'Georgia', t: 'The federal ADA applies to businesses open to the public; website accessibility cases are filed in Georgia federal courts too.' },
+    UT: { n: 'Utah', t: 'The federal ADA applies to businesses open to the public, wherever the business is located.' },
+    NV: { n: 'Nevada', t: 'The federal ADA applies to businesses open to the public; Nevada also has its own public accommodations law.' },
+    VA: { n: 'Virginia', t: 'The federal ADA applies to businesses open to the public; the Virginia Human Rights Act also covers public accommodations.' },
+    other: { n: 'Other state', t: 'The federal ADA applies to businesses open to the public in every state; many states add their own laws.' }
+  };
+  const HEALTH = ['medical', 'dental', 'chiro', 'therapy'];
+  function stateNote() {
+    const st = STATES[val('state')];
+    const base = st ? `<b>${esc(st.n)}:</b> ${esc(st.t)}` : '<b>Pick the client\'s state</b> on the left to see why accessibility matters there.';
+    const hhs = HEALTH.includes(val('industry')) && val('medicaid') !== 'no' ? '<br><b>Health care:</b> practices that take Medicaid or other HHS federal funding are covered by the HHS Section 504 rule, which uses WCAG 2.1 AA for websites (larger practices from May 2026, practices with fewer than 15 employees from May 2027).' + (val('medicaid') === 'unknown' ? ' Ask the client if they take Medicaid.' : '') : '';
+    return base + hhs + '<br><span style="font-size:12px">General information, not legal advice. The client should confirm with their own attorney.</span>';
+  }
+  const STATUS = { done: 'Done by WebSwan', review: 'Needs review', rec: 'Recommended', na: 'Not on this site' };
+
+  const FIELDS = ['biz', 'site', 'industry', 'platform', 'state', 'medicaid', 'email', 'phone', 'hours', 'address', 'pkg', 'color', 'pos', 'brandText', 'stmtUrl', 'privacyUrl', 'installDate', 'limits'];
+  let checks = {}, currentId = '';
+
+  function val(id) { return $(id).value.trim(); }
+  function data() {
+    const d = {}; FIELDS.forEach(f => d[f] = val(f)); d.checks = Object.assign({}, checks); return d;
+  }
+  function fill(d) {
+    FIELDS.forEach(f => { if (d && d[f] != null) $(f).value = d[f]; });
+    checks = {}; CHECKS.forEach(c => checks[c.k] = (d && d.checks && d.checks[c.k]) || c.def);
+    renderChecks(); update();
+  }
+  function blank() {
+    FIELDS.forEach(f => $(f).value = '');
+    $('industry').value = 'medical'; $('platform').value = 'siteswan'; $('medicaid').value = 'unknown'; $('pkg').value = 'ada'; $('color').value = '#339cde'; $('pos').value = 'right';
+    $('brandText').value = 'Accessibility tools'; $('stmtUrl').value = '/accessibility'; $('installDate').value = new Date().toISOString().slice(0, 10);
+    currentId = ''; fill({});
+  }
+  const origin = () => { let s = val('site'); if (!s) return ''; if (!/^https?:\/\//i.test(s)) s = 'https://' + s; try { return new URL(s).origin; } catch (e) { return s; } };
+  const host = () => origin().replace(/^https?:\/\/(www\.)?/, '');
+  const stmtFull = () => { const u = val('stmtUrl') || '/accessibility'; return /^https?:/i.test(u) ? u : (origin() ? origin() + (u.startsWith('/') ? u : '/' + u) : u); };
+  const niceDate = s => { if (!s) return new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }); const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }); };
+  const who = () => ({ medical: 'patients', dental: 'patients', chiro: 'patients', therapy: 'clients', legal: 'clients', business: 'customers' }[val('industry')] || 'visitors');
+
+  function codes() {
+    const a = ['<script', '  src="' + WIDGET + '"'];
+    if (val('color') && val('color').toLowerCase() !== '#155eef') a.push('  data-color="' + esc(val('color')) + '"');
+    a.push('  data-position="' + esc(val('pos') || 'right') + '"');
+    if (val('brandText')) a.push('  data-brand="' + esc(val('brandText')) + '"');
+    a.push('  data-statement-url="' + esc(val('stmtUrl') || '/accessibility') + '"');
+    if (val('email')) a.push('  data-contact-email="' + esc(val('email')) + '"');
+    const ada = a.join('\n') + '>\n<\/script>';
+    const c = ['<script', '  src="' + COOKIE + '"', '  data-company="' + esc(val('biz') || 'Business name') + '"'];
+    if (val('privacyUrl')) c.push('  data-privacy-url="' + esc(val('privacyUrl')) + '"');
+    if (val('email')) c.push('  data-contact-email="' + esc(val('email')) + '"');
+    if (val('color')) c.push('  data-color="' + esc(val('color')) + '"');
+    c.push('  data-position="' + (val('pos') === 'left' ? 'right' : 'left') + '"');
+    return { ada, cookie: c.join('\n') + '>\n<\/script>' };
+  }
+  const STEPS = {
+    siteswan: ['In SiteSwan, open the site → Settings → Custom Code (Header/Footer scripts).', 'Paste the code in the footer (before &lt;/body&gt;) and save.', 'Publish the site, then open it in a private window to check.'],
+    wix: ['Wix dashboard → Settings → Custom Code → + Add Custom Code.', 'Paste the code, choose "All pages", place it in "Body - end", load "Once".', 'Apply and publish. The Wix plan must allow custom code (a connected domain and a paid plan).'],
+    godaddy: ['GoDaddy Website Builder → Settings → Site-wide code (or Header/Footer code).', 'Paste the code and save, then publish.', 'If only an "HTML" section exists, it may run inside a frame; ask the client to upgrade or use site-wide code.'],
+    square: ['Square Online → Website → Settings → Tracking tools / Custom code.', 'Paste the code in the footer area and save, then publish.', 'Some Square plans block outside scripts; check the button shows on the live site.'],
+    squarespace: ['Squarespace → Settings → Advanced → Code Injection → Footer.', 'Paste the code and save. Code Injection needs a Business plan or higher.'],
+    wordpress: ['Install a header/footer code plugin (for example WPCode) or use the theme\'s custom-code area.', 'Paste the code in the footer (before &lt;/body&gt;) and save.', 'Clear any caching plugin, then check the live site.'],
+    shopify: ['Shopify admin → Online Store → Themes → … → Edit code → theme.liquid.', 'Paste the code right before &lt;/body&gt; and save.'],
+    webflow: ['Webflow → Project settings → Custom code → Footer code.', 'Paste the code, save, and publish.'],
+    html: ['Open the site\'s HTML (every page, or the shared footer/template).', 'Paste the code right before &lt;/body&gt;.', 'Upload or redeploy, then check the live site.']
+  };
+
+  function renderChecks() {
+    $('checkRows').innerHTML = CHECKS.map(c => `<tr><td>${esc(c.t)}</td><td style="text-align:right"><select data-ck="${c.k}" aria-label="${esc(c.t)}">${Object.entries(STATUS).map(([k, v]) => `<option value="${k}" ${checks[c.k] === k ? 'selected' : ''}>${v}</option>`).join('')}</select></td></tr>`).join('');
+  }
+
+  function statementHTML() {
+    const biz = val('biz') || '[Business name]', site = origin() || '[website address]';
+    const done = CHECKS.filter(c => checks[c.k] === 'done').map(c => c.work);
+    const limits = CHECKS.filter(c => ['review', 'rec'].includes(checks[c.k]) && c.limit).map(c => c.limit);
+    if (val('limits')) val('limits').split(/\n+/).map(s => s.trim()).filter(Boolean).forEach(s => limits.push(s));
+    const contact = [val('email') ? `<li>Email: <a href="mailto:${esc(val('email'))}">${esc(val('email'))}</a></li>` : '', val('phone') ? `<li>Phone: ${esc(val('phone'))} (relay calls welcome)</li>` : '', val('hours') ? `<li>Hours: ${esc(val('hours'))}</li>` : '', val('address') ? `<li>Mailing address: ${esc(val('address'))}</li>` : ''].filter(Boolean).join('');
+    return `<h1>${esc(biz)} Accessibility Statement</h1>
+<p>${esc(biz)} wants everyone, including people with disabilities, to be able to use our website and get the information and services we offer our ${esc(who())}. We are working to improve the accessibility of <a href="${esc(site)}">${esc(site.replace(/^https?:\/\//, ''))}</a>.</p>
+<h2>Need help? Contact us</h2>
+<p>If you have trouble using any part of this website, need information in another format, or want to report an accessibility problem, please contact us. Include the page address and a short description of the problem, and we will make reasonable efforts to help and to fix it.</p>
+<ul>${contact || '<li>[accessibility contact email and phone]</li>'}</ul>
+<h2>What we do</h2>
+<ul>${done.map(w => `<li>${esc(w)}</li>`).join('') || '<li>[describe the accessibility measures in place]</li>'}</ul>
+<h2>Standards we follow</h2>
+<p>We use the Web Content Accessibility Guidelines (WCAG) 2.1, Level AA, as a reference for our accessibility work. This statement is not a claim that every page fully meets those guidelines.</p>
+${limits.length ? `<h2>Known limitations</h2><p>We know about the following and are working on them. If any of these affects you, contact us and we will help another way.</p><ul>${limits.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : ''}
+<h2>Date</h2>
+<p>This statement was prepared on ${esc(niceDate(val('installDate')))} and last reviewed on ${esc(niceDate(val('installDate')))}.</p>`;
+  }
+
+  function reportHTML() {
+    const biz = val('biz') || 'Client', site = origin();
+    const by = s => CHECKS.filter(c => checks[c.k] === s);
+    const li = arr => arr.length ? '<ul>' + arr.map(c => `<li>${esc(c.t)}</li>`).join('') + '</ul>' : '<p style="color:#5b7186">None.</p>';
+    const extra = val('limits') ? '<ul>' + val('limits').split(/\n+/).filter(Boolean).map(s => `<li>${esc(s)}</li>`).join('') + '</ul>' : '';
+    return `<div class="rh"><h3>Website Accessibility Setup Report</h3><div>WebSwan Digital Solutions · prepared for ${esc(biz)}</div></div>
+<div class="rb">
+<p><b>Website:</b> ${esc(site || '—')}<br><b>Date:</b> ${esc(niceDate(val('installDate')))}<br><b>Installed:</b> ${val('pkg') === 'both' ? 'Swan accessibility toolbar and cookie consent banner' : 'Swan accessibility toolbar'}<br><b>Accessibility statement:</b> ${esc(stmtFull())}</p>
+<h4>✅ Completed by WebSwan</h4>${li(by('done'))}
+<h4>🔎 Needs review</h4>${li(by('review'))}${extra}
+<h4>➡️ Recommended next steps</h4>${li(by('rec'))}
+<h4>What your visitors can now do</h4><ul>${TOOLBAR.map(t => `<li>${esc(t[0].toUpperCase() + t.slice(1))}</li>`).join('')}</ul>
+<h4>Why it matters for you</h4><p style="font-size:14px">${stateNote()}</p>
+<h4>Important</h4>
+<p style="font-size:13px;color:#3b5266">The accessibility toolbar and statement support your accessibility program. They do not, by themselves, make a website fully accessible or guarantee compliance with the ADA, WCAG, Section 508 or any state law. Items marked "Needs review" or "Recommended" may still need changes to the website's content or code. You, together with your website platform, remain responsible for the full accessibility of your website. Questions: call WebSwan Digital Solutions at (239) 667-0151.</p>
+</div>`;
+  }
+
+  function update() {
+    const c = codes();
+    $('adaCode').textContent = c.ada; $('cookieCode').textContent = c.cookie;
+    $('cookieWrap').style.display = val('pkg') === 'both' ? '' : 'none';
+    $('platformSteps').innerHTML = (STEPS[val('platform')] || STEPS.html).map(s => `<li>${s}</li>`).join('');
+    $('statementOut').innerHTML = statementHTML();
+    $('report').innerHTML = reportHTML();
+    $('stateNote').innerHTML = stateNote();
+    try { store.set('ada_gen_draft', Object.assign(data(), { id: currentId })); } catch (e) {}
+  }
+
+  async function copy(text, msg) {
+    try { await navigator.clipboard.writeText(text); } catch (e) { const t = document.createElement('textarea'); t.value = text; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+    toast(msg || 'Copied');
+  }
+
+  // saved clients
+  function renderSaved() {
+    const list = store.get('ada_gen_clients', []);
+    $('savedList').innerHTML = list.length ? list.map(x => `<button type="button" data-open="${esc(x.id)}" title="Open">${esc(x.biz || x.site || 'Client')}</button>`).join('') : '<span style="font-size:13px;color:#5b7186">No saved clients yet.</span>';
+  }
+  $('savedList').addEventListener('click', e => { const b = e.target.closest('[data-open]'); if (!b) return; const x = store.get('ada_gen_clients', []).find(y => y.id === b.dataset.open); if (x) { currentId = x.id; fill(x); toast('Opened ' + (x.biz || 'client')); } });
+  $('saveBtn').onclick = () => {
+    if (!val('biz') && !val('site')) return toast('Add the business name or website first');
+    const list = store.get('ada_gen_clients', []); const d = data(); d.id = currentId || 'c' + Date.now(); d.at = Date.now(); currentId = d.id;
+    const i = list.findIndex(y => y.id === d.id); if (i >= 0) list[i] = d; else list.unshift(d);
+    store.set('ada_gen_clients', list.slice(0, 200)); renderSaved(); toast('Saved ' + (d.biz || 'client'));
+  };
+  $('newBtn').onclick = () => { blank(); toast('New client'); };
+
+  // tabs
+  document.querySelectorAll('[role=tab]').forEach(b => b.onclick = () => {
+    document.querySelectorAll('[role=tab]').forEach(x => x.setAttribute('aria-selected', x === b));
+    document.querySelectorAll('.panel').forEach(p => { p.hidden = p.id !== 'p-' + b.dataset.tab; p.classList.toggle('printme', p.id === 'p-' + b.dataset.tab); });
+  });
+  document.querySelectorAll('[data-copy]').forEach(b => b.onclick = () => copy($(b.dataset.copy).textContent, 'Code copied'));
+  $('checkRows').addEventListener('change', e => { const s = e.target.closest('[data-ck]'); if (s) { checks[s.dataset.ck] = s.value; update(); } });
+  FIELDS.forEach(f => { $(f).addEventListener('input', update); $(f).addEventListener('change', update); });
+  $('stateList').innerHTML = Object.entries(STATES).filter(([k]) => k !== 'other').map(([, v]) => `<p style="margin:4px 0"><b>${esc(v.n)}:</b> ${esc(v.t)}</p>`).join('');
+  $('copyStmtHtml').onclick = () => copy(statementHTML(), 'Statement HTML copied');
+  $('copyStmtText').onclick = () => copy($('statementOut').innerText, 'Statement text copied');
+  $('dlStmt').onclick = () => {
+    const page = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Accessibility Statement · ${esc(val('biz'))}</title><style>body{font:17px/1.6 system-ui,sans-serif;max-width:760px;margin:40px auto;padding:0 18px;color:#1b2a36}h1{font-size:28px}h2{font-size:20px;margin-top:28px}a{color:#0b5cad}</style></head><body><main>${statementHTML()}</main></body><\/html>`;
+    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([page], { type: 'text/html' })); a.download = 'accessibility-statement-' + (host() || 'client').replace(/[^\w.-]/g, '') + '.html'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  };
+  $('printBtn').onclick = () => window.print();
+  $('mailBtn').onclick = () => {
+    const to = val('email'), biz = val('biz') || 'your practice';
+    const body = `Hello,\n\nYour accessibility toolbar is now live on ${origin() || 'your website'}${val('pkg') === 'both' ? ', together with your cookie consent banner' : ''}.\n\nI've attached your Website Accessibility Setup Report. It lists what WebSwan completed, what still needs review, and our recommended next steps. Your accessibility statement will be at ${stmtFull()}.\n\nThe toolbar and statement support your accessibility program; they don't guarantee full ADA or WCAG compliance on their own, so please look over the "Needs review" items with us.\n\nAny questions, just call me at (239) 667-0151.\n\nTania\nWebSwan Digital Solutions`;
+    location.href = 'mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent('Your website accessibility setup – ' + biz) + '&body=' + encodeURIComponent(body);
+    toast('Save the report as PDF first, then attach it to the email');
+  };
+
+  // start: last draft or a fresh client
+  const draft = store.get('ada_gen_draft', null);
+  if (draft && (draft.biz || draft.site)) { blank(); currentId = draft.id || ''; fill(draft); } else blank();
+  renderSaved();
+})();
+</script>
+</body>
+</html>
