@@ -1872,6 +1872,7 @@
             padding: 0.75rem 1.5rem 1.5rem;
         }
                 [data-highlight="pink"] { background: #f8bbd0 !important; box-shadow: inset 0 0 0 2px #ec407a; color: #6a1b4d !important; }
+                [data-highlight="ocean"] { background: #cfe9fb !important; box-shadow: inset 0 0 0 2px #0077be; color: #023e5a !important; }
         #tmLeadModalOverlay {
             display: none;
             position: fixed;
@@ -5323,31 +5324,42 @@
                 const el = document.getElementById('telemarketingLeadsContainer');
                 if (!el) return;
                 const tmHasInfo = (l) => ['decisionMakerName', 'name', 'companyName', 'phone', 'email', 'website', 'comment', 'serviceInterested', 'industry'].some(k => l[k] && String(l[k]).trim());
-                const visible = telemarketingLeads.filter(l => !tmDismissed.includes(l.id) && tmHasInfo(l));
-                if (!visible.length) {
+                const visibleAll = telemarketingLeads.filter(l => !tmDismissed.includes(l.id) && tmHasInfo(l));
+                if (!visibleAll.length) {
                     el.innerHTML = '';
                     return;
                 }
-                let html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
-                    + '<span style="font-weight:700;color:#ad1457;font-size:0.85rem;"><i class="fas fa-phone-volume"></i> From Telemarketing Calls</span>'
-                    + '<button class="btn btn-outline" id="tmRefreshBtn" style="border-color:#ec407a;color:#ad1457;padding:0.3rem 0.8rem;font-size:0.75rem;"><i class="fas fa-sync"></i> Refresh</button>'
-                    + '</div>';
-                visible.forEach((lead) => {
+                // Leads pushed from the Lead Prospector are ocean blue; telemarketing calls stay pink/red.
+                const isPros = (l) => l.source === 'prospector';
+                const groups = [
+                    { list: visibleAll.filter(l => !isPros(l)), title: '<i class="fas fa-phone-volume"></i> From Telemarketing Calls', color: '#ad1457', border: '#ec407a', hl: 'pink', refresh: true },
+                    { list: visibleAll.filter(isPros), title: '<i class="fas fa-magnifying-glass-location"></i> From Lead Prospector', color: '#0077be', border: '#0077be', hl: 'ocean', refresh: false }
+                ];
+                let html = '';
+                groups.forEach((g, gi) => {
+                    if (!g.list.length && !(g.refresh)) return;
+                    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin:' + (gi ? '14px' : '0') + ' 0 8px;">'
+                        + '<span style="font-weight:700;color:' + g.color + ';font-size:0.85rem;">' + g.title + '</span>'
+                        + (g.refresh ? '<button class="btn btn-outline" id="tmRefreshBtn" style="border-color:#ec407a;color:#ad1457;padding:0.3rem 0.8rem;font-size:0.75rem;"><i class="fas fa-sync"></i> Refresh</button>' : '')
+                        + '</div>';
+                    g.list.forEach((lead) => { html += tmRowHTML(lead, g.hl); });
+                });
+                function tmRowHTML(lead, hl) {
                     const emoji = categoryToEmoji(lead.category);
                     const when = lead.timestamp ? new Date(lead.timestamp).toLocaleString() : '';
                     const safeName = String(lead.decisionMakerName || lead.name || lead.companyName || lead.phone || 'No name').replace(/</g, '&lt;');
                     const safeCompany = lead.companyName ? ' — ' + lead.companyName.replace(/</g, '&lt;') : '';
-                    html += `
+                    return `
                         <div class="completed-item tm-lead-row" data-tm-id="${lead.id}">
-                            <span style="font-size:1.1rem;">${emoji}</span>
-                            <span class="item-text" data-highlight="pink">${safeName}${safeCompany}</span>
+                            <span style="font-size:1.1rem;">${lead.source === 'prospector' ? '🔎' : emoji}</span>
+                            <span class="item-text" data-highlight="${hl}">${safeName}${safeCompany}</span>
                             <span class="item-type">${(lead.category || 'Lead').replace(/</g, '&lt;')}</span>
                             <span style="font-size:0.7rem;color:#8a4a63;">${when}</span>
                             ${tmPushed.includes(String(lead.id)) ? '<span class="tm-pushed-badge"><i class="fas fa-check"></i> Pushed</span>' : ''}
                             <button class="tm-push-btn" data-tm-id="${lead.id}" title="Push to Lead Form"><i class="fas fa-share-square"></i></button>
                             <button class="delete-completed tm-dismiss-btn" data-tm-id="${lead.id}" title="Dismiss"><i class="fas fa-times-circle"></i></button>
                         </div>`;
-                });
+                }
                 el.innerHTML = html;
 
                 el.querySelectorAll('.tm-lead-row').forEach((row) => {
@@ -5446,7 +5458,7 @@
                 if (clean(lead.category)) notes.push('Status: ' + clean(lead.category));
                 if (clean(lead.comment)) notes.push('Notes: ' + clean(lead.comment));
                 if (clean(lead.telemarketerId)) notes.push('Telemarketer: ' + clean(lead.telemarketerId));
-                notes.push('Source: ' + (lead.sheetLabel ? 'Google Sheet - ' + lead.sheetLabel : 'Telemarketing') + (lead.timestamp ? ' (' + new Date(lead.timestamp).toLocaleDateString() + ')' : ''));
+                notes.push('Source: ' + (lead.source === 'prospector' ? 'Lead Prospector' : lead.sheetLabel ? 'Google Sheet - ' + lead.sheetLabel : 'Telemarketing') + (lead.timestamp ? ' (' + new Date(lead.timestamp).toLocaleDateString() + ')' : ''));
 
                 leadFormName.value = clean(lead.decisionMakerName) || clean(lead.name) || clean(lead.companyName);
                 leadFormPhone.value = clean(lead.phone);
