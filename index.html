@@ -1873,6 +1873,7 @@
         }
                 [data-highlight="pink"] { background: #f8bbd0 !important; box-shadow: inset 0 0 0 2px #ec407a; color: #6a1b4d !important; }
                 [data-highlight="ocean"] { background: #cfe9fb !important; box-shadow: inset 0 0 0 2px #0077be; color: #023e5a !important; }
+                [data-highlight="aiblue"] { background: #dbe8ff !important; box-shadow: inset 0 0 0 2px #1d4ed8; color: #0b2a6f !important; }
         #tmLeadModalOverlay {
             display: none;
             position: fixed;
@@ -5419,8 +5420,10 @@
                 }
                 // Leads pushed from the Lead Prospector are ocean blue; telemarketing calls stay pink/red.
                 const isPros = (l) => l.source === 'prospector';
+                const isAI = (l) => l.source === 'voice-studio';
                 const groups = [
-                    { list: visibleAll.filter(l => !isPros(l)), title: '<i class="fas fa-phone-volume"></i> From Telemarketing Calls', color: '#ad1457', border: '#ec407a', hl: 'pink', refresh: true },
+                    { list: visibleAll.filter(l => !isPros(l) && !isAI(l)), title: '<i class="fas fa-phone-volume"></i> From Telemarketing Calls', color: '#ad1457', border: '#ec407a', hl: 'pink', refresh: true },
+                    { list: visibleAll.filter(isAI).sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || ''))), title: '<i class="fas fa-robot"></i> From AI Calls (Voice Studio) · Rebecca, Monica, George, Alek, Rachel', color: '#1d4ed8', border: '#1d4ed8', hl: 'aiblue', refresh: false },
                     { list: visibleAll.filter(isPros), title: '<i class="fas fa-magnifying-glass-location"></i> From Lead Prospector', color: '#0077be', border: '#0077be', hl: 'ocean', refresh: false }
                 ];
                 let html = '';
@@ -5439,9 +5442,9 @@
                     const safeCompany = lead.companyName ? ' — ' + lead.companyName.replace(/</g, '&lt;') : '';
                     return `
                         <div class="completed-item tm-lead-row" data-tm-id="${lead.id}">
-                            <span style="font-size:1.1rem;">${lead.source === 'prospector' ? '🔎' : emoji}</span>
+                            <span style="font-size:1.1rem;">${lead.source === 'prospector' ? '🔎' : lead.source === 'voice-studio' ? '🤖' : emoji}</span>
                             <span class="item-text" data-highlight="${hl}">${safeName}${safeCompany}</span>
-                            <span class="item-type">${(lead.category || 'Lead').replace(/</g, '&lt;')}</span>
+                            <span class="item-type">${(lead.category || 'Lead').replace(/</g, '&lt;')}${lead.source === 'voice-studio' && lead.telemarketerId ? ' · ' + String(lead.telemarketerId).replace(/</g, '&lt;') : ''}</span>
                             <span style="font-size:0.7rem;color:#8a4a63;">${when}</span>
                             ${tmPushed.includes(String(lead.id)) ? '<span class="tm-pushed-badge"><i class="fas fa-check"></i> Pushed</span>' : ''}
                             <button class="tm-push-btn" data-tm-id="${lead.id}" title="Push to Lead Form"><i class="fas fa-share-square"></i></button>
@@ -5502,7 +5505,7 @@
                     ['Calls Made Today', lead.callsMadeToday],
                     ['Interested Leads Today', lead.interestedCountToday],
                     ['Comment', lead.comment],
-                    ['Telemarketer', lead.telemarketerId],
+                    [lead.source === 'voice-studio' ? 'AI Agent' : 'Telemarketer', lead.telemarketerId],
                     ['Submitted', lead.timestamp ? new Date(lead.timestamp).toLocaleString() : '']
                 ].filter(([, v]) => v);
 
@@ -5545,7 +5548,7 @@
                 if (clean(lead.category)) notes.push('Status: ' + clean(lead.category));
                 if (clean(lead.comment)) notes.push('Notes: ' + clean(lead.comment));
                 if (clean(lead.telemarketerId)) notes.push('Telemarketer: ' + clean(lead.telemarketerId));
-                notes.push('Source: ' + (lead.source === 'prospector' ? 'Lead Prospector' : lead.sheetLabel ? 'Google Sheet - ' + lead.sheetLabel : 'Telemarketing') + (lead.timestamp ? ' (' + new Date(lead.timestamp).toLocaleDateString() + ')' : ''));
+                notes.push('Source: ' + (lead.source === 'voice-studio' ? 'AI call (Voice Studio)' : lead.source === 'prospector' ? 'Lead Prospector' : lead.sheetLabel ? 'Google Sheet - ' + lead.sheetLabel : 'Telemarketing') + (lead.timestamp ? ' (' + new Date(lead.timestamp).toLocaleDateString() + ')' : ''));
 
                 leadFormName.value = clean(lead.companyName) || clean(lead.name) || clean(lead.decisionMakerName);
                 leadFormContact.value = clean(lead.decisionMakerName) || (clean(lead.companyName) && clean(lead.name) !== clean(lead.companyName) ? clean(lead.name) : '');
