@@ -5427,8 +5427,9 @@
                 // AI calls: a real conversation (talked, email, call back, appointment) is yellow and listed first; hang ups, no answer, voicemail stay blue.
                 const aiGood = (l) => /talked|email|appointment|call ?back/i.test(String(l.category || l.status || '')) ? 1 : 0;
                 const groups = [
+                    { list: visibleAll.filter(l => isAI(l) && aiGood(l)).sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || ''))), title: '<i class="fas fa-star"></i> AI Calls: they talked or gave an email (call these first) · <span style="background:#fff3a3;color:#4a3b00;padding:0 6px;border-radius:6px">yellow</span>', color: '#8a6d00', border: '#e0b100', hl: 'aiblue', refresh: false },
                     { list: visibleAll.filter(l => !isPros(l) && !isAI(l)), title: '<i class="fas fa-phone-volume"></i> From Telemarketing Calls', color: '#ad1457', border: '#ec407a', hl: 'pink', refresh: true },
-                    { list: visibleAll.filter(isAI).sort((a, b) => (aiGood(b) - aiGood(a)) || String(b.timestamp || '').localeCompare(String(a.timestamp || ''))), title: '<i class="fas fa-robot"></i> From AI Calls (Voice Studio) · <span style="background:#fff3a3;color:#4a3b00;padding:0 6px;border-radius:6px">yellow = they talked or gave an email</span> · blue = hang up, no answer, voicemail', color: '#1d4ed8', border: '#1d4ed8', hl: 'aiblue', refresh: false },
+                    { list: visibleAll.filter(l => isAI(l) && !aiGood(l)).sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || ''))), title: '<i class="fas fa-robot"></i> AI Calls (Voice Studio) · hang up, no answer, voicemail', color: '#1d4ed8', border: '#1d4ed8', hl: 'aiblue', refresh: false },
                     { list: visibleAll.filter(isPros), title: '<i class="fas fa-magnifying-glass-location"></i> From Lead Prospector', color: '#0077be', border: '#0077be', hl: 'ocean', refresh: false }
                 ];
                 let html = '';
