@@ -1874,6 +1874,7 @@
                 [data-highlight="pink"] { background: #f8bbd0 !important; box-shadow: inset 0 0 0 2px #ec407a; color: #6a1b4d !important; }
                 [data-highlight="ocean"] { background: #cfe9fb !important; box-shadow: inset 0 0 0 2px #0077be; color: #023e5a !important; }
                 [data-highlight="aiblue"] { background: #dbe8ff !important; box-shadow: inset 0 0 0 2px #1d4ed8; color: #0b2a6f !important; }
+                [data-highlight="aiyellow"] { background: #fff3a3 !important; box-shadow: inset 0 0 0 2px #e0b100; color: #4a3b00 !important; font-weight: 700; }
         #tmLeadModalOverlay {
             display: none;
             position: fixed;
@@ -5423,9 +5424,11 @@
                 // Leads pushed from the Lead Prospector are ocean blue; telemarketing calls stay pink/red.
                 const isPros = (l) => l.source === 'prospector';
                 const isAI = (l) => l.source === 'voice-studio';
+                // AI calls: a real conversation (talked, email, call back, appointment) is yellow and listed first; hang ups, no answer, voicemail stay blue.
+                const aiGood = (l) => /talked|email|appointment|call ?back/i.test(String(l.category || l.status || '')) ? 1 : 0;
                 const groups = [
                     { list: visibleAll.filter(l => !isPros(l) && !isAI(l)), title: '<i class="fas fa-phone-volume"></i> From Telemarketing Calls', color: '#ad1457', border: '#ec407a', hl: 'pink', refresh: true },
-                    { list: visibleAll.filter(isAI).sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || ''))), title: '<i class="fas fa-robot"></i> From AI Calls (Voice Studio) · Rebecca, Monica, George, Alek, Rachel', color: '#1d4ed8', border: '#1d4ed8', hl: 'aiblue', refresh: false },
+                    { list: visibleAll.filter(isAI).sort((a, b) => (aiGood(b) - aiGood(a)) || String(b.timestamp || '').localeCompare(String(a.timestamp || ''))), title: '<i class="fas fa-robot"></i> From AI Calls (Voice Studio) · <span style="background:#fff3a3;color:#4a3b00;padding:0 6px;border-radius:6px">yellow = they talked or gave an email</span> · blue = hang up, no answer, voicemail', color: '#1d4ed8', border: '#1d4ed8', hl: 'aiblue', refresh: false },
                     { list: visibleAll.filter(isPros), title: '<i class="fas fa-magnifying-glass-location"></i> From Lead Prospector', color: '#0077be', border: '#0077be', hl: 'ocean', refresh: false }
                 ];
                 let html = '';
@@ -5445,7 +5448,7 @@
                     return `
                         <div class="completed-item tm-lead-row" data-tm-id="${lead.id}">
                             <span style="font-size:1.1rem;">${lead.source === 'prospector' ? '🔎' : lead.source === 'voice-studio' ? '🤖' : emoji}</span>
-                            <span class="item-text" data-highlight="${hl}">${safeName}${safeCompany}</span>
+                            <span class="item-text" data-highlight="${hl === 'aiblue' && aiGood(lead) ? 'aiyellow' : hl}">${safeName}${safeCompany}</span>
                             <span class="item-type">${(lead.category || 'Lead').replace(/</g, '&lt;')}${lead.source === 'voice-studio' && lead.telemarketerId ? ' · ' + String(lead.telemarketerId).replace(/</g, '&lt;') : ''}</span>
                             <span style="font-size:0.7rem;color:#8a4a63;">${when}</span>
                             ${tmPushed.includes(String(lead.id)) ? '<span class="tm-pushed-badge"><i class="fas fa-check"></i> Pushed</span>' : ''}
