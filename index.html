@@ -1890,7 +1890,9 @@
             display: flex;
         }
         /* the ✍️ Text highlight button stays on top of the lead pop-up */
-        body:has(#tmLeadModalOverlay.show) #wsxBar { z-index: 10010; }
+        body:has(#tmLeadModalOverlay.show) #wsxBar,
+        body:has(#tmLeadModalOverlay.show) #highlightToolbar,
+        body:has(#tmLeadModalOverlay.show) #highlightModeHint { z-index: 10010; }
         .tm-lead-row {
             cursor: pointer;
         }
@@ -5693,7 +5695,6 @@
                 const all = loadTmEdits(); all[String(lead.id)] = Object.assign(all[String(lead.id)] || {}, ch);
                 try { localStorage.setItem('webswan_tm_edits', JSON.stringify(all)); scheduleFirebaseAutoSave(); } catch (e) {}
                 renderTelemarketingLeads();
-                openTmLeadModal(lead, false);
                 showToast('💾 Edits saved. Push it to the Lead Form whenever you are ready.', 'success');
             }
             function openCallRecording(callId) {
@@ -5706,60 +5707,46 @@
             const tmHlKey = (lead, k) => 'tmlead-' + String(lead && lead.id || '').replace(/[^\w-]/g, '') + '-' + k;
             const tmEsc = (v) => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-            function openTmLeadModal(lead, edit) {
+            // One pop-up for viewing, editing and highlighting: every box can be highlighted with ✍️ Text highlight, and typing is saved by itself.
+            function openTmLeadModal(lead) {
                 const body = document.getElementById('tmLeadModalBody');
                 if (!body) return;
                 tmCurrentLead = lead;
                 const tmListenEl = document.getElementById('tmListenBtn'); if (tmListenEl) tmListenEl.style.display = tmCallId(lead) ? '' : 'none';
                 const tmPushBtnEl = document.getElementById('tmPushToFormBtn'), tmEditBtnEl = document.getElementById('tmEditBtn');
-                if (tmPushBtnEl) tmPushBtnEl.innerHTML = edit ? '<i class="fas fa-share-square"></i> Save &amp; push to Lead Form' : '<i class="fas fa-share-square"></i> Push to Lead Form';
-                if (tmEditBtnEl) tmEditBtnEl.style.display = edit ? 'none' : '';
-                const tmSaveEl = document.getElementById('tmSaveEditBtn'); if (tmSaveEl) tmSaveEl.style.display = edit ? '' : 'none';
-                if (edit) {
-                    const box = 'width:100%;box-sizing:border-box;padding:7px;border:1px solid #d6c2cc;border-radius:8px;font:inherit;';
-                    // Each field is a highlightable field (Text highlight / Whole Field), saved per lead.
-                    const fld = (k, label, v, area) => '<div class="field-group" data-hlkey="' + tmHlKey(lead, k) + '" style="margin-bottom:9px;"><label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ad1457;display:block;">' + label + '</label>'
-                        + '<textarea data-tm-edit="' + k + '" rows="' + (area ? 5 : 1) + '"' + (area ? '' : ' style="min-height:0;resize:none;"') + '>' + tmEsc(v) + '</textarea></div>';
-                    body.innerHTML = fld('companyName', 'Practice / business', lead.companyName || lead.name) + fld('decisionMakerName', 'Contact (doctor, attorney or owner)', lead.decisionMakerName)
-                        + fld('phone', 'Phone', lead.phone) + fld('email', 'Email', lead.email) + fld('website', 'Website', lead.website) + fld('comment', 'Comments', lead.comment, true)
-                        + '<p style="font-size:0.75rem;color:#6b7c8f;margin:4px 0 0;">🖍️ To highlight words: select the words here, press <b>✍️ Text highlight</b> (bottom left) and pick a color.</p>';
-                    setTimeout(() => window.dispatchEvent(new Event('resize')), 30); // repaint saved highlights in these boxes
-                    document.getElementById('tmLeadModalOverlay').classList.add('show');
-                    return;
-                }
-                const rows = [
-                    ['Decision Maker', lead.decisionMakerName ? `${lead.decisionMakerName}${lead.decisionMakerRole ? ' (' + lead.decisionMakerRole + ')' : ''}` : ''],
-                    ['Name', lead.name],
-                    ['Phone', lead.phone],
-                    ['Email', lead.email],
-                    ['Company', lead.companyName],
+                if (tmPushBtnEl) tmPushBtnEl.innerHTML = '<i class="fas fa-share-square"></i> Save &amp; push to Lead Form';
+                if (tmEditBtnEl) tmEditBtnEl.style.display = 'none';
+                const tmSaveEl = document.getElementById('tmSaveEditBtn'); if (tmSaveEl) tmSaveEl.style.display = '';
+                const lbl = (t) => '<span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ad1457;display:block;">' + t + '</span>';
+                const info = [
+                    ['Status', lead.category],
                     ['Industry', lead.industry],
-                    ['Website', lead.website],
                     ['Service Interested', lead.serviceInterested],
-                    ['Category', lead.category],
-                    ['Calls Made Today', lead.callsMadeToday],
-                    ['Interested Leads Today', lead.interestedCountToday],
-                    ['Comment', lead.comment],
                     [lead.source === 'voice-studio' ? 'AI Agent' : 'Telemarketer', lead.telemarketerId],
                     ['Submitted', lead.timestamp ? new Date(lead.timestamp).toLocaleString() : '']
-                ].filter(([, v]) => v);
-
-                // Words Tania highlighted on this lead show in their colors here too.
-                const tmLabelKey = { 'Name': 'name', 'Phone': 'phone', 'Email': 'email', 'Company': 'companyName', 'Website': 'website', 'Comment': 'comment' };
-                const tmMarked = (label, value) => {
-                    let wsx = {}; try { wsx = JSON.parse(localStorage.getItem('wsx_text_hl') || '{}') || {}; } catch (e) {}
-                    const text = String(value), k = tmLabelKey[label]; const ranges = k ? ((wsx[tmHlKey(lead, k)] || []).map(r => ({ start: r.s, end: r.e, color: r.c })).sort((a, b) => a.start - b.start)) : [];
-                    if (!ranges.length) return text.replace(/</g, '&lt;');
-                    let html = '', cur = 0;
-                    ranges.forEach(r => { const st = Math.max(cur, Math.min(r.start, text.length)), en = Math.max(st, Math.min(r.end, text.length)); html += escapeHtmlForOverlay(text.slice(cur, st)) + (en > st ? '<mark style="background:' + ({ yellow: '#ffd600', green: '#a5d6a7', red: '#ef9a9a', blue: '#90caf9', orange: '#ffcc80', teal: '#80deea', indigo: '#c5cae9', charcoal: '#b0bec5', crimson: '#e57373', black: '#111' }[r.color] || '#ffd600') + (r.color === 'black' ? ';color:#fff' : '') + ';border-radius:3px;">' + escapeHtmlForOverlay(text.slice(st, en)) + '</mark>' : ''); cur = en; });
-                    return html + escapeHtmlForOverlay(text.slice(cur));
-                };
-                body.innerHTML = rows.map(([label, value]) =>
-                    `<div style="margin-bottom:10px;"><span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ad1457;display:block;">${label}</span><span style="white-space:pre-wrap;">${tmMarked(label, value)}</span></div>`
-                ).join('');
-
+                ].filter(([, v]) => v).map(([l, v]) => '<div style="margin-bottom:8px;">' + lbl(l) + '<span>' + tmEsc(v) + '</span></div>').join('');
+                const fld = (k, label, v, area) => '<div class="field-group" data-hlkey="' + tmHlKey(lead, k) + '" style="margin-bottom:9px;"><label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ad1457;display:block;">' + label + '</label>'
+                    + '<textarea data-tm-edit="' + k + '" rows="' + (area ? 6 : 1) + '"' + (area ? '' : ' style="min-height:0;resize:none;"') + '>' + tmEsc(v) + '</textarea></div>';
+                body.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:4px 12px;margin-bottom:6px;">' + info + '</div>'
+                    + fld('companyName', 'Practice / business', lead.companyName || lead.name) + fld('decisionMakerName', 'Contact (doctor, attorney or owner)', lead.decisionMakerName)
+                    + fld('phone', 'Phone', lead.phone) + fld('email', 'Email', lead.email) + fld('website', 'Website', lead.website) + fld('comment', 'Comments', lead.comment, true)
+                    + '<p style="font-size:0.75rem;color:#6b7c8f;margin:4px 0 0;">🖍️ Highlight: select words in any box, press <b>✍️ Text highlight</b> (bottom left) and pick a color. ✍️ Everything you type is saved by itself.</p>';
+                setTimeout(() => window.dispatchEvent(new Event('resize')), 30); // repaint saved highlights in these boxes
                 document.getElementById('tmLeadModalOverlay').classList.add('show');
             }
+            // Typing in the pop-up is saved by itself (a moment after Tania stops typing), so nothing she adds is ever lost.
+            let tmAutoTimer = null;
+            document.addEventListener('input', (e) => {
+                if (!e.target.closest || !e.target.closest('#tmLeadModalBody') || !e.target.dataset.tmEdit) return;
+                const lead = tmCurrentLead; if (!lead) return;
+                clearTimeout(tmAutoTimer);
+                tmAutoTimer = setTimeout(() => {
+                    const ch = {}; document.querySelectorAll('#tmLeadModalBody [data-tm-edit]').forEach(el => { ch[el.dataset.tmEdit] = el.value.trim(); });
+                    Object.assign(lead, ch);
+                    const all = loadTmEdits(); all[String(lead.id)] = Object.assign(all[String(lead.id)] || {}, ch);
+                    try { localStorage.setItem('webswan_tm_edits', JSON.stringify(all)); scheduleFirebaseAutoSave(); } catch (x) {}
+                }, 600);
+            });
 
             // ===== PUSH TELEMARKETING LEAD -> LEAD FORM (lead stays in the telemarketing list) =====
             function loadTmPushed() {
