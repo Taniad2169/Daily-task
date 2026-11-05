@@ -2586,6 +2586,7 @@
                 <div id="tmLeadModalBody" style="font-size:0.9rem;color:#2d3748;line-height:1.7;"></div>
                 <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;">
                     <button class="btn btn-outline" id="tmListenBtn" style="border-color:#1d4ed8;color:#1d4ed8;display:none;"><i class="fas fa-headphones"></i> Listen to the call</button>
+                    <button class="btn btn-outline" id="tmSaveEditBtn" style="border-color:#2e7d32;color:#2e7d32;display:none;"><i class="fas fa-save"></i> Save edits</button>
                     <button class="btn btn-outline" id="tmEditBtn" style="border-color:#ad1457;color:#ad1457;"><i class="fas fa-pen"></i> Edit</button>
                     <button class="btn" id="tmPushToFormBtn" style="background:#0077b6;color:white;border-color:#0077b6;"><i class="fas fa-share-square"></i> Push to Lead Form</button>
                 </div>
@@ -5644,6 +5645,18 @@
                 const id = m ? m[1] : (String(lead.id || '').startsWith('ai-') ? String(lead.id).slice(3) : '');
                 return /^[\w-]{4,120}$/.test(id) ? id : '';
             }
+            // Save the edits only (no push): Tania can call again first and push later. Kept on this device, reapplied after every refresh.
+            function saveTmEditsOnly() {
+                const lead = tmCurrentLead; if (!lead) return;
+                const editEls = document.querySelectorAll('#tmLeadModalBody [data-tm-edit]'); if (!editEls.length) return;
+                const ch = {}; editEls.forEach(el => { ch[el.dataset.tmEdit] = el.value.trim(); });
+                Object.assign(lead, ch);
+                const all = loadTmEdits(); all[String(lead.id)] = Object.assign(all[String(lead.id)] || {}, ch);
+                try { localStorage.setItem('webswan_tm_edits', JSON.stringify(all)); } catch (e) {}
+                renderTelemarketingLeads();
+                openTmLeadModal(lead, false);
+                showToast('💾 Edits saved. Push it to the Lead Form whenever you are ready.', 'success');
+            }
             function openCallRecording(callId) {
                 if (!callId) { showToast('No recording is linked to this lead.', 'error'); return; }
                 window.open('https://taniad2169.github.io/webswan-dagigoia-task/voice-studio/?listen=' + encodeURIComponent(callId), '_blank', 'noopener');
@@ -5661,6 +5674,7 @@
                 const tmPushBtnEl = document.getElementById('tmPushToFormBtn'), tmEditBtnEl = document.getElementById('tmEditBtn');
                 if (tmPushBtnEl) tmPushBtnEl.innerHTML = edit ? '<i class="fas fa-share-square"></i> Save &amp; push to Lead Form' : '<i class="fas fa-share-square"></i> Push to Lead Form';
                 if (tmEditBtnEl) tmEditBtnEl.style.display = edit ? 'none' : '';
+                const tmSaveEl = document.getElementById('tmSaveEditBtn'); if (tmSaveEl) tmSaveEl.style.display = edit ? '' : 'none';
                 if (edit) {
                     const box = 'width:100%;box-sizing:border-box;padding:7px;border:1px solid #d6c2cc;border-radius:8px;font:inherit;';
                     const fld = (k, label, v, area) => '<label style="display:block;margin-bottom:9px;"><span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ad1457;display:block;">' + label + '</span>'
@@ -6465,6 +6479,8 @@
             if (tmPushToFormBtn) tmPushToFormBtn.addEventListener('click', () => pushTmLeadToForm(tmCurrentLead));
             const tmEditBtnTop = document.getElementById('tmEditBtn');
             const tmListenTop = document.getElementById('tmListenBtn');
+            const tmSaveTop = document.getElementById('tmSaveEditBtn');
+            if (tmSaveTop) tmSaveTop.addEventListener('click', saveTmEditsOnly);
             if (tmListenTop) tmListenTop.addEventListener('click', () => openCallRecording(tmCallId(tmCurrentLead)));
             if (tmEditBtnTop) tmEditBtnTop.addEventListener('click', () => { if (tmCurrentLead) openTmLeadModal(tmCurrentLead, true); });
             const tmModalCloseBtn = document.getElementById('tmLeadModalCloseBtn');
