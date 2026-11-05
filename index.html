@@ -2585,6 +2585,7 @@
                 <h3><i class="fas fa-phone-volume" style="color:#ec407a;"></i> Telemarketing Intake</h3>
                 <div id="tmLeadModalBody" style="font-size:0.9rem;color:#2d3748;line-height:1.7;"></div>
                 <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;">
+                    <button class="btn btn-outline" id="tmEditBtn" style="border-color:#ad1457;color:#ad1457;"><i class="fas fa-pen"></i> Edit</button>
                     <button class="btn" id="tmPushToFormBtn" style="background:#0077b6;color:white;border-color:#0077b6;"><i class="fas fa-share-square"></i> Push to Lead Form</button>
                 </div>
             </div>
@@ -4868,6 +4869,17 @@
 
                 leads.push(newLead);
 
+                // A pushed telemarketing / AI-call lead is now a regular lead: take it out of the colored telemarketing lists.
+                try {
+                    const pend = JSON.parse(localStorage.getItem('webswan_tm_pending') || 'null');
+                    const pPhone = String(phone || '').replace(/\D/g, '').slice(-10);
+                    if (pend && pend.id && ((pend.name && pend.name === String(name || '').trim()) || (pend.phone && pend.phone === pPhone))) {
+                        localStorage.removeItem('webswan_tm_pending');
+                        if (!tmDismissed.includes(pend.id)) { tmDismissed.push(pend.id); saveTmDismissed(); }
+                        renderTelemarketingLeads();
+                    }
+                } catch (e) {}
+
                 const displayText = `${name || 'No name'}${contact ? ' (' + contact + ')' : ''} - ${phone || 'No phone'} (${email || 'No email'})${originText(newLead) ? ' · ' + originText(newLead) : ''}`;
                 completedItems.push({
                     id: Date.now(),
@@ -5571,6 +5583,7 @@
                             <span class="item-type">${(lead.category || 'Lead').replace(/</g, '&lt;')}${lead.source === 'voice-studio' && lead.telemarketerId ? ' · ' + String(lead.telemarketerId).replace(/</g, '&lt;') : ''}</span>
                             <span style="font-size:0.7rem;color:#8a4a63;">${when}</span>
                             ${tmPushed.includes(String(lead.id)) ? '<span class="tm-pushed-badge"><i class="fas fa-check"></i> Pushed</span>' : ''}
+                            <button class="tm-push-btn tm-edit-btn" data-tm-id="${lead.id}" title="Edit (name, email, comments), then push to the Lead Form" style="color:#ad1457;"><i class="fas fa-pen"></i></button>
                             <button class="tm-push-btn" data-tm-id="${lead.id}" title="Push to Lead Form"><i class="fas fa-share-square"></i></button>
                             <button class="delete-completed tm-dismiss-btn" data-tm-id="${lead.id}" title="Dismiss"><i class="fas fa-times-circle"></i></button>
                         </div>`;
@@ -5585,7 +5598,14 @@
                         if (lead) openTmLeadModal(lead);
                     });
                 });
-                el.querySelectorAll('.tm-push-btn').forEach((btn) => {
+                el.querySelectorAll('.tm-edit-btn').forEach((btn) => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const lead = telemarketingLeads.find(l => String(l.id) === String(btn.dataset.tmId));
+                        if (lead) openTmLeadModal(lead, true);
+                    });
+                });
+                el.querySelectorAll('.tm-push-btn:not(.tm-edit-btn)').forEach((btn) => {
                     btn.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const lead = telemarketingLeads.find(l => String(l.id) === String(btn.dataset.tmId));
@@ -5612,10 +5632,27 @@
                 }
             }
 
-            function openTmLeadModal(lead) {
+            // Edits Tania makes to a telemarketing / AI-call lead (name, email, comments...) stay on this device and are reapplied after every refresh.
+            function loadTmEdits() { try { const o = JSON.parse(localStorage.getItem('webswan_tm_edits') || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
+            function applyTmEdits(lead) { const ed = loadTmEdits()[String(lead.id)]; return ed ? Object.assign({}, lead, ed) : lead; }
+            const tmEsc = (v) => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+            function openTmLeadModal(lead, edit) {
                 const body = document.getElementById('tmLeadModalBody');
                 if (!body) return;
                 tmCurrentLead = lead;
+                const tmPushBtnEl = document.getElementById('tmPushToFormBtn'), tmEditBtnEl = document.getElementById('tmEditBtn');
+                if (tmPushBtnEl) tmPushBtnEl.innerHTML = edit ? '<i class="fas fa-share-square"></i> Save &amp; push to Lead Form' : '<i class="fas fa-share-square"></i> Push to Lead Form';
+                if (tmEditBtnEl) tmEditBtnEl.style.display = edit ? 'none' : '';
+                if (edit) {
+                    const box = 'width:100%;box-sizing:border-box;padding:7px;border:1px solid #d6c2cc;border-radius:8px;font:inherit;';
+                    const fld = (k, label, v, area) => '<label style="display:block;margin-bottom:9px;"><span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ad1457;display:block;">' + label + '</span>'
+                        + (area ? '<textarea data-tm-edit="' + k + '" rows="5" style="' + box + '">' + tmEsc(v) + '</textarea>' : '<input data-tm-edit="' + k + '" value="' + tmEsc(v) + '" style="' + box + '">') + '</label>';
+                    body.innerHTML = fld('companyName', 'Practice / business', lead.companyName || lead.name) + fld('decisionMakerName', 'Contact (doctor, attorney or owner)', lead.decisionMakerName)
+                        + fld('phone', 'Phone', lead.phone) + fld('email', 'Email', lead.email) + fld('website', 'Website', lead.website) + fld('comment', 'Comments', lead.comment, true);
+                    document.getElementById('tmLeadModalOverlay').classList.add('show');
+                    return;
+                }
                 const rows = [
                     ['Decision Maker', lead.decisionMakerName ? `${lead.decisionMakerName}${lead.decisionMakerRole ? ' (' + lead.decisionMakerRole + ')' : ''}` : ''],
                     ['Name', lead.name],
@@ -5656,6 +5693,13 @@
 
             function pushTmLeadToForm(lead) {
                 if (!lead) return;
+                const editEls = document.querySelectorAll('#tmLeadModalBody [data-tm-edit]');
+                if (editEls.length && tmCurrentLead === lead) {
+                    const ch = {}; editEls.forEach(el => { ch[el.dataset.tmEdit] = el.value.trim(); });
+                    Object.assign(lead, ch);
+                    const all = loadTmEdits(); all[String(lead.id)] = Object.assign(all[String(lead.id)] || {}, ch);
+                    try { localStorage.setItem('webswan_tm_edits', JSON.stringify(all)); } catch (e) {}
+                }
                 const hasFormData = [leadFormName, leadFormContact, leadFormPhone, leadFormEmail, leadFormUrl, leadFormComment].some(f => f.value.trim());
                 if (hasFormData && !confirm('The Lead Form already has information in it. Replace it with this telemarketing lead?')) return;
 
@@ -5686,6 +5730,8 @@
                 updateLeadFormWordCounter();
 
                 const id = String(lead.id);
+                // When Tania submits this lead from the Lead Form, it leaves the yellow / blue / red lists and lives in Completed Tasks like any other lead.
+                try { localStorage.setItem('webswan_tm_pending', JSON.stringify({ id, name: leadFormName.value.trim(), phone: String(leadFormPhone.value || '').replace(/\D/g, '').slice(-10) })); } catch (e) {}
                 if (!tmPushed.includes(id)) {
                     tmPushed.push(id);
                     saveTmPushed();
@@ -5734,7 +5780,7 @@
                 if (!window.dailyFirebase || !window.dailyFirebase.loadTelemarketingLeads) return;
                 try {
                     const docs = await window.dailyFirebase.loadTelemarketingLeads();
-                    telemarketingLeads = docs.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+                    telemarketingLeads = docs.map(applyTmEdits).sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
                     renderTelemarketingLeads();
                     if (manual) showToast(`📲 ${telemarketingLeads.length} telemarketing lead(s) loaded`, 'success');
                 } catch (error) {
@@ -6400,6 +6446,8 @@
             fetchTelemarketingLeads(false);
             const tmPushToFormBtn = document.getElementById('tmPushToFormBtn');
             if (tmPushToFormBtn) tmPushToFormBtn.addEventListener('click', () => pushTmLeadToForm(tmCurrentLead));
+            const tmEditBtnTop = document.getElementById('tmEditBtn');
+            if (tmEditBtnTop) tmEditBtnTop.addEventListener('click', () => { if (tmCurrentLead) openTmLeadModal(tmCurrentLead, true); });
             const tmModalCloseBtn = document.getElementById('tmLeadModalCloseBtn');
             if (tmModalCloseBtn) tmModalCloseBtn.addEventListener('click', closeTmLeadModal);
             const tmModalOverlayEl = document.getElementById('tmLeadModalOverlay');
