@@ -2155,7 +2155,40 @@
                 <button class="btn btn-primary page-btn active" data-page="tasks"><i class="fas fa-tasks"></i> Tasks</button>
                 <button class="btn btn-purple page-btn" data-page="lessons"><i class="fas fa-graduation-cap"></i> Lessons</button>
                 <button class="btn btn-notes page-btn" data-page="notes"><i class="fas fa-sticky-note"></i> Notes</button>
+                <button class="btn btn-outline" id="fcOpenBtn" type="button" style="border-color:#c2185b;color:#c2185b;font-weight:700;"><i class="fas fa-calendar-alt"></i> Future Calls <span id="fcBadge" style="background:#c2185b;color:#fff;border-radius:10px;padding:1px 8px;font-size:12px;margin-left:4px;"></span></button>
             </div>
+
+            <!-- ===== FUTURE CALLS (prospects who asked for a call back 1 month or more out) ===== -->
+            <div id="fcModal" hidden style="position:fixed;inset:0;background:rgba(10,25,45,.55);z-index:9999;overflow:auto;padding:24px 12px;">
+                <div style="max-width:860px;margin:0 auto;background:#fff;border-radius:16px;padding:18px 20px;box-shadow:0 20px 50px rgba(0,0,0,.3);">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+                        <h3 style="margin:0;color:#c2185b;"><i class="fas fa-calendar-alt"></i> Future Calls</h3>
+                        <button class="btn btn-outline" id="fcCloseBtn" type="button"><i class="fas fa-times"></i> Close</button>
+                    </div>
+                    <p style="margin:6px 0 12px;color:#555;font-size:14px;">Prospects who asked you to call back later. Due and overdue calls turn red and show on the button.</p>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;">
+                        <input id="fcName" list="fcLeadList" placeholder="Name / practice (pick a lead or type)" style="padding:9px;border:1px solid #ccd;border-radius:8px;">
+                        <datalist id="fcLeadList"></datalist>
+                        <input id="fcPhone" placeholder="Phone" style="padding:9px;border:1px solid #ccd;border-radius:8px;">
+                        <input id="fcEmail" placeholder="Email" style="padding:9px;border:1px solid #ccd;border-radius:8px;">
+                        <input id="fcDate" type="date" title="Call back on" style="padding:9px;border:1px solid #ccd;border-radius:8px;">
+                    </div>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0;">
+                        <span style="font-size:13px;color:#555;align-self:center;">Quick date:</span>
+                        <button class="btn btn-outline fcQuick" type="button" data-m="1">1 month</button>
+                        <button class="btn btn-outline fcQuick" type="button" data-m="2">2 months</button>
+                        <button class="btn btn-outline fcQuick" type="button" data-m="3">3 months</button>
+                        <button class="btn btn-outline fcQuick" type="button" data-m="6">6 months</button>
+                    </div>
+                    <textarea id="fcNote" placeholder="Note: who you spoke with, what they said, why later (budget, new year, contract ends…)" style="width:100%;min-height:60px;padding:9px;border:1px solid #ccd;border-radius:8px;box-sizing:border-box;"></textarea>
+                    <div style="display:flex;gap:8px;margin:8px 0 14px;flex-wrap:wrap;">
+                        <button class="btn btn-primary" id="fcAddBtn" type="button"><i class="fas fa-plus"></i> Save future call</button>
+                        <label style="font-size:13px;color:#555;align-self:center;"><input type="checkbox" id="fcShowDone"> Show called</label>
+                    </div>
+                    <div id="fcList"></div>
+                </div>
+            </div>
+
 
             <!-- ===== PAGE 1: TASKS ===== -->
             <div id="page-tasks" class="page active">
@@ -3996,6 +4029,77 @@
                 }
             }
 
+            // ----- FUTURE CALLS: prospects who asked for a call back 1 month or more out -----
+            // Saved in 'webswan_future_calls' (synced with Firebase like the leads). "Called" keeps the record with doneAt, so it syncs.
+            function fcLoad() { try { const a = JSON.parse(localStorage.getItem('webswan_future_calls') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+            function fcSave(list) { localStorage.setItem('webswan_future_calls', JSON.stringify(list)); scheduleFirebaseAutoSave(); renderFutureCalls(); }
+            function fcToday() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+            function fcPlusMonths(m) { const d = new Date(); d.setMonth(d.getMonth() + m); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+            function fcEsc(s) { return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+            function fcNice(iso) { try { return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }); } catch (e) { return iso; } }
+            function renderFutureCalls() {
+                const list = fcLoad(), today = fcToday(), soon = (() => { const d = new Date(); d.setDate(d.getDate() + 7); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+                const open = list.filter(x => !x.doneAt);
+                const due = open.filter(x => x.date && x.date <= soon).length;
+                const badge = document.getElementById('fcBadge');
+                if (badge) { badge.textContent = open.length ? (due ? due + ' due' : open.length) : ''; badge.style.display = open.length ? '' : 'none'; badge.style.background = due ? '#d32f2f' : '#c2185b'; }
+                const box = document.getElementById('fcList'); if (!box) return;
+                const showDone = document.getElementById('fcShowDone') && document.getElementById('fcShowDone').checked;
+                const rows = (showDone ? list : open).slice().sort((a, b) => String(a.date || '9').localeCompare(String(b.date || '9')));
+                if (!rows.length) { box.innerHTML = '<p style="color:#777;">No future calls yet. Add a prospect above when they ask you to call back later.</p>'; return; }
+                box.innerHTML = rows.map(x => {
+                    const late = !x.doneAt && x.date && x.date < today, isToday = !x.doneAt && x.date === today, near = !x.doneAt && x.date && x.date <= soon;
+                    const color = x.doneAt ? '#9e9e9e' : late ? '#d32f2f' : isToday ? '#e65100' : near ? '#f9a825' : '#c2185b';
+                    const tag = x.doneAt ? '✅ Called' : late ? '⚠️ Overdue' : isToday ? '📞 Call today' : near ? '⏰ This week' : '';
+                    return `<div style="border:1px solid #eee;border-left:6px solid ${color};border-radius:10px;padding:10px 12px;margin:8px 0;${x.doneAt ? 'opacity:.6;' : ''}">
+                        <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;"><b style="font-size:16px;">${fcEsc(x.name)}</b><span style="color:${color};font-weight:700;">${fcEsc(fcNice(x.date))} ${tag}</span></div>
+                        <div style="font-size:14px;margin:4px 0;">${x.phone ? `<a href="tel:${fcEsc(x.phone.replace(/[^\d+]/g, ''))}">📞 ${fcEsc(x.phone)}</a>` : ''} ${x.email ? ` · <a href="mailto:${fcEsc(x.email)}">✉️ ${fcEsc(x.email)}</a>` : ''}</div>
+                        ${x.note ? `<div style="font-size:14px;color:#444;white-space:pre-wrap;">${fcEsc(x.note)}</div>` : ''}
+                        <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
+                            ${x.doneAt ? `<button class="btn btn-outline fcAct" data-act="undo" data-id="${fcEsc(x.id)}" type="button">↩️ Back to list</button>` : `<button class="btn btn-outline fcAct" data-act="done" data-id="${fcEsc(x.id)}" type="button">✅ Called</button>
+                            <button class="btn btn-outline fcAct" data-act="m1" data-id="${fcEsc(x.id)}" type="button">+1 month</button>`}
+                        </div></div>`;
+                }).join('');
+            }
+            function setupFutureCalls() {
+                const modal = document.getElementById('fcModal'); if (!modal) return;
+                document.body.appendChild(modal); // on top of everything, never inside a hidden or scrolled section
+                const $f = id => document.getElementById(id);
+                $f('fcOpenBtn').addEventListener('click', () => {
+                    const dl = $f('fcLeadList');
+                    try { dl.innerHTML = (leads || []).slice(-300).map(l => `<option value="${fcEsc(l.name)}">${fcEsc([l.contact, l.phone].filter(v => v && !/^No /.test(v)).join(' · '))}</option>`).join(''); } catch (e) {}
+                    if (!$f('fcDate').value) $f('fcDate').value = fcPlusMonths(1);
+                    modal.hidden = false; renderFutureCalls();
+                });
+                $f('fcCloseBtn').addEventListener('click', () => { modal.hidden = true; });
+                modal.addEventListener('click', e => { if (e.target === modal) modal.hidden = true; });
+                $f('fcName').addEventListener('change', () => {
+                    const l = (leads || []).find(k => k.name === $f('fcName').value); if (!l) return;
+                    if (!$f('fcPhone').value && l.phone && !/^No /.test(l.phone)) $f('fcPhone').value = l.phone;
+                    if (!$f('fcEmail').value && l.email && !/^No /.test(l.email)) $f('fcEmail').value = l.email;
+                });
+                document.querySelectorAll('.fcQuick').forEach(b => b.addEventListener('click', () => { $f('fcDate').value = fcPlusMonths(Number(b.dataset.m)); }));
+                $f('fcShowDone').addEventListener('change', renderFutureCalls);
+                $f('fcAddBtn').addEventListener('click', () => {
+                    const name = $f('fcName').value.trim(); if (!name) { showToast('Add the name first', 'error'); return; }
+                    const list = fcLoad();
+                    list.push({ id: 'fc' + Date.now(), name, phone: $f('fcPhone').value.trim(), email: $f('fcEmail').value.trim(), date: $f('fcDate').value || fcPlusMonths(1), note: $f('fcNote').value.trim(), addedAt: new Date().toISOString() });
+                    fcSave(list);
+                    ['fcName', 'fcPhone', 'fcEmail', 'fcNote'].forEach(id => { $f(id).value = ''; }); $f('fcDate').value = fcPlusMonths(1);
+                    showToast('📅 Saved to Future Calls', 'success');
+                });
+                $f('fcList').addEventListener('click', e => {
+                    const b = e.target.closest('.fcAct'); if (!b) return;
+                    const list = fcLoad(), x = list.find(k => String(k.id) === b.dataset.id); if (!x) return;
+                    if (b.dataset.act === 'done') x.doneAt = new Date().toISOString();
+                    if (b.dataset.act === 'undo') { x.doneAt = ''; x.reopenedAt = new Date().toISOString(); }
+                    if (b.dataset.act === 'm1') { const d = new Date((x.date || fcToday()) + 'T12:00:00'); d.setMonth(d.getMonth() + 1); x.date = d.toISOString().slice(0, 10); x.movedAt = new Date().toISOString(); }
+                    fcSave(list);
+                });
+                renderFutureCalls();
+            }
+            setupFutureCalls();
+
             // ----- COMPLETE DATA BACKUP / RESTORE -----
             const DAILY_TASK_STORAGE_KEYS = [
                 'webswan_page',
@@ -4011,7 +4115,8 @@
                 'webswan_saved_notes',
                 'webswan_notes',
                 'webswan_translator_script',
-                'webswan_deleted_leads'
+                'webswan_deleted_leads',
+                'webswan_future_calls'
             ];
 
             let firebaseUser = null;
@@ -4084,7 +4189,7 @@
             }
 
             const ARRAY_STORAGE_KEYS = new Set([
-                'webswan_leads', 'webswan_todos', 'webswan_completed', 'webswan_saved_notes', 'webswan_deleted_leads'
+                'webswan_leads', 'webswan_todos', 'webswan_completed', 'webswan_saved_notes', 'webswan_deleted_leads', 'webswan_future_calls'
             ]);
 
             function mergeDailyTaskData(localData, remoteData) {
@@ -4131,6 +4236,7 @@
                 updateNotesWordCounter();
                 updateLeadFormWordCounter();
                 updateNoteInputWordCounter();
+                renderFutureCalls();
             }
 
             function updateFirebaseControls(message, connected = false) {
