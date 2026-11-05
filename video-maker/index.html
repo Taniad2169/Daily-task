@@ -346,7 +346,7 @@ const store = { get(k){ try { return JSON.parse(localStorage.getItem("wsvm-"+k))
                 set(k,v){ try { localStorage.setItem("wsvm-"+k, JSON.stringify(v)); } catch {} } };
 
 function brand(){ return BRANDS[$("brand").value]; }
-function status(m){ $("status").textContent = m || ""; }
+function status(m){ $("status").textContent = m || ""; if (!m) return; let t = document.getElementById("vmToast"); if (!t) { t = document.createElement("div"); t.id = "vmToast"; t.setAttribute("role", "status"); t.setAttribute("aria-live", "polite"); t.style.cssText = "position:fixed;left:50%;bottom:20px;transform:translateX(-50%);width:max-content;max-width:min(92vw,520px);background:#0f172a;color:#fff;padding:12px 16px;border-radius:10px;font-size:15px;line-height:1.4;z-index:99999;box-shadow:0 6px 24px rgba(0,0,0,.3)"; document.body.appendChild(t); } t.textContent = m; t.style.display = "block"; clearTimeout(t._h); t._h = setTimeout(() => { t.style.display = "none"; }, 7000); }
 function audioCtx(){ if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)(); return ac; }
 const words = (t) => t.trim().split(/\s+/).filter(Boolean);
 const autoDur = (t) => Math.max(2.5, Math.round((words(t).length / 2.6 + 1) * 10) / 10);
@@ -731,7 +731,7 @@ $("recBtn").onclick = async () => {
     };
     rec.start(); mic = { rec }; $("recBtn").textContent = "⏹ Stop recording"; $("recBtn").classList.add("rec");
     status("Recording… read your script, then press Stop.");
-  } catch { status("Microphone access was blocked. Allow it in the address bar and try again."); }
+  } catch { status("Your microphone is blocked. Click the icon at the left of the address bar, set Microphone to Allow, then reload the page."); }
 };
 
 // ---------- wiring ----------
@@ -758,7 +758,7 @@ function tpShow(){
 $("tpBtn").onclick = async () => {
   if (!scenes.length) return status("Make or open your scenes first.");
   try { tpStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
-  catch { return status("Microphone access was blocked. Allow it in the address bar and try again."); }
+  catch { return status("Your microphone is blocked. Click the icon at the left of the address bar, set Microphone to Allow, then reload the page."); }
   tpI = Math.max(0, scenes.findIndex(s => !s.voiceBuf)); if (tpI < 0) tpI = 0;
   $("tp").style.display = "block"; tpShow();
 };
@@ -889,7 +889,7 @@ $("cloneRecBtn").onclick = async () => {
     };
     rec.start(); cloneMic = rec; $("cloneRecBtn").textContent = "⏹ Stop recording"; $("cloneRecBtn").classList.add("rec");
     $("cloneInfo").textContent = "Recording… read the text above (or anything) in your normal voice.";
-  } catch { $("cloneInfo").textContent = "Microphone access was blocked. Allow it in the address bar and try again."; }
+  } catch { $("cloneInfo").textContent = "Your microphone is blocked. Click the icon at the left of the address bar, set Microphone to Allow, then reload the page."; }
 };
 $("cloneFile").onchange = async () => { const f = $("cloneFile").files[0]; if (!f) return;
   try { cloneBuf = await audioCtx().decodeAudioData(await f.arrayBuffer()); $("cloneInfo").textContent = `${f.name}: ${cloneBuf.duration.toFixed(0)} seconds. Press 🧬 Save to my library.`; } catch { $("cloneInfo").textContent = "That file couldn't be opened."; } };
@@ -1074,7 +1074,7 @@ async function sceneRecord(s, btn, el){
     rec.onstop = async () => { st.getTracks().forEach(t => t.stop()); s._rec = null; btn.textContent = "🎙️ Record this scene"; btn.classList.remove("rec");
       try { s.voiceBuf = await audioCtx().decodeAudioData(await new Blob(ch).arrayBuffer()); el.textContent = `🎙️ Scene voice ${s.voiceBuf.duration.toFixed(1)} s`; } catch { el.textContent = "Couldn't read the recording. Try again."; } };
     rec.start(); s._rec = rec; btn.textContent = "⏹ Stop"; btn.classList.add("rec"); el.textContent = "Recording… read this scene, then press Stop.";
-  } catch { el.textContent = "Microphone access was blocked. Allow it in the address bar."; }
+  } catch { el.textContent = "Your microphone is blocked. Click the icon at the left of the address bar, set Microphone to Allow, then reload the page."; }
 }
 // Fix someone else's video (like Jimmy's): keep the motion, put my corrected words on the lips (Kling Lip Sync, ~3¢)
 async function fixLips(s, i, el){
