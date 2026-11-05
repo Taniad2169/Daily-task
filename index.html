@@ -5552,7 +5552,8 @@
                 localStorage.setItem('webswan_tm_dismissed', JSON.stringify(tmDismissed.map(String)));
                 scheduleFirebaseAutoSave(); // removed leads stay removed on every device and after any reload
             }
-            // Tania's own color for a telemarketing / AI-call lead: yellow = talked to someone, green = got an email or appointment, orange = hot lead.
+            // Tania's own color for a telemarketing / AI-call lead. Orange = hot (email + appointment). Green = got an email, transferred to Rachel or got Rachel's number.
+            // Yellow = spoke to a real person (call back later / need to speak to someone else). Blue = hang up, voicemail, phone menu ("press 1") or another AI.
             const TM_RANK = { blue: 0, yellow: 1, green: 2, orange: 3 };
             function loadTmColors() { try { const o = JSON.parse(localStorage.getItem('webswan_tm_colors') || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
             function setTmColor(id, color) {
@@ -5581,7 +5582,7 @@
                 const aiSaid = (l) => ((String(l.comment || '').match(/What they said:([^\n]*)/i) || [])[1] || '').trim();
                 const aiGood = (l) => {
                     const c = String(l.category || l.status || '');
-                    if (!/talked|\bemail|appointment|call ?back/i.test(c)) return 0; // \b: 'voicemail' is not an email
+                    if (!/talked|\bemail|appointment|call ?back|interested|rachel|spoke/i.test(c)) return 0; // \b: 'voicemail' is not an email
                     if (/appointment/i.test(c)) return 1;
                     const said = aiSaid(l);
                     if (said && (aiBOT.test(said) || (aiIVR.test(said) && !aiHUMAN.test(said)))) return 0;
@@ -5591,14 +5592,23 @@
                 const tmColors = loadTmColors();
                 // Orange: appointment or showed interest. Green: gave at least an email. Yellow: spoke to a human. Blue: nobody spoke (voicemail, machine, no answer).
                 const aiSpoke = (l) => { const said = aiSaid(l); return !!said && !aiBOT.test(said) && !(aiIVR.test(said) && !aiHUMAN.test(said)); };
-                const aiAuto = (l) => { const c = String(l.category || l.status || ''); if (/appointment|interested/i.test(c)) return 'orange'; if (/\bemail/i.test(c) && aiGood(l)) return 'green'; return aiGood(l) || (/hang ?up/i.test(c) && aiSpoke(l)) ? 'yellow' : 'blue'; };
+                // Sent to Rachel: a live transfer or Rachel's number ((239) 667-0151 / (347) 646-7086), from the outcome or the call summary.
+                const aiRachel = (l) => /transferred to rachel|got rachel'?s number|transferr?(ed|ing) (you |them |the caller )?(over )?to rachel|rachel'?s (number|direct line)|(239)\D{0,4}667\D{0,3}0151|(347)\D{0,4}646\D{0,3}7086/i.test(String(l.category || l.status || '') + ' ' + String(l.comment || '').replace(/^What they said:.*$/gim, ''));
+                const aiAuto = (l) => {
+                    const c = String(l.category || l.status || '');
+                    if (/appointment/i.test(c)) return 'orange';                                        // hot: email + appointment
+                    if (/voicemail|no answer|automated|phone menu|wrong number|hang ?up/i.test(c)) return 'blue'; // nobody (or nobody real) to talk to
+                    if (aiRachel(l) && aiGood(l)) return 'green';                                       // transferred to Rachel / got her number
+                    if (/\bemail/i.test(c) && aiGood(l)) return 'green';                               // got an email
+                    return aiGood(l) ? 'yellow' : 'blue';                                              // spoke to a person (call back, talked, interested)
+                };
                 const tmColorOf = (l) => tmColors[String(l.id)] || (isAI(l) ? aiAuto(l) : '');
                 const tmRank = (l) => TM_RANK[tmColorOf(l)] || 0;
                 const byRank = (a, b) => (tmRank(b) - tmRank(a)) || String(b.timestamp || '').localeCompare(String(a.timestamp || ''));
                 const groups = [
-                    { list: visibleAll.filter(l => isAI(l) && tmRank(l) >= 1).sort(byRank), title: '<i class="fas fa-star"></i> AI Calls: they talked or gave an email (call these first) · <span style="background:#fff3a3;color:#4a3b00;padding:0 6px;border-radius:6px">yellow</span>', color: '#8a6d00', border: '#e0b100', hl: 'aiblue', refresh: false },
+                    { list: visibleAll.filter(l => isAI(l) && tmRank(l) >= 1).sort(byRank), title: '<i class="fas fa-star"></i> AI Calls: real conversations (call these first) · <span style="background:#ffe0b2;color:#7a3b00;padding:0 6px;border-radius:6px">orange hot: email + appointment</span> <span style="background:#c8f0c8;color:#14532d;padding:0 6px;border-radius:6px">green: email or Rachel</span> <span style="background:#fff3a3;color:#4a3b00;padding:0 6px;border-radius:6px">yellow: spoke to a person</span>', color: '#8a6d00', border: '#e0b100', hl: 'aiblue', refresh: false },
                     { list: visibleAll.filter(l => !isPros(l) && !isAI(l)), title: '<i class="fas fa-phone-volume"></i> From Telemarketing Calls', color: '#ad1457', border: '#ec407a', hl: 'pink', refresh: true },
-                    { list: visibleAll.filter(l => isAI(l) && tmRank(l) === 0).sort(byRank), title: '<i class="fas fa-robot"></i> AI Calls (Voice Studio) · hang up, no answer, voicemail', color: '#1d4ed8', border: '#1d4ed8', hl: 'aiblue', refresh: false },
+                    { list: visibleAll.filter(l => isAI(l) && tmRank(l) === 0).sort(byRank), title: '<i class="fas fa-robot"></i> AI Calls (Voice Studio) · <span style="background:#dbeafe;color:#1d4ed8;padding:0 6px;border-radius:6px">blue</span> hang up, voicemail, phone menu, another AI', color: '#1d4ed8', border: '#1d4ed8', hl: 'aiblue', refresh: false },
                     { list: visibleAll.filter(isPros), title: '<i class="fas fa-magnifying-glass-location"></i> From Lead Prospector', color: '#0077be', border: '#0077be', hl: 'ocean', refresh: false }
                 ];
                 let html = '';
@@ -5622,8 +5632,9 @@
                             <span class="item-type">${(lead.category || 'Lead').replace(/</g, '&lt;')}${lead.source === 'voice-studio' && lead.telemarketerId ? ' · ' + String(lead.telemarketerId).replace(/</g, '&lt;') : ''}</span>
                             <span style="font-size:0.7rem;color:#8a4a63;">${when}</span>
                             ${tmPushed.includes(String(lead.id)) ? '<span class="tm-pushed-badge"><i class="fas fa-check"></i> Pushed</span>' : ''}
+                            ${String(lead.myNotes || '').trim() ? '<span title="You have notes on this lead" style="font-size:0.7rem;font-weight:700;background:#fff8d6;color:#c2185b;border:1px solid #f48fb1;border-radius:8px;padding:1px 6px;">📝 My notes</span>' : ''}
                             ${tmCallId(lead) ? `<button class="tm-push-btn tm-listen-btn" data-call-id="${tmCallId(lead)}" title="Listen to the call recording (opens Voice Studio)" style="color:#1d4ed8;"><i class="fas fa-headphones"></i></button>` : ''}
-                            <span class="tm-color-dots" style="display:inline-flex;gap:4px;align-items:center;">${[['yellow', '#ffd600', 'Talked to someone'], ['green', '#2e7d32', 'Got an email or appointment'], ['orange', '#f57c00', 'Hot lead']].filter(([c]) => TM_RANK[c] > tmRank(lead)).map(([c, bg, t]) => `<button class="tm-color-btn" data-tm-id="${lead.id}" data-color="${c}" title="${t}" style="width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #9aa;background:${bg};cursor:pointer;padding:0;"></button>`).join('')}</span>
+                            <span class="tm-color-dots" style="display:inline-flex;gap:4px;align-items:center;">${[['yellow', '#ffd600', 'Spoke to a person (call back later)'], ['green', '#2e7d32', "Got an email, transferred to Rachel or got Rachel's number"], ['orange', '#f57c00', 'Hot lead: email + appointment']].filter(([c]) => TM_RANK[c] > tmRank(lead)).map(([c, bg, t]) => `<button class="tm-color-btn" data-tm-id="${lead.id}" data-color="${c}" title="${t}" style="width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #9aa;background:${bg};cursor:pointer;padding:0;"></button>`).join('')}</span>
                             <button class="tm-push-btn tm-edit-btn" data-tm-id="${lead.id}" title="Edit (name, email, comments), then push to the Lead Form" style="color:#ad1457;"><i class="fas fa-pen"></i></button>
                             <button class="tm-push-btn" data-tm-id="${lead.id}" title="Push to Lead Form"><i class="fas fa-share-square"></i></button>
                             <button class="delete-completed tm-dismiss-btn" data-tm-id="${lead.id}" title="Dismiss"><i class="fas fa-times-circle"></i></button>
@@ -5703,7 +5714,24 @@
             }
             // Edits Tania makes to a telemarketing / AI-call lead (name, email, comments...) stay on this device and are reapplied after every refresh.
             function loadTmEdits() { try { const o = JSON.parse(localStorage.getItem('webswan_tm_edits') || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
-            function applyTmEdits(lead) { const ed = loadTmEdits()[String(lead.id)]; return ed ? Object.assign({}, lead, ed) : lead; }
+            function applyTmEdits(lead) { const ed = loadTmEdits()[String(lead.id)]; const l = Object.assign({ _origComment: lead.comment || '' }, lead, ed || {}); splitMyNotes(l); return l; }
+            // Tania's own notes live in "My notes"; the call notes (AI agent / telemarketer) stay in "Their notes".
+            // Notes she already typed into the call notes before this existed are moved over the first time the lead is opened.
+            function splitMyNotes(lead) {
+                if (lead.myNotes != null) return;
+                const orig = String(lead._origComment || '').trim(), cur = String(lead.comment || '').trim();
+                if (!orig || cur === orig || !cur.includes(orig)) { lead.myNotes = ''; return; }
+                lead.myNotes = cur.replace(orig, '').trim();
+                lead.comment = orig;
+            }
+            window.stampNote = stampNote;
+            function stampNote() {
+                const ta = document.querySelector('#tmLeadModalBody [data-tm-edit="myNotes"]'); if (!ta) return;
+                const stamp = '— ' + new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ': ';
+                ta.value = stamp + '\n' + (ta.value ? '\n' + ta.value : '');
+                ta.focus(); ta.setSelectionRange(stamp.length, stamp.length);
+                ta.dispatchEvent(new Event('input', { bubbles: true }));
+            }
             const tmHlKey = (lead, k) => 'tmlead-' + String(lead && lead.id || '').replace(/[^\w-]/g, '') + '-' + k;
             const tmEsc = (v) => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -5712,6 +5740,7 @@
                 const body = document.getElementById('tmLeadModalBody');
                 if (!body) return;
                 tmCurrentLead = lead;
+                splitMyNotes(lead);
                 const tmListenEl = document.getElementById('tmListenBtn'); if (tmListenEl) tmListenEl.style.display = tmCallId(lead) ? '' : 'none';
                 const tmPushBtnEl = document.getElementById('tmPushToFormBtn'), tmEditBtnEl = document.getElementById('tmEditBtn');
                 if (tmPushBtnEl) tmPushBtnEl.innerHTML = '<i class="fas fa-share-square"></i> Save &amp; push to Lead Form';
@@ -5729,7 +5758,13 @@
                     + '<textarea data-tm-edit="' + k + '" rows="' + (area ? 6 : 1) + '"' + (area ? '' : ' style="min-height:0;resize:none;"') + '>' + tmEsc(v) + '</textarea></div>';
                 body.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:4px 12px;margin-bottom:6px;">' + info + '</div>'
                     + fld('companyName', 'Practice / business', lead.companyName || lead.name) + fld('decisionMakerName', 'Contact (doctor, attorney or owner)', lead.decisionMakerName)
-                    + fld('phone', 'Phone', lead.phone) + fld('email', 'Email', lead.email) + fld('website', 'Website', lead.website) + fld('comment', 'Comments', lead.comment, true)
+                    + fld('phone', 'Phone', lead.phone) + fld('email', 'Email', lead.email) + fld('website', 'Website', lead.website)
+                    + '<div class="field-group my-notes-group" data-hlkey="' + tmHlKey(lead, 'myNotes') + '" style="margin-bottom:9px;">'
+                    +   '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><label style="font-size:0.75rem;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:#c2185b;">📝 My notes (Tania)</label>'
+                    +   '<button type="button" onclick="stampNote()" style="border:1px solid #f48fb1;background:#fff;color:#c2185b;border-radius:8px;padding:2px 9px;font-size:0.72rem;font-weight:700;cursor:pointer;">+ New dated note</button></div>'
+                    +   '<textarea data-tm-edit="myNotes" rows="4" placeholder="Your notes go here: what you learned, next step, when to call back…" style="background:#fff8d6;border:2px solid #f48fb1;border-left:6px solid #e91e63;color:#4a0d2a;font-weight:600;">' + tmEsc(lead.myNotes) + '</textarea></div>'
+                    + '<div class="field-group" data-hlkey="' + tmHlKey(lead, 'comment') + '" style="margin-bottom:9px;"><label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#475569;display:block;">' + (lead.source === 'voice-studio' ? '🤖 Their notes (AI call: summary and what they said)' : '📞 Their notes (telemarketer)') + '</label>'
+                    +   '<textarea data-tm-edit="comment" rows="6" style="background:#f1f5f9;color:#334155;">' + tmEsc(lead.comment) + '</textarea></div>'
                     + '<p style="font-size:0.75rem;color:#6b7c8f;margin:4px 0 0;">🖍️ Highlight: select words in any box, press <b>✍️ Text highlight</b> (bottom left) and pick a color. ✍️ Everything you type is saved by itself.</p>';
                 setTimeout(() => window.dispatchEvent(new Event('resize')), 30); // repaint saved highlights in these boxes
                 document.getElementById('tmLeadModalOverlay').classList.add('show');
@@ -5785,7 +5820,9 @@
                 if (clean(lead.industry)) notes.push('Industry: ' + clean(lead.industry));
                 if (clean(lead.serviceInterested)) notes.push('Service: ' + clean(lead.serviceInterested));
                 if (clean(lead.category)) notes.push('Status: ' + clean(lead.category));
-                if (clean(lead.comment)) notes.push('Notes: ' + clean(lead.comment));
+                if (lead.myNotes == null) splitMyNotes(lead);
+                if (clean(lead.myNotes)) notes.unshift('My notes: ' + clean(lead.myNotes));
+                if (clean(lead.comment)) notes.push('Their notes: ' + clean(lead.comment));
                 if (clean(lead.telemarketerId)) notes.push('Telemarketer: ' + clean(lead.telemarketerId));
                 notes.push('Source: ' + (lead.source === 'voice-studio' ? 'AI call (Voice Studio)' : lead.source === 'prospector' ? 'Lead Prospector' : lead.sheetLabel ? 'Google Sheet - ' + lead.sheetLabel : 'Telemarketing') + (lead.timestamp ? ' (' + new Date(lead.timestamp).toLocaleDateString() + ')' : ''));
 
