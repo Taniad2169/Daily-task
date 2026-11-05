@@ -4119,7 +4119,10 @@
                 'webswan_notes',
                 'webswan_translator_script',
                 'webswan_deleted_leads',
-                'webswan_future_calls'
+                'webswan_future_calls',
+                'webswan_tm_dismissed',
+                'webswan_tm_colors',
+                'webswan_tm_edits'
             ];
 
             let firebaseUser = null;
@@ -4209,6 +4212,18 @@
                         merged[key] = mergeJsonArrayStrings(localVal, remoteVal);
                         return;
                     }
+                    // Removed telemarketing / AI leads: removed on any device = removed everywhere.
+                    if (key === 'webswan_tm_dismissed') {
+                        let a = [], b = []; try { a = JSON.parse(localVal || '[]'); } catch (e) {} try { b = JSON.parse(remoteVal || '[]'); } catch (e) {}
+                        merged[key] = JSON.stringify([...new Set([].concat(Array.isArray(b) ? b : [], Array.isArray(a) ? a : []).map(String))]);
+                        return;
+                    }
+                    // Lead colors and edits: keep both devices' entries (this device wins on the same lead).
+                    if (key === 'webswan_tm_colors' || key === 'webswan_tm_edits') {
+                        let a = {}, b = {}; try { a = JSON.parse(localVal || '{}'); } catch (e) {} try { b = JSON.parse(remoteVal || '{}'); } catch (e) {}
+                        merged[key] = JSON.stringify(Object.assign({}, b && typeof b === 'object' ? b : {}, a && typeof a === 'object' ? a : {}));
+                        return;
+                    }
                     merged[key] = mergeTextValue(localVal, remoteVal);
                 });
                 // Leads deleted on any device stay deleted: drop them (and their completed rows) after merging.
@@ -4240,6 +4255,7 @@
                 updateLeadFormWordCounter();
                 updateNoteInputWordCounter();
                 renderFutureCalls();
+                loadTmDismissed(); renderTelemarketingLeads();
             }
 
             function updateFirebaseControls(message, connected = false) {
@@ -5529,14 +5545,23 @@
             }
 
             function saveTmDismissed() {
-                localStorage.setItem('webswan_tm_dismissed', JSON.stringify(tmDismissed));
+                localStorage.setItem('webswan_tm_dismissed', JSON.stringify(tmDismissed.map(String)));
+                scheduleFirebaseAutoSave(); // removed leads stay removed on every device and after any reload
+            }
+            // Tania's own color for a telemarketing / AI-call lead: yellow = talked to someone, green = got an email or appointment, orange = hot lead.
+            const TM_RANK = { blue: 0, yellow: 1, green: 2, orange: 3 };
+            function loadTmColors() { try { const o = JSON.parse(localStorage.getItem('webswan_tm_colors') || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
+            function setTmColor(id, color) {
+                const all = loadTmColors(); all[String(id)] = color;
+                localStorage.setItem('webswan_tm_colors', JSON.stringify(all)); scheduleFirebaseAutoSave();
             }
 
             function renderTelemarketingLeads() {
                 const el = document.getElementById('telemarketingLeadsContainer');
                 if (!el) return;
                 const tmHasInfo = (l) => ['decisionMakerName', 'name', 'companyName', 'phone', 'email', 'website', 'comment', 'serviceInterested', 'industry'].some(k => l[k] && String(l[k]).trim());
-                const visibleAll = telemarketingLeads.filter(l => !tmDismissed.includes(l.id) && tmHasInfo(l));
+                const tmGone = new Set(tmDismissed.map(String));
+                const visibleAll = telemarketingLeads.filter(l => !tmGone.has(String(l.id)) && tmHasInfo(l));
                 if (!visibleAll.length) {
                     el.innerHTML = '';
                     return;
@@ -5552,16 +5577,22 @@
                 const aiSaid = (l) => ((String(l.comment || '').match(/What they said:([^\n]*)/i) || [])[1] || '').trim();
                 const aiGood = (l) => {
                     const c = String(l.category || l.status || '');
-                    if (!/talked|email|appointment|call ?back/i.test(c)) return 0;
+                    if (!/talked|\bemail|appointment|call ?back/i.test(c)) return 0; // \b: 'voicemail' is not an email
                     if (/appointment/i.test(c)) return 1;
                     const said = aiSaid(l);
                     if (said && (aiBOT.test(said) || (aiIVR.test(said) && !aiHUMAN.test(said)))) return 0;
                     return 1;
                 };
+                // Colors: Tania's choice wins; otherwise AI calls with an appointment are orange (hot), an email green, a real conversation yellow, the rest blue.
+                const tmColors = loadTmColors();
+                const aiAuto = (l) => { const c = String(l.category || l.status || ''); if (/appointment/i.test(c)) return 'orange'; if (/\bemail/i.test(c) && aiGood(l)) return 'green'; return aiGood(l) ? 'yellow' : 'blue'; };
+                const tmColorOf = (l) => tmColors[String(l.id)] || (isAI(l) ? aiAuto(l) : '');
+                const tmRank = (l) => TM_RANK[tmColorOf(l)] || 0;
+                const byRank = (a, b) => (tmRank(b) - tmRank(a)) || String(b.timestamp || '').localeCompare(String(a.timestamp || ''));
                 const groups = [
-                    { list: visibleAll.filter(l => isAI(l) && aiGood(l)).sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || ''))), title: '<i class="fas fa-star"></i> AI Calls: they talked or gave an email (call these first) · <span style="background:#fff3a3;color:#4a3b00;padding:0 6px;border-radius:6px">yellow</span>', color: '#8a6d00', border: '#e0b100', hl: 'aiblue', refresh: false },
+                    { list: visibleAll.filter(l => isAI(l) && tmRank(l) >= 1).sort(byRank), title: '<i class="fas fa-star"></i> AI Calls: they talked or gave an email (call these first) · <span style="background:#fff3a3;color:#4a3b00;padding:0 6px;border-radius:6px">yellow</span>', color: '#8a6d00', border: '#e0b100', hl: 'aiblue', refresh: false },
                     { list: visibleAll.filter(l => !isPros(l) && !isAI(l)), title: '<i class="fas fa-phone-volume"></i> From Telemarketing Calls', color: '#ad1457', border: '#ec407a', hl: 'pink', refresh: true },
-                    { list: visibleAll.filter(l => isAI(l) && !aiGood(l)).sort((a, b) => String(b.timestamp || '').localeCompare(String(a.timestamp || ''))), title: '<i class="fas fa-robot"></i> AI Calls (Voice Studio) · hang up, no answer, voicemail', color: '#1d4ed8', border: '#1d4ed8', hl: 'aiblue', refresh: false },
+                    { list: visibleAll.filter(l => isAI(l) && tmRank(l) === 0).sort(byRank), title: '<i class="fas fa-robot"></i> AI Calls (Voice Studio) · hang up, no answer, voicemail', color: '#1d4ed8', border: '#1d4ed8', hl: 'aiblue', refresh: false },
                     { list: visibleAll.filter(isPros), title: '<i class="fas fa-magnifying-glass-location"></i> From Lead Prospector', color: '#0077be', border: '#0077be', hl: 'ocean', refresh: false }
                 ];
                 let html = '';
@@ -5581,11 +5612,12 @@
                     return `
                         <div class="completed-item tm-lead-row" data-tm-id="${lead.id}">
                             <span style="font-size:1.1rem;">${lead.source === 'prospector' ? '🔎' : lead.source === 'voice-studio' ? '🤖' : emoji}</span>
-                            <span class="item-text" data-highlight="${hl === 'aiblue' && aiGood(lead) ? 'aiyellow' : hl}">${safeName}${safeCompany}</span>
+                            <span class="item-text" data-highlight="${({ blue: 'aiblue', yellow: isAI(lead) ? 'aiyellow' : 'yellow', green: 'green', orange: 'orange' })[tmColorOf(lead)] || hl}">${safeName}${safeCompany}</span>
                             <span class="item-type">${(lead.category || 'Lead').replace(/</g, '&lt;')}${lead.source === 'voice-studio' && lead.telemarketerId ? ' · ' + String(lead.telemarketerId).replace(/</g, '&lt;') : ''}</span>
                             <span style="font-size:0.7rem;color:#8a4a63;">${when}</span>
                             ${tmPushed.includes(String(lead.id)) ? '<span class="tm-pushed-badge"><i class="fas fa-check"></i> Pushed</span>' : ''}
                             ${tmCallId(lead) ? `<button class="tm-push-btn tm-listen-btn" data-call-id="${tmCallId(lead)}" title="Listen to the call recording (opens Voice Studio)" style="color:#1d4ed8;"><i class="fas fa-headphones"></i></button>` : ''}
+                            <span class="tm-color-dots" style="display:inline-flex;gap:4px;align-items:center;">${[['yellow', '#ffd600', 'Talked to someone'], ['green', '#2e7d32', 'Got an email or appointment'], ['orange', '#f57c00', 'Hot lead']].filter(([c]) => TM_RANK[c] > tmRank(lead)).map(([c, bg, t]) => `<button class="tm-color-btn" data-tm-id="${lead.id}" data-color="${c}" title="${t}" style="width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #9aa;background:${bg};cursor:pointer;padding:0;"></button>`).join('')}</span>
                             <button class="tm-push-btn tm-edit-btn" data-tm-id="${lead.id}" title="Edit (name, email, comments), then push to the Lead Form" style="color:#ad1457;"><i class="fas fa-pen"></i></button>
                             <button class="tm-push-btn" data-tm-id="${lead.id}" title="Push to Lead Form"><i class="fas fa-share-square"></i></button>
                             <button class="delete-completed tm-dismiss-btn" data-tm-id="${lead.id}" title="Dismiss"><i class="fas fa-times-circle"></i></button>
@@ -5595,11 +5627,14 @@
 
                 el.querySelectorAll('.tm-lead-row').forEach((row) => {
                     row.addEventListener('click', (e) => {
-                        if (e.target.closest('.tm-dismiss-btn') || e.target.closest('.tm-push-btn')) return;
+                        if (e.target.closest('.tm-dismiss-btn') || e.target.closest('.tm-push-btn') || e.target.closest('.tm-color-btn')) return;
                         const id = row.dataset.tmId;
                         const lead = telemarketingLeads.find(l => String(l.id) === String(id));
                         if (lead) openTmLeadModal(lead);
                     });
+                });
+                el.querySelectorAll('.tm-color-btn').forEach((btn) => {
+                    btn.addEventListener('click', (e) => { e.stopPropagation(); setTmColor(btn.dataset.tmId, btn.dataset.color); renderTelemarketingLeads(); });
                 });
                 el.querySelectorAll('.tm-listen-btn').forEach((btn) => {
                     btn.addEventListener('click', (e) => { e.stopPropagation(); openCallRecording(btn.dataset.callId); });
@@ -5652,7 +5687,7 @@
                 const ch = {}; editEls.forEach(el => { ch[el.dataset.tmEdit] = el.value.trim(); });
                 Object.assign(lead, ch);
                 const all = loadTmEdits(); all[String(lead.id)] = Object.assign(all[String(lead.id)] || {}, ch);
-                try { localStorage.setItem('webswan_tm_edits', JSON.stringify(all)); } catch (e) {}
+                try { localStorage.setItem('webswan_tm_edits', JSON.stringify(all)); scheduleFirebaseAutoSave(); } catch (e) {}
                 renderTelemarketingLeads();
                 openTmLeadModal(lead, false);
                 showToast('💾 Edits saved. Push it to the Lead Form whenever you are ready.', 'success');
@@ -5729,7 +5764,7 @@
                     const ch = {}; editEls.forEach(el => { ch[el.dataset.tmEdit] = el.value.trim(); });
                     Object.assign(lead, ch);
                     const all = loadTmEdits(); all[String(lead.id)] = Object.assign(all[String(lead.id)] || {}, ch);
-                    try { localStorage.setItem('webswan_tm_edits', JSON.stringify(all)); } catch (e) {}
+                    try { localStorage.setItem('webswan_tm_edits', JSON.stringify(all)); scheduleFirebaseAutoSave(); } catch (e) {}
                 }
                 const hasFormData = [leadFormName, leadFormContact, leadFormPhone, leadFormEmail, leadFormUrl, leadFormComment].some(f => f.value.trim());
                 if (hasFormData && !confirm('The Lead Form already has information in it. Replace it with this telemarketing lead?')) return;
