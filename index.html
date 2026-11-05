@@ -1889,6 +1889,8 @@
         #tmLeadModalOverlay.show {
             display: flex;
         }
+        /* the ✍️ Text highlight button stays on top of the lead pop-up */
+        body:has(#tmLeadModalOverlay.show) #wsxBar { z-index: 10010; }
         .tm-lead-row {
             cursor: pointer;
         }
@@ -5561,7 +5563,7 @@
                 if (!el) return;
                 const tmHasInfo = (l) => ['decisionMakerName', 'name', 'companyName', 'phone', 'email', 'website', 'comment', 'serviceInterested', 'industry'].some(k => l[k] && String(l[k]).trim());
                 const tmGone = new Set(tmDismissed.map(String));
-                const visibleAll = telemarketingLeads.filter(l => !tmGone.has(String(l.id)) && tmHasInfo(l));
+                const visibleAll = telemarketingLeads.filter(l => !tmGone.has(String(l.id)) && tmHasInfo(l) && !(l.source === 'voice-studio' && /do not call/i.test(String(l.category || l.status || ''))));
                 if (!visibleAll.length) {
                     el.innerHTML = '';
                     return;
@@ -5585,7 +5587,9 @@
                 };
                 // Colors: Tania's choice wins; otherwise AI calls with an appointment are orange (hot), an email green, a real conversation yellow, the rest blue.
                 const tmColors = loadTmColors();
-                const aiAuto = (l) => { const c = String(l.category || l.status || ''); if (/appointment/i.test(c)) return 'orange'; if (/\bemail/i.test(c) && aiGood(l)) return 'green'; return aiGood(l) ? 'yellow' : 'blue'; };
+                // Orange: appointment or showed interest. Green: gave at least an email. Yellow: spoke to a human. Blue: nobody spoke (voicemail, machine, no answer).
+                const aiSpoke = (l) => { const said = aiSaid(l); return !!said && !aiBOT.test(said) && !(aiIVR.test(said) && !aiHUMAN.test(said)); };
+                const aiAuto = (l) => { const c = String(l.category || l.status || ''); if (/appointment|interested/i.test(c)) return 'orange'; if (/\bemail/i.test(c) && aiGood(l)) return 'green'; return aiGood(l) || (/hang ?up/i.test(c) && aiSpoke(l)) ? 'yellow' : 'blue'; };
                 const tmColorOf = (l) => tmColors[String(l.id)] || (isAI(l) ? aiAuto(l) : '');
                 const tmRank = (l) => TM_RANK[tmColorOf(l)] || 0;
                 const byRank = (a, b) => (tmRank(b) - tmRank(a)) || String(b.timestamp || '').localeCompare(String(a.timestamp || ''));
@@ -5699,6 +5703,7 @@
             // Edits Tania makes to a telemarketing / AI-call lead (name, email, comments...) stay on this device and are reapplied after every refresh.
             function loadTmEdits() { try { const o = JSON.parse(localStorage.getItem('webswan_tm_edits') || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
             function applyTmEdits(lead) { const ed = loadTmEdits()[String(lead.id)]; return ed ? Object.assign({}, lead, ed) : lead; }
+            const tmHlKey = (lead, k) => 'tmlead-' + String(lead && lead.id || '').replace(/[^\w-]/g, '') + '-' + k;
             const tmEsc = (v) => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
             function openTmLeadModal(lead, edit) {
@@ -5712,10 +5717,13 @@
                 const tmSaveEl = document.getElementById('tmSaveEditBtn'); if (tmSaveEl) tmSaveEl.style.display = edit ? '' : 'none';
                 if (edit) {
                     const box = 'width:100%;box-sizing:border-box;padding:7px;border:1px solid #d6c2cc;border-radius:8px;font:inherit;';
-                    const fld = (k, label, v, area) => '<label style="display:block;margin-bottom:9px;"><span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ad1457;display:block;">' + label + '</span>'
-                        + (area ? '<textarea data-tm-edit="' + k + '" rows="5" style="' + box + '">' + tmEsc(v) + '</textarea>' : '<input data-tm-edit="' + k + '" value="' + tmEsc(v) + '" style="' + box + '">') + '</label>';
+                    // Each field is a highlightable field (Text highlight / Whole Field), saved per lead.
+                    const fld = (k, label, v, area) => '<div class="field-group" data-hlkey="' + tmHlKey(lead, k) + '" style="margin-bottom:9px;"><label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ad1457;display:block;">' + label + '</label>'
+                        + '<textarea data-tm-edit="' + k + '" rows="' + (area ? 5 : 1) + '"' + (area ? '' : ' style="min-height:0;resize:none;"') + '>' + tmEsc(v) + '</textarea></div>';
                     body.innerHTML = fld('companyName', 'Practice / business', lead.companyName || lead.name) + fld('decisionMakerName', 'Contact (doctor, attorney or owner)', lead.decisionMakerName)
-                        + fld('phone', 'Phone', lead.phone) + fld('email', 'Email', lead.email) + fld('website', 'Website', lead.website) + fld('comment', 'Comments', lead.comment, true);
+                        + fld('phone', 'Phone', lead.phone) + fld('email', 'Email', lead.email) + fld('website', 'Website', lead.website) + fld('comment', 'Comments', lead.comment, true)
+                        + '<p style="font-size:0.75rem;color:#6b7c8f;margin:4px 0 0;">🖍️ To highlight words: select the words here, press <b>✍️ Text highlight</b> (bottom left) and pick a color.</p>';
+                    setTimeout(() => window.dispatchEvent(new Event('resize')), 30); // repaint saved highlights in these boxes
                     document.getElementById('tmLeadModalOverlay').classList.add('show');
                     return;
                 }
@@ -5736,8 +5744,18 @@
                     ['Submitted', lead.timestamp ? new Date(lead.timestamp).toLocaleString() : '']
                 ].filter(([, v]) => v);
 
+                // Words Tania highlighted on this lead show in their colors here too.
+                const tmLabelKey = { 'Name': 'name', 'Phone': 'phone', 'Email': 'email', 'Company': 'companyName', 'Website': 'website', 'Comment': 'comment' };
+                const tmMarked = (label, value) => {
+                    let wsx = {}; try { wsx = JSON.parse(localStorage.getItem('wsx_text_hl') || '{}') || {}; } catch (e) {}
+                    const text = String(value), k = tmLabelKey[label]; const ranges = k ? ((wsx[tmHlKey(lead, k)] || []).map(r => ({ start: r.s, end: r.e, color: r.c })).sort((a, b) => a.start - b.start)) : [];
+                    if (!ranges.length) return text.replace(/</g, '&lt;');
+                    let html = '', cur = 0;
+                    ranges.forEach(r => { const st = Math.max(cur, Math.min(r.start, text.length)), en = Math.max(st, Math.min(r.end, text.length)); html += escapeHtmlForOverlay(text.slice(cur, st)) + (en > st ? '<mark style="background:' + ({ yellow: '#ffd600', green: '#a5d6a7', red: '#ef9a9a', blue: '#90caf9', orange: '#ffcc80', teal: '#80deea', indigo: '#c5cae9', charcoal: '#b0bec5', crimson: '#e57373', black: '#111' }[r.color] || '#ffd600') + (r.color === 'black' ? ';color:#fff' : '') + ';border-radius:3px;">' + escapeHtmlForOverlay(text.slice(st, en)) + '</mark>' : ''); cur = en; });
+                    return html + escapeHtmlForOverlay(text.slice(cur));
+                };
                 body.innerHTML = rows.map(([label, value]) =>
-                    `<div style="margin-bottom:10px;"><span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ad1457;display:block;">${label}</span><span>${String(value).replace(/</g, '&lt;')}</span></div>`
+                    `<div style="margin-bottom:10px;"><span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ad1457;display:block;">${label}</span><span style="white-space:pre-wrap;">${tmMarked(label, value)}</span></div>`
                 ).join('');
 
                 document.getElementById('tmLeadModalOverlay').classList.add('show');
