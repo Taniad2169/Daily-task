@@ -5566,7 +5566,7 @@
                 if (!el) return;
                 const tmHasInfo = (l) => ['decisionMakerName', 'name', 'companyName', 'phone', 'email', 'website', 'comment', 'serviceInterested', 'industry'].some(k => l[k] && String(l[k]).trim());
                 const tmGone = new Set(tmDismissed.map(String));
-                const visibleAll = telemarketingLeads.filter(l => !tmGone.has(String(l.id)) && tmHasInfo(l) && !(l.source === 'voice-studio' && /do not call/i.test(String(l.category || l.status || ''))));
+                const visibleAll = telemarketingLeads.filter(l => !tmGone.has(String(l.id)) && tmHasInfo(l) && !(l.source === 'voice-studio' && /do not call/i.test(String(l.category || l.status || ''))) && !(l.source === 'voice-studio' && ['4156189200', '4158770687', '5166100203'].includes(String(l.phone || '').replace(/\D/g, '').slice(-10)))); // Tania's own test calls are hidden
                 if (!visibleAll.length) {
                     el.innerHTML = '';
                     return;
