@@ -2656,6 +2656,7 @@
                     <select id="evaAgent" style="padding:5px 8px;border:1.5px solid #d9cff5;border-radius:8px;"><option value="">Auto (doctors → Monica, attorneys → George)</option><option value="monica">Monica</option><option value="george">George</option><option value="rebecca">Rebecca (advertising)</option></select>
                     <span style="color:#6b7c8f;">They call 24 hours after this email, never after 6 PM New York time.</span>
                 </div>
+                <label style="display:block;margin-top:8px;font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">Mailing address at the bottom of every email <span style="font-weight:400;text-transform:none;color:#6b7c8f;">(required by the CAN-SPAM law; a PO box or business mailbox is fine)</span><input id="evaAddress" placeholder="e.g. PO Box 1234, Oakland, CA 94609" style="width:100%;padding:7px;border:1.5px solid #d9cff5;border-radius:9px;font-size:0.85rem;text-transform:none;font-weight:400;"></label>
                 <div id="evaMsg" style="font-size:0.82rem;min-height:1.2em;margin-top:8px;"></div>
                 <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px;">
                     <button type="button" class="btn btn-outline" id="evaCopyBtn" style="border-color:#7c5cd6;color:#5b3fa8;"><i class="fas fa-copy"></i> Copy text</button>
@@ -4275,7 +4276,8 @@
                 'webswan_tm_dismissed',
                 'webswan_tm_colors',
                 'webswan_tm_edits',
-                'webswan_eva_drafts'
+                'webswan_eva_drafts',
+                'webswan_eva_address'
             ];
 
             let firebaseUser = null;
@@ -6006,6 +6008,7 @@
                 return null;
             }
             let evaIssues = []; // [{label, on}] from the website check
+            let evaAds = [];    // paid-ad signals from the website check (Google Ads, Microsoft Ads…): Rebecca brings up pay-per-click, Eva never does
             function evaFindingsText(l) {
                 const on = evaIssues.filter(i => i.on).map(i => i.label);
                 if (!on.length) return '';
@@ -6048,9 +6051,10 @@
                 document.getElementById('evaTo').value = lead.email || '';
                 document.getElementById('evaTpl').value = 'audit';
                 document.getElementById('evaAgent').value = '';
+                document.getElementById('evaAddress').value = localStorage.getItem('webswan_eva_address') || '';
                 document.getElementById('evaReply').value = ''; document.getElementById('evaReplyMsg').textContent = '';
                 document.getElementById('evaState').value = evaGuessState(lead);
-                evaIssues = []; evaRenderFindings();
+                evaIssues = []; evaAds = []; evaRenderFindings();
                 document.getElementById('evaCall').innerHTML = evaCallSummary(lead);
                 ['evaAudit', 'evaFlyer'].forEach(id => document.getElementById(id).value = '');
                 document.getElementById('evaFlyerUrl').value = '';
@@ -6058,6 +6062,8 @@
                 document.getElementById('evaMsg').style.color = '#8a5a00';
                 evaFill(false);
                 const h = evaDrafts()[String(lead.id)] || [];
+                const unsub = h.some(d => d.unsubscribed);
+                if (unsub) { document.getElementById('evaMsg').style.color = '#b42318'; document.getElementById('evaMsg').textContent = '⛔ This practice asked to unsubscribe. Do not email them again.'; }
                 document.getElementById('evaHistory').textContent = h.length ? '⚠️ Already drafted ' + h.length + 'x, last on ' + new Date(h[h.length - 1].at).toLocaleString() + ' (' + h[h.length - 1].subject + ')' + (h[h.length - 1].handoff ? ' · handed to ' + h[h.length - 1].handoff.agent : '') : '';
                 document.getElementById('evaDraftOverlay').style.display = 'flex';
                 if (lead.website && localStorage.getItem('wp_prospector_code')) evaScan(); // check the site right away when the code is saved
@@ -6082,6 +6088,8 @@
                     if (!r.ok) throw new Error(d.error || ('Error ' + r.status));
                     if (d.reachable === false) { evaRenderFindings('<span style="color:#b42318">Their website did not open. That is a finding too: you can mention it.</span>'); evaIssues = [{ label: 'Website not loading', on: true, sev: 'high' }]; evaRenderFindings(); evaFill(false); return; }
                     evaIssues = (d.issues || []).filter(i => i.key !== 'builder').map(i => ({ label: i.label, sev: i.severity, on: i.severity !== 'low' }));
+                    evaAds = Array.isArray(d.ads) ? d.ads : [];
+                    if (evaAds.length) document.getElementById('evaCall').innerHTML += '<br>💰 Running ads: <b>' + tmEsc(evaAds.join(', ')) + '</b> (Rebecca will bring up pay-per-click on her call; Eva never mentions it)';
                     if (d.emails && d.emails.length && !document.getElementById('evaTo').value) document.getElementById('evaTo').value = d.emails[0];
                     if (!evaIssues.length) { evaRenderFindings('<span style="color:#157a5e">✅ No big problems found on their website.</span>'); evaFill(false); return; }
                     evaRenderFindings(); evaFill(false);
@@ -6104,6 +6112,12 @@
                 const msg = document.getElementById('evaMsg'), btn = document.getElementById('evaSaveBtn');
                 const to = document.getElementById('evaTo').value.trim(), subject = document.getElementById('evaSubject').value.trim();
                 let body = document.getElementById('evaBody').value.replace(/\s+$/, '');
+                if ((evaDrafts()[String((evaLead || {}).id)] || []).some(d => d.unsubscribed)) { msg.style.color = '#b42318'; msg.textContent = '⛔ This practice asked to unsubscribe. The law says we must not email them again.'; return; }
+                const addr = document.getElementById('evaAddress').value.trim();
+                if (!addr) { msg.style.color = '#b42318'; msg.textContent = 'Add the mailing address first (required by law on every marketing email).'; return; }
+                localStorage.setItem('webswan_eva_address', addr); scheduleFirebaseAutoSave();
+                const brand = document.getElementById('evaTpl').value === 'newpatients' ? 'WebSwan Media Network' : 'WebSwan Digital Solutions';
+                body += '\n\n--\n' + brand + ' · ' + addr + '\nIf you would rather not receive emails from us, just reply "unsubscribe".';
                 if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) { msg.style.color = '#b42318'; msg.textContent = 'Add a valid email in "To".'; return; }
                 const kind = document.getElementById('evaTpl').value;
                 const { files, linkOnly } = await evaFiles();
@@ -6155,7 +6169,7 @@
                 const said = ((String(l.comment || '').match(/What they said:([^\n]*)/i) || [])[1] || '').trim();
                 const lead = { id: String(l.id || ''), business: l.companyName || l.name || '', contact: l.decisionMakerName || '', phone: l.phone || '', state: document.getElementById('evaState').value || evaGuessState(l) || String(l.state || '').toUpperCase().slice(0, 2),
                     email: to, industry: l.industry || '', kind: document.getElementById('evaTpl').value === 'newpatients' ? 'newpatients' : (l.serviceInterested || ''), agent: document.getElementById('evaAgent').value, reply: reply || '', emailSentAt: (reply && ((evaDrafts()[String(l.id)] || []).slice(-1)[0] || {}).at) || new Date().toISOString(), subject, files: fileNames,
-                    spokeWith: ct ? ct.who : '', spokeBy: ct ? (ct.caller || 'Tania') : '', spokeWhen: ct ? ct.when : '', said: said || (String(l.myNotes || '').split('\n').filter(Boolean)[0] || '').slice(0, 220), findings: evaIssues.filter(i => i.on).map(i => i.label) };
+                    spokeWith: ct ? ct.who : '', spokeBy: ct ? (ct.caller || 'Tania') : '', spokeWhen: ct ? ct.when : '', said: said || (String(l.myNotes || '').split('\n').filter(Boolean)[0] || '').slice(0, 220), findings: evaIssues.filter(i => i.on).map(i => i.label), ads: evaAds };
                 if (!/^[A-Z]{2}$/.test(lead.state)) {
                     const st = (prompt('Which state is ' + (lead.business || 'this practice') + ' in? (2 letters, e.g. FL) so the caller calls in their business hours:') || '').trim().toUpperCase();
                     if (!/^[A-Z]{2}$/.test(st)) return '<span style="color:#b42318">📞 Not handed to a caller: no state.</span>';
@@ -6188,6 +6202,11 @@
                 if (id === 'evaReplyBtn') {
                     const rep = document.getElementById('evaReply').value.trim(), out = document.getElementById('evaReplyMsg');
                     if (!rep) { out.style.color = '#b42318'; out.textContent = 'Paste their reply first.'; return; }
+                    if (/\b(unsubscribe|remove me|take me off|stop emailing|do not (email|contact)|don'?t (email|contact))\b/i.test(rep)) {
+                        const all = evaDrafts(), k = String((evaLead || {}).id); all[k] = (all[k] || []).concat([{ at: new Date().toISOString(), subject: 'UNSUBSCRIBED', unsubscribed: true, kind: 'unsubscribe' }]);
+                        localStorage.setItem('webswan_eva_drafts', JSON.stringify(all)); scheduleFirebaseAutoSave();
+                        out.style.color = '#b42318'; out.textContent = '⛔ Marked as unsubscribed: no more emails to this practice, and the reply was not sent to a caller.'; return;
+                    }
                     const last = (evaDrafts()[String((evaLead || {}).id)] || []).slice(-1)[0] || {};
                     if (last.kind === 'newpatients') { document.getElementById('evaTpl').value = 'newpatients'; document.getElementById('evaAgent').value = 'rebecca'; }
                     out.style.color = '#5b3fa8'; out.textContent = 'Sending…';
