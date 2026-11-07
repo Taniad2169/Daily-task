@@ -2645,6 +2645,11 @@
                         <button type="button" id="evaAskJimmy" style="margin-top:5px;border:1px solid #7c5cd6;background:#fff;color:#5b3fa8;border-radius:8px;padding:3px 9px;font-size:0.75rem;font-weight:700;cursor:pointer;">Copy a flyer request for Jimmy</button>
                     </div>
                 </div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:0.82rem;">
+                    <label style="display:inline-flex;gap:6px;align-items:center;font-weight:700;color:#5b3fa8;"><input type="checkbox" id="evaHandoff" checked> 📞 Hand to a caller after saving:</label>
+                    <select id="evaAgent" style="padding:5px 8px;border:1.5px solid #d9cff5;border-radius:8px;"><option value="">Auto (doctors → Monica, attorneys → George)</option><option value="monica">Monica</option><option value="george">George</option><option value="rebecca">Rebecca (advertising)</option></select>
+                    <span style="color:#6b7c8f;">They call 24 hours after this email, never after 6 PM New York time.</span>
+                </div>
                 <div id="evaMsg" style="font-size:0.82rem;min-height:1.2em;margin-top:8px;"></div>
                 <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px;">
                     <button type="button" class="btn btn-outline" id="evaCopyBtn" style="border-color:#7c5cd6;color:#5b3fa8;"><i class="fas fa-copy"></i> Copy text</button>
@@ -2742,7 +2747,9 @@
                 gmailTok = { t: cred.accessToken, exp: Date.now() + 55 * 60000, email: r.user && r.user.email };
                 return gmailTok.t;
             },
-            account: () => gmailTok && gmailTok.email
+            account: () => gmailTok && gmailTok.email,
+            // Firebase ID token of the Google account Eva used (an owner account): lets Voice Studio accept the hand-off
+            idToken: async () => { const u = gmailAuth.currentUser || auth.currentUser; return u ? u.getIdToken() : null; }
         };
 
         window.dailyFirebase = {
@@ -6038,7 +6045,7 @@
                 document.getElementById('evaMsg').style.color = '#8a5a00';
                 evaFill(false);
                 const h = evaDrafts()[String(lead.id)] || [];
-                document.getElementById('evaHistory').textContent = h.length ? '⚠️ Already drafted ' + h.length + 'x, last on ' + new Date(h[h.length - 1].at).toLocaleString() + ' (' + h[h.length - 1].subject + ')' : '';
+                document.getElementById('evaHistory').textContent = h.length ? '⚠️ Already drafted ' + h.length + 'x, last on ' + new Date(h[h.length - 1].at).toLocaleString() + ' (' + h[h.length - 1].subject + ')' + (h[h.length - 1].handoff ? ' · handed to ' + h[h.length - 1].handoff.agent : '') : '';
                 document.getElementById('evaDraftOverlay').style.display = 'flex';
                 if (lead.website && localStorage.getItem('wp_prospector_code')) evaScan(); // check the site right away when the code is saved
             }
@@ -6116,11 +6123,36 @@
                     localStorage.setItem('webswan_eva_drafts', JSON.stringify(all)); scheduleFirebaseAutoSave();
                     if (evaLead.email !== to) { evaLead.email = to; const ed = loadTmEdits(); ed[k] = Object.assign(ed[k] || {}, { email: to }); localStorage.setItem('webswan_tm_edits', JSON.stringify(ed)); }
                     msg.style.color = '#157a5e'; msg.innerHTML = '✅ Draft saved in Gmail' + (window.wpGmail.account() ? ' (' + tmEsc(window.wpGmail.account()) + ')' : '') + '. <a href="https://mail.google.com/mail/u/0/#drafts" target="_blank" rel="noopener">Open Drafts</a>';
+                    if (document.getElementById('evaHandoff').checked) msg.innerHTML += '<br>' + await evaHandoff(to, subject, files.map(f => f.name));
                     showToast('💜 Draft saved for ' + (evaLead.companyName || evaLead.name || 'lead'), 'success');
                 } catch (e) {
                     msg.style.color = '#b42318';
                     msg.textContent = /popup|cancel/i.test(e.message || e.code || '') ? 'The Google window was closed. Try again.' : /has not been used|disabled|accessNotConfigured/i.test(e.message || '') ? 'Gmail API is not turned on yet for this app (one-time setup in Google Cloud).' : ('Could not save: ' + (e.message || e));
                 } finally { btn.disabled = false; }
+            }
+            // Hand the lead to the caller in Voice Studio (Monica / George / Rebecca), with everything Eva knew.
+            async function evaHandoff(to, subject, fileNames) {
+                const l = evaLead || {};
+                const ct = evaContact(l);
+                const said = ((String(l.comment || '').match(/What they said:([^\n]*)/i) || [])[1] || '').trim();
+                const lead = { id: String(l.id || ''), business: l.companyName || l.name || '', contact: l.decisionMakerName || '', phone: l.phone || '', state: document.getElementById('evaState').value || evaGuessState(l) || String(l.state || '').toUpperCase().slice(0, 2),
+                    email: to, industry: l.industry || '', kind: l.serviceInterested || '', agent: document.getElementById('evaAgent').value, emailSentAt: new Date().toISOString(), subject, files: fileNames,
+                    spokeWith: ct ? ct.who : '', spokeBy: ct ? (ct.caller || 'Tania') : '', spokeWhen: ct ? ct.when : '', said: said || (String(l.myNotes || '').split('\n').filter(Boolean)[0] || '').slice(0, 220), findings: evaIssues.filter(i => i.on).map(i => i.label) };
+                if (!/^[A-Z]{2}$/.test(lead.state)) {
+                    const st = (prompt('Which state is ' + (lead.business || 'this practice') + ' in? (2 letters, e.g. FL) so the caller calls in their business hours:') || '').trim().toUpperCase();
+                    if (!/^[A-Z]{2}$/.test(st)) return '<span style="color:#b42318">📞 Not handed to a caller: no state.</span>';
+                    lead.state = st;
+                }
+                try {
+                    const tok = await window.wpGmail.idToken();
+                    if (!tok) throw new Error('Google sign-in missing');
+                    const r = await fetch('https://webswan-billing.netlify.app/.netlify/functions/voice-calls', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'eva_handoff', lead }) });
+                    const d = await r.json().catch(() => ({}));
+                    if (!r.ok) throw new Error(d.error || ('Voice Studio error ' + r.status));
+                    const all = evaDrafts(); const k = String(l.id); const h = all[k] || []; if (h.length) { h[h.length - 1].handoff = { agent: d.agent, notBefore: d.notBefore }; localStorage.setItem('webswan_eva_drafts', JSON.stringify(all)); scheduleFirebaseAutoSave(); }
+                    const nm = d.agent ? d.agent[0].toUpperCase() + d.agent.slice(1) : 'The caller';
+                    return '📞 ' + nm + ' will follow up after ' + tmEsc(new Date(d.notBefore).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + (d.paused ? ' <span style="color:#8a5a00">(the auto-dialer is paused in Voice Studio right now)</span>' : '') + '.';
+                } catch (e) { return '<span style="color:#b42318">📞 Not handed to a caller yet: ' + tmEsc(e.message || e) + '</span>'; }
             }
             function evaJimmyBrief() {
                 const l = evaLead || {};
