@@ -5870,6 +5870,18 @@
                 if (!el) return;
                 const denied = error && (error.code === 'permission-denied' || /permission/i.test(error.message || ''));
                 if (!denied) return;
+                // Tania, Nov 6: after a reset the leads looked "gone". Show a big banner at the top so it's never hidden in a closed section.
+                if (!document.getElementById('tmTopConnect')) {
+                    const top = document.createElement('button');
+                    top.id = 'tmTopConnect'; top.type = 'button';
+                    top.innerHTML = '🔑 Reconnect your leads (Paul + Voice Studio): tap here and pick thewebswann@gmail.com';
+                    top.style.cssText = 'position:fixed;top:10px;left:50%;transform:translateX(-50%);z-index:99999;padding:14px 20px;font-size:16px;font-weight:800;background:#f59e0b;color:#111;border:0;border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.3);max-width:94vw';
+                    top.addEventListener('click', async () => {
+                        try { await window.dailyFirebase.connectTelemarketing(); top.remove(); fetchTelemarketingLeads(true); }
+                        catch (err) { console.error('Telemarketing sign-in failed:', err); showToast('❌ Could not connect: ' + (err.code || err.message), 'error'); }
+                    });
+                    document.body.appendChild(top);
+                }
                 el.innerHTML = '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:8px;">'
                     + '<span style="font-weight:700;color:#ad1457;font-size:0.85rem;"><i class="fas fa-lock"></i> Telemarketing leads are private</span>'
                     + '<button class="btn btn-outline" id="tmConnectBtn" style="border-color:#ec407a;color:#ad1457;padding:0.3rem 0.8rem;font-size:0.75rem;"><i class="fab fa-google"></i> Connect Telemarketing (owner)</button>'
