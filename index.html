@@ -5635,7 +5635,7 @@
                             <span style="font-size:0.7rem;color:#8a4a63;">${when}</span>
                             ${tmPushed.includes(String(lead.id)) ? '<span class="tm-pushed-badge"><i class="fas fa-check"></i> Pushed</span>' : ''}
                             ${String(lead.myNotes || '').trim() ? '<span title="You have notes on this lead" style="font-size:0.7rem;font-weight:700;background:#fff8d6;color:#c2185b;border:1px solid #f48fb1;border-radius:8px;padding:1px 6px;">📝 My notes</span>' : ''}
-                            ${tmCallId(lead) ? `<button class="tm-push-btn tm-listen-btn" data-call-id="${tmCallId(lead)}" title="Listen to the call recording (opens Voice Studio)" style="color:#1d4ed8;"><i class="fas fa-headphones"></i></button>` : ''}
+                            ${tmCallId(lead) ? `<button class="tm-push-btn tm-listen-btn" data-call-id="${tmCallId(lead)}" title="Listen to the call recording right here" style="color:#1d4ed8;"><i class="fas fa-headphones"></i></button>` : ''}
                             <span class="tm-color-dots" style="display:inline-flex;gap:4px;align-items:center;">${[['yellow', '#ffd600', 'Spoke to a person (call back later)'], ['green', '#2e7d32', "Got an email, transferred to Rachel or got Rachel's number"], ['orange', '#f57c00', 'Hot lead: email + appointment']].filter(([c]) => TM_RANK[c] > tmRank(lead)).map(([c, bg, t]) => `<button class="tm-color-btn" data-tm-id="${lead.id}" data-color="${c}" title="${t}" style="width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #9aa;background:${bg};cursor:pointer;padding:0;"></button>`).join('')}</span>
                             <button class="tm-push-btn tm-edit-btn" data-tm-id="${lead.id}" title="Edit (name, email, comments), then push to the Lead Form" style="color:#ad1457;"><i class="fas fa-pen"></i></button>
                             <button class="tm-push-btn" data-tm-id="${lead.id}" title="Push to Lead Form"><i class="fas fa-share-square"></i></button>
@@ -5710,9 +5710,28 @@
                 renderTelemarketingLeads();
                 showToast('💾 Edits saved. Push it to the Lead Form whenever you are ready.', 'success');
             }
-            function openCallRecording(callId) {
+            // Tania, Nov 7: play the recording right here in WorkPilot (no new page, no extra Google sign-in).
+            // Falls back to Voice Studio only if WorkPilot isn't signed in or the recording can't load.
+            async function openCallRecording(callId) {
                 if (!callId) { showToast('No recording is linked to this lead.', 'error'); return; }
-                window.open('https://taniad2169.github.io/webswan-dagigoia-task/voice-studio/?listen=' + encodeURIComponent(callId), '_blank', 'noopener');
+                const vsLink = 'https://taniad2169.github.io/webswan-dagigoia-task/voice-studio/?listen=' + encodeURIComponent(callId);
+                try {
+                    const u = window.dailyFirebase && window.dailyFirebase.currentUser && window.dailyFirebase.currentUser();
+                    if (!u) throw new Error('Sign in to WorkPilot first');
+                    showToast('🎧 Loading the recording…', 'success');
+                    const r = await fetch('https://webswan-billing.netlify.app/.netlify/functions/voice-calls', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + await u.getIdToken() }, body: JSON.stringify({ action: 'audio', callId }) });
+                    if (!r.ok) { let d = {}; try { d = await r.json(); } catch (e) {} throw new Error(d.error || ('Recording error ' + r.status)); }
+                    const url = URL.createObjectURL(await r.blob());
+                    let bar = document.getElementById('wpRecBar');
+                    if (!bar) { bar = document.createElement('div'); bar.id = 'wpRecBar'; bar.style.cssText = 'position:fixed;left:12px;right:12px;bottom:12px;z-index:100000;background:#fff;border:1px solid #cfd8e3;border-radius:14px;padding:10px 12px;box-shadow:0 8px 30px rgba(0,0,0,.18);display:flex;gap:10px;align-items:center;flex-wrap:wrap'; document.body.appendChild(bar); }
+                    const prev = bar.querySelector('audio'); if (prev) { prev.pause(); URL.revokeObjectURL(prev.src); }
+                    bar.innerHTML = '<strong style="font-size:14px">🎧 Call recording</strong><audio controls autoplay style="flex:1;min-width:220px"></audio><a href="' + url + '" download="call-' + callId + '.wav" style="font-size:13px">⬇ Download</a><button type="button" style="border:0;background:#eef2f7;border-radius:8px;padding:6px 10px;cursor:pointer">✕ Close</button>';
+                    bar.querySelector('audio').src = url;
+                    bar.querySelector('button').onclick = () => { const a = bar.querySelector('audio'); if (a) a.pause(); URL.revokeObjectURL(url); bar.remove(); };
+                } catch (e) {
+                    showToast('Couldn\'t play it here (' + e.message + '). Opening Voice Studio…', 'error');
+                    window.open(vsLink, '_blank', 'noopener');
+                }
             }
             // Edits Tania makes to a telemarketing / AI-call lead (name, email, comments...) stay on this device and are reapplied after every refresh.
             function loadTmEdits() { try { const o = JSON.parse(localStorage.getItem('webswan_tm_edits') || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
