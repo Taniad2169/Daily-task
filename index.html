@@ -2068,6 +2068,15 @@
                 <div class="lock-subtitle">🗝️</div>
                 <div class="lock-status" id="secondLockStatus">🗝️</div>
             </div>
+            <!-- Login code (Claude / Eva): bypasses the 7 + 3 clicks -->
+            <div id="codeLoginBox" style="margin-top:22px;">
+                <button type="button" id="codeLoginToggle" style="background:none;border:0;color:rgba(255,255,255,0.55);font-size:0.8rem;cursor:pointer;text-decoration:underline;">🔑 Use a login code</button>
+                <form id="codeLoginForm" style="display:none;margin-top:10px;gap:8px;justify-content:center;flex-wrap:wrap;" autocomplete="off">
+                    <input id="codeLoginInput" type="password" placeholder="Login code" aria-label="Login code" style="padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,0.35);background:rgba(255,255,255,0.12);color:#fff;font-size:1rem;min-width:220px;">
+                    <button type="submit" style="padding:10px 16px;border-radius:10px;border:0;background:#48d6fa;color:#04263d;font-weight:700;cursor:pointer;">Enter</button>
+                    <div id="codeLoginMsg" style="flex-basis:100%;font-size:0.8rem;color:#ffb4b4;min-height:1em;"></div>
+                </form>
+            </div>
         </div>
     </div>
 
@@ -2790,6 +2799,65 @@
                 secondLockContainer.classList.remove('show');
                 secondLockContainer.style.display = 'none';
             }
+
+            // ===== LOGIN CODES (Claude = full access, Eva = lavender leads only) =====
+            // Only SHA-256 fingerprints are stored here, never the codes themselves (this page's code is public on GitHub).
+            const WP_CODES = { "cc2b6e2cc62a3a7964a66a7d424d1980ba3044a8b4d537bd35cbe304981180ab": "claude", "c3aa49cdc09603728378b4890b02db5b006195614f31bc7241533d7de67aa978": "eva" };
+            window.WP_ROLE = 'owner';
+            async function wpHash(t) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(t).trim().toUpperCase())); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join(''); }
+            function applyRole(role) {
+                window.WP_ROLE = role;
+                document.body.classList.toggle('eva-mode', role === 'eva');
+                const banner = document.getElementById('roleBanner');
+                if (banner) banner.remove();
+                if (role === 'claude' || role === 'eva') {
+                    const b = document.createElement('div'); b.id = 'roleBanner';
+                    b.style.cssText = 'position:sticky;top:0;z-index:50;background:' + (role === 'eva' ? '#e6d9ff;color:#3b2470' : '#d8f3fb;color:#04263d') + ';padding:8px 14px;font-weight:700;font-size:0.85rem;display:flex;gap:10px;align-items:center;justify-content:space-between;border-bottom:2px solid ' + (role === 'eva' ? '#9b7ae0' : '#48d6fa');
+                    b.innerHTML = '<span>' + (role === 'eva' ? '💜 Eva view: lavender leads only. Draft each email with the audit attached and save it to Drafts for Tania to send.' : '🤖 Claude (CTO) is signed in with a login code') + '</span><button type="button" id="roleLogout" style="border:1px solid currentColor;background:#fff;border-radius:8px;padding:3px 10px;cursor:pointer;font-weight:700;">Log out</button>';
+                    appContent.prepend(b);
+                    document.getElementById('roleLogout').onclick = () => { sessionStorage.removeItem('wp_role'); location.reload(); };
+                }
+                if (role === 'eva') evaOnlyLeads();
+                try { renderTelemarketingLeads(); } catch (e) {}
+            }
+            // Eva sees only the lead list: hide every other part of WorkPilot (pop-up windows stay usable)
+            function evaOnlyLeads() {
+                const keep = document.getElementById('telemarketingLeadsContainer'); if (!keep) return;
+                document.querySelector('.page-btn[data-page="tasks"]')?.click();
+                let node = keep;
+                while (node && node !== appContent) {
+                    const parent = node.parentElement; if (!parent) break;
+                    [...parent.children].forEach(sib => {
+                        if (sib === node || sib.id === 'roleBanner' || /modal|overlay|toast/i.test(sib.id || '') || getComputedStyle(sib).position === 'fixed') return;
+                        sib.setAttribute('data-eva-hidden', '1'); sib.style.display = 'none';
+                    });
+                    node = parent;
+                }
+            }
+            function unlockWith(role) {
+                isUnlocked = true;
+                lockScreen.classList.add('hidden');
+                appContent.classList.add('unlocked');
+                initApp();
+                if (role !== 'owner') sessionStorage.setItem('wp_role', role);
+                applyRole(role);
+                showToast(role === 'eva' ? '💜 Welcome Eva: your lavender leads are ready' : role === 'claude' ? '🤖 Welcome Claude' : '🔓 Welcome to WebSwan Suite, love! 💙', 'success');
+            }
+            document.getElementById('codeLoginToggle').addEventListener('click', function(e) {
+                e.stopPropagation();
+                const f = document.getElementById('codeLoginForm'); f.style.display = f.style.display === 'none' ? 'flex' : 'none';
+                if (f.style.display === 'flex') document.getElementById('codeLoginInput').focus();
+            });
+            document.getElementById('codeLoginForm').addEventListener('click', e => e.stopPropagation());
+            document.getElementById('codeLoginForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const role = WP_CODES[await wpHash(document.getElementById('codeLoginInput').value)];
+                if (!role) { document.getElementById('codeLoginMsg').textContent = 'That code did not work.'; return; }
+                document.getElementById('codeLoginInput').value = '';
+                unlockWith(role);
+            });
+            // stay signed in with a code until the tab is closed
+            { const r = sessionStorage.getItem('wp_role'); if (r === 'claude' || r === 'eva') setTimeout(() => unlockWith(r), 0); }
 
             firstLockEmoji.addEventListener('click', function(e) {
                 e.stopPropagation();
@@ -5615,6 +5683,8 @@
                     { list: visibleAll.filter(l => isAI(l) && tmRank(l) === 0).sort(byRank), title: '<i class="fas fa-robot"></i> AI Calls (Voice Studio) · <span style="background:#dbeafe;color:#1d4ed8;padding:0 6px;border-radius:6px">blue</span> hang up, voicemail, phone menu, another AI', color: '#1d4ed8', border: '#1d4ed8', hl: 'aiblue', refresh: false },
                     { list: visibleAll.filter(isPros), title: '<i class="fas fa-magnifying-glass-location"></i> From Lead Prospector', color: '#0077be', border: '#0077be', hl: 'ocean', refresh: false }
                 ];
+                // Eva (login code) only sees the lavender leads
+                if (window.WP_ROLE === 'eva') groups.splice(0, groups.length, { list: visibleAll.filter(l => tmColorOf(l) === 'lavender').sort(byRank), title: '💜 Lavender leads: audit emails (Eva)', color: '#5b3fa8', border: '#9b7ae0', hl: 'lavender', refresh: true });
                 let html = '';
                 groups.forEach((g, gi) => {
                     if (!g.list.length && !(g.refresh)) return;
@@ -6463,6 +6533,7 @@
             function lockApp() {
                 if (confirm('🔒 Lock the app? You\'ll need to unlock again.')) {
                     isUnlocked = false;
+                    if (window.WP_ROLE !== 'owner') { sessionStorage.removeItem('wp_role'); location.reload(); return; }
                     appContent.classList.remove('unlocked');
                     lockScreen.classList.remove('hidden');
                     resetLocks();
