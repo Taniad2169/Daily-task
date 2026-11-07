@@ -2620,7 +2620,7 @@
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;">
                     <label style="font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">To<input id="evaTo" type="email" style="width:100%;padding:8px;border:1.5px solid #d9cff5;border-radius:9px;font-size:0.9rem;text-transform:none;font-weight:400;"></label>
                     <label style="font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">Their state<select id="evaState" style="width:100%;padding:8px;border:1.5px solid #d9cff5;border-radius:9px;font-size:0.9rem;text-transform:none;font-weight:400;"><option value="">Other state</option><option value="NY">New York</option><option value="FL">Florida</option><option value="IL">Illinois</option><option value="NV">Nevada</option></select></label>
-                    <label style="font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">Email type<select id="evaTpl" style="width:100%;padding:8px;border:1.5px solid #d9cff5;border-radius:9px;font-size:0.9rem;text-transform:none;font-weight:400;"><option value="audit">Free audit (report attached)</option><option value="flyer">Flyer from Jimmy</option><option value="both">Audit + flyer</option><option value="followup">Follow-up (no reply yet)</option></select></label>
+                    <label style="font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">Email type<select id="evaTpl" style="width:100%;padding:8px;border:1.5px solid #d9cff5;border-radius:9px;font-size:0.9rem;text-transform:none;font-weight:400;"><option value="audit">Free audit (report attached)</option><option value="flyer">Flyer from Jimmy</option><option value="both">Audit + flyer</option><option value="followup">Follow-up (no reply yet)</option><option value="newpatients">New patients / clients (Rebecca · Media Network, 10 a day)</option></select></label>
                 </div>
                 <div style="margin-top:8px;border:1.5px solid #d9cff5;border-radius:10px;padding:8px 10px;background:#faf7ff;">
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -2631,6 +2631,12 @@
                     <div id="evaFindings" style="font-size:0.82rem;margin-top:4px;"></div>
                     <div style="font-size:0.72rem;color:#6b7c8f;margin-top:4px;">Ticked problems go into the email under the audit sentence. Untick anything you don't want to mention.</div>
                 </div>
+                <details id="evaReplyBox" style="margin-top:8px;border:1.5px solid #d9cff5;border-radius:10px;padding:6px 10px;">
+                    <summary style="cursor:pointer;font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">📩 They replied? Tell the caller</summary>
+                    <textarea id="evaReply" rows="3" placeholder="Paste their reply here (or what it says in short)…" style="width:100%;margin-top:6px;padding:7px;border:1px solid #d9cff5;border-radius:8px;font-size:0.85rem;font-family:inherit;"></textarea>
+                    <button type="button" id="evaReplyBtn" style="margin-top:4px;border:1px solid #7c5cd6;background:#7c5cd6;color:#fff;border-radius:8px;padding:4px 12px;font-size:0.8rem;font-weight:700;cursor:pointer;">Send their reply to the caller</button>
+                    <span id="evaReplyMsg" style="font-size:0.8rem;margin-left:6px;"></span>
+                </details>
                 <label style="display:block;margin-top:8px;font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">Subject<input id="evaSubject" style="width:100%;padding:8px;border:1.5px solid #d9cff5;border-radius:9px;font-size:0.9rem;text-transform:none;font-weight:400;"></label>
                 <label style="display:block;margin-top:8px;font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">Message <span style="font-weight:400;text-transform:none;color:#6b7c8f;">(no sign-off: your Gmail signature goes at the end · [word](link) becomes a clickable word in the email)</span><textarea id="evaBody" rows="10" style="width:100%;padding:9px;border:1.5px solid #d9cff5;border-radius:9px;font-size:0.9rem;line-height:1.5;font-family:inherit;text-transform:none;font-weight:400;"></textarea></label>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;">
@@ -6019,6 +6025,11 @@
                 const stateP = EVA_STATE_P[st] ? EVA_STATE_P[st] + ' You can check the states with the most website compliance lawsuits here: [website compliance lawsuits by state](' + EVA_LAWSUITS + ').\n\n' : '';
                 const adaLink = EVA_STATE_P[st] ? ' You can verify the ADA fines here: [ADA compliance fines](' + EVA_ADA_FINES + ').' : '';
                 const flLine = st === 'FL' ? "\n\nFor Florida, cookie consent and ADA accessibility on your website both matter; you can see the state's own standards here: [Florida accessibility standards](" + EVA_FL_DMS + ').' : '';
+                if (kind === 'newpatients') {
+                    const law = /attorney|lawyer|law firm|\blaw\b|legal|esq/i.test((l.industry || '') + ' ' + co + ' ' + (l.decisionMakerName || ''));
+                    const who = law ? 'clients' : 'patients', pros = law ? 'attorneys' : 'doctors';
+                    return { s: 'Are you still accepting new ' + who + '?', b: hi + '\n\nThis is Eva with WebSwan Media Network. Our new platform features qualified ' + pros + ' who are open to new ' + who + '. We checked the Google reviews for ' + co + ', and your practice pre-qualifies for added visibility to reach new ' + who + '.\n\nWe would like to schedule a 10-minute appointment with you or the person in charge of your practice to go over how it works and answer your questions. Rebecca from our team will give you a call soon to set it up.' };
+                }
                 if (kind === 'flyer') return { s: 'Something we made for ' + co, b: hi + '\n\nI put together a flyer idea for ' + co + ' and attached it to this email. It shows how your business could look in front of more local customers.\n\nWould you like me to adjust it with your colors and offers? ' + call };
                 if (kind === 'both') return { s: 'Your free website audit for ' + co + ' (plus a flyer)', b: hi + '\n\n' + stateP + opener + ran + co + '.' + adaLink + ' The report is attached, along with a flyer idea we designed for you.' + found + flLine + '\n\nThe audit shows the items worth fixing first. Would you have 10 minutes this week to go over it? ' + alek + '\n\n' + call };
                 if (kind === 'followup') return { s: 'Following up: ' + co, b: hi + '\n\n' + stateP + 'I wanted to follow up on the website and ADA compliance audit I sent for ' + co + '.' + adaLink + ' Did you get a chance to look at it?' + found + flLine + '\n\nI am happy to walk you through the findings; it only takes 10 minutes. ' + alek + '\n\n' + call };
@@ -6036,6 +6047,8 @@
                 evaLead = lead;
                 document.getElementById('evaTo').value = lead.email || '';
                 document.getElementById('evaTpl').value = 'audit';
+                document.getElementById('evaAgent').value = '';
+                document.getElementById('evaReply').value = ''; document.getElementById('evaReplyMsg').textContent = '';
                 document.getElementById('evaState').value = evaGuessState(lead);
                 evaIssues = []; evaRenderFindings();
                 document.getElementById('evaCall').innerHTML = evaCallSummary(lead);
@@ -6095,6 +6108,11 @@
                 const kind = document.getElementById('evaTpl').value;
                 const { files, linkOnly } = await evaFiles();
                 if ((kind === 'audit' || kind === 'both') && !document.getElementById('evaAudit').files[0] && !confirm('No audit file attached. Save the draft anyway?')) return;
+                if (kind === 'newpatients') {
+                    const today = new Date().toDateString();
+                    const sentToday = Object.values(evaDrafts()).flat().filter(d => d.kind === 'newpatients' && new Date(d.at).toDateString() === today).length;
+                    if (sentToday >= 10) { msg.style.color = '#b42318'; msg.textContent = 'Eva already prepared 10 new-patients/clients emails today. That is the daily limit; this one can go tomorrow.'; return; }
+                }
                 if (linkOnly) body += '\n\nHere is the flyer: [view the flyer](' + linkOnly + ')';
                 const total = files.reduce((n, f) => n + f.data.byteLength, 0);
                 if (total > 24 * 1024 * 1024) { msg.style.color = '#b42318'; msg.textContent = 'Attachments are over 24 MB, too big for Gmail.'; return; }
@@ -6119,7 +6137,7 @@
                     const d = await res.json().catch(() => ({}));
                     if (!res.ok) throw new Error((d.error && d.error.message) || ('Gmail error ' + res.status));
                     const all = evaDrafts(); const k = String(evaLead.id);
-                    all[k] = (all[k] || []).concat([{ at: new Date().toISOString(), subject, to, files: files.map(f => f.name), by: window.WP_ROLE || 'owner' }]).slice(-20);
+                    all[k] = (all[k] || []).concat([{ at: new Date().toISOString(), subject, to, files: files.map(f => f.name), by: window.WP_ROLE || 'owner', kind }]).slice(-20);
                     localStorage.setItem('webswan_eva_drafts', JSON.stringify(all)); scheduleFirebaseAutoSave();
                     if (evaLead.email !== to) { evaLead.email = to; const ed = loadTmEdits(); ed[k] = Object.assign(ed[k] || {}, { email: to }); localStorage.setItem('webswan_tm_edits', JSON.stringify(ed)); }
                     msg.style.color = '#157a5e'; msg.innerHTML = '✅ Draft saved in Gmail' + (window.wpGmail.account() ? ' (' + tmEsc(window.wpGmail.account()) + ')' : '') + '. <a href="https://mail.google.com/mail/u/0/#drafts" target="_blank" rel="noopener">Open Drafts</a>';
@@ -6131,12 +6149,12 @@
                 } finally { btn.disabled = false; }
             }
             // Hand the lead to the caller in Voice Studio (Monica / George / Rebecca), with everything Eva knew.
-            async function evaHandoff(to, subject, fileNames) {
+            async function evaHandoff(to, subject, fileNames, reply) {
                 const l = evaLead || {};
                 const ct = evaContact(l);
                 const said = ((String(l.comment || '').match(/What they said:([^\n]*)/i) || [])[1] || '').trim();
                 const lead = { id: String(l.id || ''), business: l.companyName || l.name || '', contact: l.decisionMakerName || '', phone: l.phone || '', state: document.getElementById('evaState').value || evaGuessState(l) || String(l.state || '').toUpperCase().slice(0, 2),
-                    email: to, industry: l.industry || '', kind: l.serviceInterested || '', agent: document.getElementById('evaAgent').value, emailSentAt: new Date().toISOString(), subject, files: fileNames,
+                    email: to, industry: l.industry || '', kind: document.getElementById('evaTpl').value === 'newpatients' ? 'newpatients' : (l.serviceInterested || ''), agent: document.getElementById('evaAgent').value, reply: reply || '', emailSentAt: (reply && ((evaDrafts()[String(l.id)] || []).slice(-1)[0] || {}).at) || new Date().toISOString(), subject, files: fileNames,
                     spokeWith: ct ? ct.who : '', spokeBy: ct ? (ct.caller || 'Tania') : '', spokeWhen: ct ? ct.when : '', said: said || (String(l.myNotes || '').split('\n').filter(Boolean)[0] || '').slice(0, 220), findings: evaIssues.filter(i => i.on).map(i => i.label) };
                 if (!/^[A-Z]{2}$/.test(lead.state)) {
                     const st = (prompt('Which state is ' + (lead.business || 'this practice') + ' in? (2 letters, e.g. FL) so the caller calls in their business hours:') || '').trim().toUpperCase();
@@ -6167,11 +6185,20 @@
                 if (id === 'evaCloseBtn') document.getElementById('evaDraftOverlay').style.display = 'none';
                 if (id === 'evaSaveBtn') evaSave();
                 if (id === 'evaScanBtn') evaScan();
+                if (id === 'evaReplyBtn') {
+                    const rep = document.getElementById('evaReply').value.trim(), out = document.getElementById('evaReplyMsg');
+                    if (!rep) { out.style.color = '#b42318'; out.textContent = 'Paste their reply first.'; return; }
+                    const last = (evaDrafts()[String((evaLead || {}).id)] || []).slice(-1)[0] || {};
+                    if (last.kind === 'newpatients') { document.getElementById('evaTpl').value = 'newpatients'; document.getElementById('evaAgent').value = 'rebecca'; }
+                    out.style.color = '#5b3fa8'; out.textContent = 'Sending…';
+                    out.innerHTML = await evaHandoff(document.getElementById('evaTo').value.trim() || last.to || '', last.subject || document.getElementById('evaSubject').value, last.files || [], rep);
+                }
                 if (id === 'evaCopyBtn') { const t = 'Subject: ' + document.getElementById('evaSubject').value + '\n\n' + document.getElementById('evaBody').value.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '$1 ($2)'); try { await navigator.clipboard.writeText(t); showToast('Email text copied', 'success'); } catch (x) {} }
                 if (id === 'evaAskJimmy') { try { await navigator.clipboard.writeText(evaJimmyBrief()); showToast('Flyer request copied: paste it to Jimmy', 'success'); } catch (x) { prompt('Copy this for Jimmy:', evaJimmyBrief()); } }
             });
             document.addEventListener('change', (e) => {
                 if (e.target && (e.target.id === 'evaTpl' || e.target.id === 'evaState')) evaFill(false);
+                if (e.target && e.target.id === 'evaTpl') document.getElementById('evaAgent').value = e.target.value === 'newpatients' ? 'rebecca' : '';
                 if (e.target && e.target.dataset && e.target.dataset.evaIssue !== undefined) { const it = evaIssues[Number(e.target.dataset.evaIssue)]; if (it) { it.on = e.target.checked; evaFill(false); } }
             });
             document.addEventListener('click', (e) => { if (e.target && e.target.id === 'evaDraftOverlay') e.target.style.display = 'none'; });
