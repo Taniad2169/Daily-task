@@ -2606,7 +2606,41 @@
                     <button class="btn btn-outline" id="tmSaveEditBtn" style="border-color:#2e7d32;color:#2e7d32;display:none;"><i class="fas fa-save"></i> Save edits</button>
                     <button class="btn btn-outline" id="tmEditBtn" style="border-color:#ad1457;color:#ad1457;"><i class="fas fa-pen"></i> Edit</button>
                     <button class="btn" id="tmPushToFormBtn" style="background:#0077b6;color:white;border-color:#0077b6;"><i class="fas fa-share-square"></i> Push to Lead Form</button>
+                    <button class="btn" id="tmEvaDraftBtn" type="button" style="background:#7c5cd6;color:white;border-color:#7c5cd6;"><i class="fas fa-envelope"></i> Email draft (Eva)</button>
                 </div>
+            </div>
+        </div>
+
+        <!-- ===== EVA: GMAIL DRAFT WITH AUDIT / JIMMY FLYER ===== -->
+        <div id="evaDraftOverlay" style="display:none;position:fixed;inset:0;background:rgba(10,20,40,0.55);z-index:3000;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 10px;">
+            <div style="background:#fff;border-radius:16px;max-width:620px;width:100%;padding:18px 18px 14px;box-shadow:0 20px 60px rgba(0,0,0,0.3);position:relative;">
+                <button type="button" id="evaCloseBtn" class="cal-modal-close" aria-label="Close"><i class="fas fa-times"></i></button>
+                <h3 style="margin:0 0 4px;color:#5b3fa8;"><i class="fas fa-envelope-open-text"></i> Email draft <span style="font-weight:400;font-size:0.85rem;color:#6b7c8f;">· saved to Gmail Drafts for Tania to send</span></h3>
+                <div id="evaHistory" style="font-size:0.8rem;color:#8a5a00;margin-bottom:6px;"></div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <label style="font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">To<input id="evaTo" type="email" style="width:100%;padding:8px;border:1.5px solid #d9cff5;border-radius:9px;font-size:0.9rem;text-transform:none;font-weight:400;"></label>
+                    <label style="font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">Email type<select id="evaTpl" style="width:100%;padding:8px;border:1.5px solid #d9cff5;border-radius:9px;font-size:0.9rem;text-transform:none;font-weight:400;"><option value="audit">Free audit (report attached)</option><option value="flyer">Flyer from Jimmy</option><option value="both">Audit + flyer</option><option value="followup">Follow-up (no reply yet)</option></select></label>
+                </div>
+                <label style="display:block;margin-top:8px;font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">Subject<input id="evaSubject" style="width:100%;padding:8px;border:1.5px solid #d9cff5;border-radius:9px;font-size:0.9rem;text-transform:none;font-weight:400;"></label>
+                <label style="display:block;margin-top:8px;font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">Message <span style="font-weight:400;text-transform:none;color:#6b7c8f;">(no sign-off: your Gmail signature goes at the end)</span><textarea id="evaBody" rows="10" style="width:100%;padding:9px;border:1.5px solid #d9cff5;border-radius:9px;font-size:0.9rem;line-height:1.5;font-family:inherit;text-transform:none;font-weight:400;"></textarea></label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;">
+                    <div style="border:1.5px dashed #d9cff5;border-radius:10px;padding:8px;">
+                        <div style="font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">📄 Their audit (PDF)</div>
+                        <input id="evaAudit" type="file" accept=".pdf,application/pdf,image/*" style="font-size:0.8rem;margin-top:4px;max-width:100%;">
+                    </div>
+                    <div style="border:1.5px dashed #d9cff5;border-radius:10px;padding:8px;">
+                        <div style="font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">🎨 Jimmy's flyer</div>
+                        <input id="evaFlyer" type="file" accept=".pdf,application/pdf,image/*" style="font-size:0.8rem;margin-top:4px;max-width:100%;">
+                        <input id="evaFlyerUrl" type="url" placeholder="…or paste the flyer link" style="width:100%;margin-top:4px;padding:6px;border:1px solid #d9cff5;border-radius:8px;font-size:0.8rem;">
+                        <button type="button" id="evaAskJimmy" style="margin-top:5px;border:1px solid #7c5cd6;background:#fff;color:#5b3fa8;border-radius:8px;padding:3px 9px;font-size:0.75rem;font-weight:700;cursor:pointer;">Copy a flyer request for Jimmy</button>
+                    </div>
+                </div>
+                <div id="evaMsg" style="font-size:0.82rem;min-height:1.2em;margin-top:8px;"></div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px;">
+                    <button type="button" class="btn btn-outline" id="evaCopyBtn" style="border-color:#7c5cd6;color:#5b3fa8;"><i class="fas fa-copy"></i> Copy text</button>
+                    <button type="button" class="btn" id="evaSaveBtn" style="background:#7c5cd6;color:#fff;border-color:#7c5cd6;"><i class="fab fa-google"></i> Save to Gmail Drafts</button>
+                </div>
+                <p style="font-size:0.72rem;color:#6b7c8f;margin:8px 0 0;">Nothing is sent. The draft waits in Gmail (account you pick in the Google window, from designs@thewebswan.com) until you press Send.</p>
             </div>
         </div>
 
@@ -2681,6 +2715,25 @@
         const marketingAuthReady = marketingAuth.authStateReady().then(function() { if (!marketingAuth.currentUser) return signInAnonymously(marketingAuth); }).catch(function(err) { console.error('Sign-in failed (marketing):', err); });
         const googleProvider = new GoogleAuthProvider();
         googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+        // Gmail drafts (Eva): separate sign-in so it never changes the WorkPilot sync account. Scope = create drafts only.
+        const gmailApp = initializeApp(firebaseConfig, "gmailDraftsApp");
+        const gmailAuth = getAuth(gmailApp);
+        let gmailTok = null;
+        window.wpGmail = {
+            async token(forceNew) {
+                if (!forceNew && gmailTok && gmailTok.exp > Date.now() + 60000) return gmailTok.t;
+                const p = new GoogleAuthProvider();
+                p.addScope('https://www.googleapis.com/auth/gmail.compose');
+                p.setCustomParameters({ prompt: 'select_account' });
+                const r = await signInWithPopup(gmailAuth, p);
+                const cred = GoogleAuthProvider.credentialFromResult(r);
+                if (!cred || !cred.accessToken) throw new Error('Google did not give Gmail access.');
+                gmailTok = { t: cred.accessToken, exp: Date.now() + 55 * 60000, email: r.user && r.user.email };
+                return gmailTok.t;
+            },
+            account: () => gmailTok && gmailTok.email
+        };
 
         window.dailyFirebase = {
             signIn: () => signInWithPopup(auth, googleProvider),
@@ -4198,7 +4251,8 @@
                 'webswan_future_calls',
                 'webswan_tm_dismissed',
                 'webswan_tm_colors',
-                'webswan_tm_edits'
+                'webswan_tm_edits',
+                'webswan_eva_drafts'
             ];
 
             let firebaseUser = null;
@@ -5862,6 +5916,116 @@
                 setTimeout(() => window.dispatchEvent(new Event('resize')), 30); // repaint saved highlights in these boxes
                 document.getElementById('tmLeadModalOverlay').classList.add('show');
             }
+
+            // ===== EVA: email draft (audit + Jimmy flyer) -> Gmail Drafts. Nothing is ever sent from here. =====
+            const EVA_FROM = 'Tania Domingue <designs@thewebswan.com>';
+            const EVA_BOOK = 'https://calendar.app.google/V5vTgj1L22g4YvTq5';
+            let evaLead = null;
+            const evaDrafts = () => { try { return JSON.parse(localStorage.getItem('webswan_eva_drafts') || '{}') || {}; } catch (e) { return {}; } };
+            function evaGreeting(l) {
+                const dm = String(l.decisionMakerName || '').trim();
+                if (!dm) return 'Hello,';
+                const first = dm.replace(/^(dr\.?|doctor)\s+/i, '');
+                return /^(dr\.?|doctor)\s/i.test(dm) ? 'Hi Dr. ' + first.split(/\s+/).slice(-1)[0] + ',' : 'Hi ' + first.split(/\s+/)[0] + ',';
+            }
+            function evaTemplate(kind, l) {
+                const co = String(l.companyName || l.name || 'your practice').trim();
+                const hi = evaGreeting(l);
+                const call = 'If it is easier, you can book a quick 15-minute call here: ' + EVA_BOOK + '\nor call Rachel, our assistant, at (239) 667-0151.';
+                if (kind === 'flyer') return { s: 'Something we made for ' + co, b: hi + '\n\nI put together a flyer idea for ' + co + ' and attached it to this email. It shows how your business could look in front of more local customers.\n\nWould you like me to adjust it with your colors and offers? ' + call };
+                if (kind === 'both') return { s: 'Your free website audit for ' + co + ' (plus a flyer)', b: hi + '\n\nI tried reaching your office by phone a few times, so I am sending this by email. I ran a complimentary website and ADA compliance audit for ' + co + '. The report is attached, along with a flyer idea we designed for you.\n\nThe audit shows the items worth fixing first. Would you have 15 minutes this week to go over it? ' + call };
+                if (kind === 'followup') return { s: 'Following up: ' + co, b: hi + '\n\nI wanted to follow up on the audit I sent for ' + co + '. Did you get a chance to look at it? I am happy to walk you through the findings; it only takes 15 minutes. ' + call };
+                return { s: 'Your free website audit for ' + co, b: hi + '\n\nI tried reaching your office by phone a few times, so I am sending this by email instead. I ran a complimentary website and ADA compliance audit for ' + co + ', and the report is attached.\n\nIt shows the items worth fixing first. Would you have 15 minutes this week to go over it? ' + call };
+            }
+            function evaFill(keepBody) {
+                const t = evaTemplate(document.getElementById('evaTpl').value, evaLead || {});
+                document.getElementById('evaSubject').value = t.s;
+                if (!keepBody) document.getElementById('evaBody').value = t.b;
+            }
+            function openEvaDraft(lead) {
+                if (!lead) return;
+                // take any edits typed in the lead pop-up first
+                document.querySelectorAll('#tmLeadModalBody [data-tm-edit]').forEach(el => { lead[el.dataset.tmEdit] = el.value.trim(); });
+                evaLead = lead;
+                document.getElementById('evaTo').value = lead.email || '';
+                document.getElementById('evaTpl').value = 'audit';
+                ['evaAudit', 'evaFlyer'].forEach(id => document.getElementById(id).value = '');
+                document.getElementById('evaFlyerUrl').value = '';
+                document.getElementById('evaMsg').textContent = lead.email ? '' : 'No email on this lead yet. Find it with the Email Finder in Lead Prospector, then paste it here.';
+                document.getElementById('evaMsg').style.color = '#8a5a00';
+                evaFill(false);
+                const h = evaDrafts()[String(lead.id)] || [];
+                document.getElementById('evaHistory').textContent = h.length ? '⚠️ Already drafted ' + h.length + 'x, last on ' + new Date(h[h.length - 1].at).toLocaleString() + ' (' + h[h.length - 1].subject + ')' : '';
+                document.getElementById('evaDraftOverlay').style.display = 'flex';
+            }
+            const b64 = (buf) => { let s = ''; const a = new Uint8Array(buf); for (let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000)); return btoa(s).replace(/.{76}/g, '$&\r\n'); };
+            const encWord = (t) => /^[\x20-\x7e]*$/.test(t) ? t : '=?UTF-8?B?' + btoa(unescape(encodeURIComponent(t))) + '?=';
+            async function evaFiles() {
+                const out = [];
+                for (const id of ['evaAudit', 'evaFlyer']) { const f = document.getElementById(id).files[0]; if (f) out.push({ name: f.name, type: f.type || 'application/octet-stream', data: await f.arrayBuffer() }); }
+                const url = document.getElementById('evaFlyerUrl').value.trim();
+                let linkOnly = '';
+                if (url) {
+                    try { const r = await fetch(url); if (!r.ok) throw 0; const blob = await r.blob(); const name = (url.split('?')[0].split('/').pop() || 'flyer').slice(0, 80); out.push({ name: /\.\w{2,4}$/.test(name) ? name : name + (blob.type.includes('pdf') ? '.pdf' : '.png'), type: blob.type || 'application/octet-stream', data: await blob.arrayBuffer() }); }
+                    catch (e) { linkOnly = url; } // the site blocks downloads: put the link in the email instead
+                }
+                return { files: out, linkOnly };
+            }
+            async function evaSave() {
+                const msg = document.getElementById('evaMsg'), btn = document.getElementById('evaSaveBtn');
+                const to = document.getElementById('evaTo').value.trim(), subject = document.getElementById('evaSubject').value.trim();
+                let body = document.getElementById('evaBody').value.replace(/\s+$/, '');
+                if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) { msg.style.color = '#b42318'; msg.textContent = 'Add a valid email in "To".'; return; }
+                const kind = document.getElementById('evaTpl').value;
+                const { files, linkOnly } = await evaFiles();
+                if ((kind === 'audit' || kind === 'both') && !document.getElementById('evaAudit').files[0] && !confirm('No audit file attached. Save the draft anyway?')) return;
+                if (linkOnly) body += '\n\nHere is the flyer: ' + linkOnly;
+                const total = files.reduce((n, f) => n + f.data.byteLength, 0);
+                if (total > 24 * 1024 * 1024) { msg.style.color = '#b42318'; msg.textContent = 'Attachments are over 24 MB, too big for Gmail.'; return; }
+                btn.disabled = true; msg.style.color = '#5b3fa8'; msg.textContent = 'Opening Google… pick the Gmail account that sends as designs@thewebswan.com';
+                try {
+                    const token = await window.wpGmail.token();
+                    const bnd = 'wsb_' + Math.random().toString(36).slice(2);
+                    const textPart = b64(new TextEncoder().encode(body));
+                    let mime = 'From: ' + EVA_FROM + '\r\nTo: ' + to + '\r\nSubject: ' + encWord(subject) + '\r\nMIME-Version: 1.0\r\n';
+                    if (!files.length) mime += 'Content-Type: text/plain; charset="UTF-8"\r\nContent-Transfer-Encoding: base64\r\n\r\n' + textPart;
+                    else {
+                        mime += 'Content-Type: multipart/mixed; boundary="' + bnd + '"\r\n\r\n--' + bnd + '\r\nContent-Type: text/plain; charset="UTF-8"\r\nContent-Transfer-Encoding: base64\r\n\r\n' + textPart + '\r\n';
+                        files.forEach(f => { const n = f.name.replace(/"/g, ''); mime += '--' + bnd + '\r\nContent-Type: ' + f.type + '; name="' + encWord(n) + '"\r\nContent-Disposition: attachment; filename="' + encWord(n) + '"\r\nContent-Transfer-Encoding: base64\r\n\r\n' + b64(f.data) + '\r\n'; });
+                        mime += '--' + bnd + '--';
+                    }
+                    msg.textContent = 'Saving the draft in Gmail…';
+                    const res = await fetch('https://gmail.googleapis.com/upload/gmail/v1/users/me/drafts?uploadType=media', { method: 'POST', headers: { authorization: 'Bearer ' + token, 'content-type': 'message/rfc822' }, body: mime });
+                    const d = await res.json().catch(() => ({}));
+                    if (!res.ok) throw new Error((d.error && d.error.message) || ('Gmail error ' + res.status));
+                    const all = evaDrafts(); const k = String(evaLead.id);
+                    all[k] = (all[k] || []).concat([{ at: new Date().toISOString(), subject, to, files: files.map(f => f.name), by: window.WP_ROLE || 'owner' }]).slice(-20);
+                    localStorage.setItem('webswan_eva_drafts', JSON.stringify(all)); scheduleFirebaseAutoSave();
+                    if (evaLead.email !== to) { evaLead.email = to; const ed = loadTmEdits(); ed[k] = Object.assign(ed[k] || {}, { email: to }); localStorage.setItem('webswan_tm_edits', JSON.stringify(ed)); }
+                    msg.style.color = '#157a5e'; msg.innerHTML = '✅ Draft saved in Gmail' + (window.wpGmail.account() ? ' (' + tmEsc(window.wpGmail.account()) + ')' : '') + '. <a href="https://mail.google.com/mail/u/0/#drafts" target="_blank" rel="noopener">Open Drafts</a>';
+                    showToast('💜 Draft saved for ' + (evaLead.companyName || evaLead.name || 'lead'), 'success');
+                } catch (e) {
+                    msg.style.color = '#b42318';
+                    msg.textContent = /popup|cancel/i.test(e.message || e.code || '') ? 'The Google window was closed. Try again.' : /has not been used|disabled|accessNotConfigured/i.test(e.message || '') ? 'Gmail API is not turned on yet for this app (one-time setup in Google Cloud).' : ('Could not save: ' + (e.message || e));
+                } finally { btn.disabled = false; }
+            }
+            function evaJimmyBrief() {
+                const l = evaLead || {};
+                return 'Jimmy, please make a one-page flyer for ' + (l.companyName || l.name || 'this business') + (l.industry ? ' (' + l.industry + ')' : '') + (l.website ? ', website ' + l.website : '') + '.\n'
+                    + 'Goal: show them what The WebSwan can do for them (website, ADA compliance, more local customers).\n'
+                    + 'Use The WebSwan brand colors #3898f5, #6aa8e6, #48d6fa and the WS logo. Phone (415) 877-0687. Booking link ' + EVA_BOOK + '.\n'
+                    + 'Send it back as a PNG or PDF named after the business so Eva can attach it to their email.';
+            }
+            document.addEventListener('click', async (e) => {
+                const id = e.target.closest && e.target.closest('button') && e.target.closest('button').id;
+                if (id === 'tmEvaDraftBtn') openEvaDraft(tmCurrentLead);
+                if (id === 'evaCloseBtn') document.getElementById('evaDraftOverlay').style.display = 'none';
+                if (id === 'evaSaveBtn') evaSave();
+                if (id === 'evaCopyBtn') { const t = 'Subject: ' + document.getElementById('evaSubject').value + '\n\n' + document.getElementById('evaBody').value; try { await navigator.clipboard.writeText(t); showToast('Email text copied', 'success'); } catch (x) {} }
+                if (id === 'evaAskJimmy') { try { await navigator.clipboard.writeText(evaJimmyBrief()); showToast('Flyer request copied: paste it to Jimmy', 'success'); } catch (x) { prompt('Copy this for Jimmy:', evaJimmyBrief()); } }
+            });
+            document.addEventListener('change', (e) => { if (e.target && e.target.id === 'evaTpl') evaFill(false); });
+            document.addEventListener('click', (e) => { if (e.target && e.target.id === 'evaDraftOverlay') e.target.style.display = 'none'; });
             // Typing in the pop-up is saved by itself (a moment after Tania stops typing), so nothing she adds is ever lost.
             let tmAutoTimer = null;
             document.addEventListener('input', (e) => {
