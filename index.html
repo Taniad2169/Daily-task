@@ -2622,6 +2622,15 @@
                     <label style="font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">Their state<select id="evaState" style="width:100%;padding:8px;border:1.5px solid #d9cff5;border-radius:9px;font-size:0.9rem;text-transform:none;font-weight:400;"><option value="">Other state</option><option value="NY">New York</option><option value="FL">Florida</option><option value="IL">Illinois</option><option value="NV">Nevada</option></select></label>
                     <label style="font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">Email type<select id="evaTpl" style="width:100%;padding:8px;border:1.5px solid #d9cff5;border-radius:9px;font-size:0.9rem;text-transform:none;font-weight:400;"><option value="audit">Free audit (report attached)</option><option value="flyer">Flyer from Jimmy</option><option value="both">Audit + flyer</option><option value="followup">Follow-up (no reply yet)</option></select></label>
                 </div>
+                <div style="margin-top:8px;border:1.5px solid #d9cff5;border-radius:10px;padding:8px 10px;background:#faf7ff;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <span style="font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">🩺 This practice's situation</span>
+                        <button type="button" id="evaScanBtn" style="border:1px solid #7c5cd6;background:#fff;color:#5b3fa8;border-radius:8px;padding:3px 10px;font-size:0.75rem;font-weight:700;cursor:pointer;">🔎 Check their website</button>
+                    </div>
+                    <div id="evaCall" style="font-size:0.8rem;color:#334155;margin-top:4px;"></div>
+                    <div id="evaFindings" style="font-size:0.82rem;margin-top:4px;"></div>
+                    <div style="font-size:0.72rem;color:#6b7c8f;margin-top:4px;">Ticked problems go into the email under the audit sentence. Untick anything you don't want to mention.</div>
+                </div>
                 <label style="display:block;margin-top:8px;font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">Subject<input id="evaSubject" style="width:100%;padding:8px;border:1.5px solid #d9cff5;border-radius:9px;font-size:0.9rem;text-transform:none;font-weight:400;"></label>
                 <label style="display:block;margin-top:8px;font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">Message <span style="font-weight:400;text-transform:none;color:#6b7c8f;">(no sign-off: your Gmail signature goes at the end · [word](link) becomes a clickable word in the email)</span><textarea id="evaBody" rows="10" style="width:100%;padding:9px;border:1.5px solid #d9cff5;border-radius:9px;font-size:0.9rem;line-height:1.5;font-family:inherit;text-transform:none;font-weight:400;"></textarea></label>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;">
@@ -5936,7 +5945,7 @@
             const EVA_FL_DMS = 'https://www.dms.myflorida.com/workforce_operations/state_human_resource_management/for_state_personnel_system_hr_practitioners/equal_employment_opportunity_compliance/employment_of_individuals_with_disabilities/accessibility_physical_and_virtual';
             const EVA_STATE_P = {
                 NY: 'The New York Attorney General (OAG), led by Letitia James, enforces strict regulations against online businesses regarding deceptive trade practices, data privacy, and subscription policies.',
-                FL: "Florida's Office of the Attorney General enforces the Florida Deceptive and Unfair Trade Practices Act against online businesses, and Florida is one of the states with the most ADA website lawsuits.",
+                FL: "Florida's Office of the Attorney General enforces the Florida Deceptive and Unfair Trade Practices Act against online businesses, and Florida website lawsuits target two main areas: ADA accessibility and digital privacy (wiretapping claims over website chat and tracking tools).",
                 IL: "The Illinois Attorney General enforces the Consumer Fraud and Deceptive Business Practices Act against online businesses, and Illinois also has the Biometric Information Privacy Act (BIPA), one of the strictest privacy laws in the country.",
                 NV: "The Nevada Attorney General enforces the state's online privacy law (NRS 603A), which requires websites that collect personal information from Nevada residents to post a privacy notice, with civil penalties of up to $5,000 per violation."
             };
@@ -5951,17 +5960,34 @@
                 const ac = String(l.phone || '').replace(/\D/g, '').slice(-10).slice(0, 3);
                 return ac.length === 3 ? (NY_AC.includes(ac) ? 'NY' : FL_AC.includes(ac) ? 'FL' : IL_AC.includes(ac) ? 'IL' : NV_AC.includes(ac) ? 'NV' : '') : '';
             }
+            // What happened on the call decides the opening line (spoke to someone vs never reached anyone).
+            function evaSpoke(l) { const c = String(l.category || l.status || ''); return /talked|call ?back|interested|spoke|appointment|\bemail/i.test(c) && !/voicemail|no answer|hang ?up|phone menu|automated/i.test(c); }
+            function evaCallSummary(l) {
+                const c = String(l.category || l.status || '').trim();
+                const said = ((String(l.comment || '').match(/What they said:([^\n]*)/i) || [])[1] || '').trim();
+                const notes = String(l.myNotes || '').trim();
+                return [c && ('📞 Call result: <b>' + tmEsc(c) + '</b>' + (evaSpoke(l) ? ' (spoke to someone)' : ' (no one reached)')), said && ('🗣️ They said: "' + tmEsc(said.slice(0, 160)) + '"'), notes && ('📝 Your notes: ' + tmEsc(notes.slice(0, 200)))].filter(Boolean).join('<br>') || 'No call details on this lead yet.';
+            }
+            let evaIssues = []; // [{label, on}] from the website check
+            function evaFindingsText(l) {
+                const on = evaIssues.filter(i => i.on).map(i => i.label);
+                if (!on.length) return '';
+                let host = ''; try { host = new URL(/^https?:/i.test(l.website || '') ? l.website : 'https://' + l.website).hostname.replace(/^www\./, ''); } catch (e) {}
+                return '\n\nA few things the audit found on ' + (host || 'your website') + ':\n' + on.slice(0, 5).map(t => '• ' + t).join('\n');
+            }
             function evaTemplate(kind, l, st) {
                 const co = String(l.companyName || l.name || 'your practice').trim();
+                const opener = evaSpoke(l) ? 'Thank you for speaking with our team on the phone. As promised, I am sending this by email.' : 'I tried reaching your office by phone a few times, so I am sending this by email instead.';
+                const found = evaFindingsText(l);
                 const hi = evaGreeting(l);
                 const call = 'If it is easier, you can book a quick 15-minute call here: ' + EVA_BOOK + '\nor call Rachel, our assistant, at (239) 667-0151.';
                 const stateP = EVA_STATE_P[st] ? EVA_STATE_P[st] + ' You can check the states with the most website compliance lawsuits here: [website compliance lawsuits by state](' + EVA_LAWSUITS + ').\n\n' : '';
                 const adaLink = EVA_STATE_P[st] ? ' You can verify the ADA fines here: [ADA compliance fines](' + EVA_ADA_FINES + ').' : '';
                 const flLine = st === 'FL' ? "\n\nFor Florida, cookie consent and ADA accessibility on your website both matter; you can see the state's own standards here: [Florida accessibility standards](" + EVA_FL_DMS + ').' : '';
                 if (kind === 'flyer') return { s: 'Something we made for ' + co, b: hi + '\n\nI put together a flyer idea for ' + co + ' and attached it to this email. It shows how your business could look in front of more local customers.\n\nWould you like me to adjust it with your colors and offers? ' + call };
-                if (kind === 'both') return { s: 'Your free website audit for ' + co + ' (plus a flyer)', b: hi + '\n\n' + stateP + 'I tried reaching your office by phone a few times, so I am sending this by email. I ran a complimentary website and ADA compliance audit for ' + co + '.' + adaLink + ' The report is attached, along with a flyer idea we designed for you.' + flLine + '\n\nThe audit shows the items worth fixing first. Would you have 15 minutes this week to go over it? ' + call };
-                if (kind === 'followup') return { s: 'Following up: ' + co, b: hi + '\n\n' + stateP + 'I wanted to follow up on the website and ADA compliance audit I sent for ' + co + '.' + adaLink + ' Did you get a chance to look at it?' + flLine + '\n\nI am happy to walk you through the findings; it only takes 15 minutes. ' + call };
-                return { s: 'Your free website audit for ' + co, b: hi + '\n\n' + stateP + 'I tried reaching your office by phone a few times, so I am sending this by email instead. I ran a complimentary website and ADA compliance audit for ' + co + ', and the report is attached.' + adaLink + flLine + '\n\nIt shows the items worth fixing first. Would you have 15 minutes this week to go over it? ' + call };
+                if (kind === 'both') return { s: 'Your free website audit for ' + co + ' (plus a flyer)', b: hi + '\n\n' + stateP + opener + ' I ran a complimentary website and ADA compliance audit for ' + co + '.' + adaLink + ' The report is attached, along with a flyer idea we designed for you.' + found + flLine + '\n\nThe audit shows the items worth fixing first. Would you have 15 minutes this week to go over it? ' + call };
+                if (kind === 'followup') return { s: 'Following up: ' + co, b: hi + '\n\n' + stateP + 'I wanted to follow up on the website and ADA compliance audit I sent for ' + co + '.' + adaLink + ' Did you get a chance to look at it?' + found + flLine + '\n\nI am happy to walk you through the findings; it only takes 15 minutes. ' + call };
+                return { s: 'Your free website audit for ' + co, b: hi + '\n\n' + stateP + opener + ' I ran a complimentary website and ADA compliance audit for ' + co + ', and the report is attached.' + adaLink + found + flLine + '\n\nIt shows the items worth fixing first. Would you have 15 minutes this week to go over it? ' + call };
             }
             function evaFill(keepBody) {
                 const t = evaTemplate(document.getElementById('evaTpl').value, evaLead || {}, document.getElementById('evaState').value);
@@ -5976,6 +6002,8 @@
                 document.getElementById('evaTo').value = lead.email || '';
                 document.getElementById('evaTpl').value = 'audit';
                 document.getElementById('evaState').value = evaGuessState(lead);
+                evaIssues = []; evaRenderFindings();
+                document.getElementById('evaCall').innerHTML = evaCallSummary(lead);
                 ['evaAudit', 'evaFlyer'].forEach(id => document.getElementById(id).value = '');
                 document.getElementById('evaFlyerUrl').value = '';
                 document.getElementById('evaMsg').textContent = lead.email ? '' : 'No email on this lead yet. Find it with the Email Finder in Lead Prospector, then paste it here.';
@@ -5984,6 +6012,32 @@
                 const h = evaDrafts()[String(lead.id)] || [];
                 document.getElementById('evaHistory').textContent = h.length ? '⚠️ Already drafted ' + h.length + 'x, last on ' + new Date(h[h.length - 1].at).toLocaleString() + ' (' + h[h.length - 1].subject + ')' : '';
                 document.getElementById('evaDraftOverlay').style.display = 'flex';
+                if (lead.website && localStorage.getItem('wp_prospector_code')) evaScan(); // check the site right away when the code is saved
+            }
+            function evaRenderFindings(msg) {
+                const box = document.getElementById('evaFindings');
+                if (msg) { box.innerHTML = msg; return; }
+                box.innerHTML = evaIssues.length ? evaIssues.map((i, n) => '<label style="display:flex;gap:6px;align-items:flex-start;margin:2px 0;"><input type="checkbox" data-eva-issue="' + n + '" ' + (i.on ? 'checked' : '') + '> <span>' + tmEsc(i.label) + (i.sev === 'high' ? ' <b style="color:#b42318">(high)</b>' : '') + '</span></label>').join('') : '';
+            }
+            // Website check through Lead Prospector (same scan as its Site Test). Code asked once, kept in this browser.
+            async function evaScan() {
+                const l = evaLead; if (!l) return;
+                if (!l.website) { evaRenderFindings('<span style="color:#8a5a00">No website on this lead. Add it in the lead first.</span>'); return; }
+                let code = localStorage.getItem('wp_prospector_code');
+                if (!code) { code = prompt('Lead Prospector access code (asked once on this device):'); if (!code) return; localStorage.setItem('wp_prospector_code', code.trim()); code = code.trim(); }
+                const ind = /attorney|lawyer|law|legal|esq/i.test((l.industry || '') + ' ' + (l.companyName || '')) ? 'legal' : /dent|doctor|dr\.|chiro|medical|clinic|health|therap|physician|ortho|derm|pediatric|md\b/i.test((l.industry || '') + ' ' + (l.companyName || '') + ' ' + (l.decisionMakerName || '')) ? 'medical' : 'business';
+                evaRenderFindings('<span style="color:#5b3fa8"><i class="fas fa-spinner fa-spin"></i> Checking ' + tmEsc(l.website) + '… (about 10 seconds)</span>');
+                try {
+                    const r = await fetch('https://webswan-lead-prospector.netlify.app/api/scan', { method: 'POST', headers: { 'content-type': 'application/json', 'x-app-key': code }, body: JSON.stringify({ url: l.website, industry: ind, who: { name: l.companyName || l.name || '' } }) });
+                    const d = await r.json().catch(() => ({}));
+                    if (r.status === 401) { localStorage.removeItem('wp_prospector_code'); throw new Error('That access code did not work. Press the button again to re-enter it.'); }
+                    if (!r.ok) throw new Error(d.error || ('Error ' + r.status));
+                    if (d.reachable === false) { evaRenderFindings('<span style="color:#b42318">Their website did not open. That is a finding too: you can mention it.</span>'); evaIssues = [{ label: 'Website not loading', on: true, sev: 'high' }]; evaRenderFindings(); evaFill(false); return; }
+                    evaIssues = (d.issues || []).filter(i => i.key !== 'builder').map(i => ({ label: i.label, sev: i.severity, on: i.severity !== 'low' }));
+                    if (d.emails && d.emails.length && !document.getElementById('evaTo').value) document.getElementById('evaTo').value = d.emails[0];
+                    if (!evaIssues.length) { evaRenderFindings('<span style="color:#157a5e">✅ No big problems found on their website.</span>'); evaFill(false); return; }
+                    evaRenderFindings(); evaFill(false);
+                } catch (e) { evaRenderFindings('<span style="color:#b42318">' + tmEsc(e.message || 'Website check failed') + '</span>'); }
             }
             const b64 = (buf) => { let s = ''; const a = new Uint8Array(buf); for (let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode.apply(null, a.subarray(i, i + 0x8000)); return btoa(s).replace(/.{76}/g, '$&\r\n'); };
             const encWord = (t) => /^[\x20-\x7e]*$/.test(t) ? t : '=?UTF-8?B?' + btoa(unescape(encodeURIComponent(t))) + '?=';
@@ -6052,10 +6106,14 @@
                 if (id === 'tmEvaDraftBtn') openEvaDraft(tmCurrentLead);
                 if (id === 'evaCloseBtn') document.getElementById('evaDraftOverlay').style.display = 'none';
                 if (id === 'evaSaveBtn') evaSave();
+                if (id === 'evaScanBtn') evaScan();
                 if (id === 'evaCopyBtn') { const t = 'Subject: ' + document.getElementById('evaSubject').value + '\n\n' + document.getElementById('evaBody').value.replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '$1 ($2)'); try { await navigator.clipboard.writeText(t); showToast('Email text copied', 'success'); } catch (x) {} }
                 if (id === 'evaAskJimmy') { try { await navigator.clipboard.writeText(evaJimmyBrief()); showToast('Flyer request copied: paste it to Jimmy', 'success'); } catch (x) { prompt('Copy this for Jimmy:', evaJimmyBrief()); } }
             });
-            document.addEventListener('change', (e) => { if (e.target && (e.target.id === 'evaTpl' || e.target.id === 'evaState')) evaFill(false); });
+            document.addEventListener('change', (e) => {
+                if (e.target && (e.target.id === 'evaTpl' || e.target.id === 'evaState')) evaFill(false);
+                if (e.target && e.target.dataset && e.target.dataset.evaIssue !== undefined) { const it = evaIssues[Number(e.target.dataset.evaIssue)]; if (it) { it.on = e.target.checked; evaFill(false); } }
+            });
             document.addEventListener('click', (e) => { if (e.target && e.target.id === 'evaDraftOverlay') e.target.style.display = 'none'; });
             // Typing in the pop-up is saved by itself (a moment after Tania stops typing), so nothing she adds is ever lost.
             let tmAutoTimer = null;
