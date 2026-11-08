@@ -5824,7 +5824,7 @@
                     const emoji = categoryToEmoji(lead.category);
                     const when = lead.timestamp ? new Date(lead.timestamp).toLocaleString() : '';
                     const safeName = String(lead.decisionMakerName || lead.name || lead.companyName || lead.phone || 'No name').replace(/</g, '&lt;');
-                    const safeCompany = lead.companyName ? ' — ' + lead.companyName.replace(/</g, '&lt;') : '';
+                    const safeCompany = lead.companyName && (lead.decisionMakerName || lead.name) && String(lead.decisionMakerName || lead.name).trim() !== String(lead.companyName).trim() ? ' — ' + lead.companyName.replace(/</g, '&lt;') : '';
                     return `
                         <div class="completed-item tm-lead-row" data-tm-id="${lead.id}">
                             <span style="font-size:1.1rem;">${lead.source === 'prospector' ? '🔎' : lead.source === 'voice-studio' ? '🤖' : emoji}</span>
