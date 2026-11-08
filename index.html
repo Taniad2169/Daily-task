@@ -2792,6 +2792,12 @@
             markPaymentSignupSeen(id) {
                 return updateDoc(doc(marketingDb, 'payment_signups', id), { seen: true });
             },
+            // Claude/Tania add a prospect straight into the telemarketing list (the list Eva works from)
+            async addTelemarketingLead(id, data) {
+                await marketingAuthReady;
+                await setDoc(doc(marketingDb, 'leads', id), data, { merge: true });
+                return id;
+            },
             async loadTelemarketingLeads() {
                 await marketingAuthReady;
                 const leadsQuery = query(collection(marketingDb, 'leads'), orderBy('timestamp', 'desc'), limit(200));
@@ -5025,7 +5031,7 @@
                 }
 
                 const newLead = {
-                    id: nextId++,
+                    id: newLeadId(),
                     name: name || contact || 'No name',
                     contact: contact,
                     phone: phone || 'No phone',
@@ -6962,16 +6968,42 @@
             // ===== INIT APP =====
             // Add a lead from a link like ?addlead=1&name=..&phone=..&email=..&url=..&comment=..&color=indigo
             // (used by Claude to drop a lead in). The color highlights the lead's name; indigo is "Prepare Audit".
+            // New lead ids never reuse a deleted lead's id (the sync drops deleted ids, which made new leads vanish)
+            function newLeadId() {
+                let gone = [];
+                try { const d = JSON.parse(localStorage.getItem('webswan_deleted_leads') || '[]'); gone = (Array.isArray(d) ? d : Object.keys(d).map(k => ({ id: k }))).map(x => +(x && x.id != null ? x.id : x) || 0); } catch (e) {}
+                const max = Math.max(0, ...leads.map(l => +l.id || 0), ...gone);
+                if (nextId <= max) nextId = max + 1;
+                return nextId++;
+            }
+            // ?addlead=1&tm=1&color=lavender&name=..&company=..&phone=..&url=..&industry=..&comment=.. puts the prospect in the
+            // telemarketing list (where Eva drafts audit emails) with that color, instead of the regular lead list.
+            async function importTmLeadFromLink(P) {
+                const name = (P.get('name') || '').trim(), company = (P.get('company') || '').trim(), phone = (P.get('phone') || '').trim();
+                const id = 'wp-' + ((company || name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || Date.now());
+                const data = { name: name || company, companyName: company || name, decisionMakerName: name, phone, email: (P.get('email') || '').trim(), website: (P.get('url') || '').trim(),
+                    industry: (P.get('industry') || '').trim(), category: (P.get('category') || '').trim(), comment: (P.get('comment') || '').trim(), status: 'new', source: 'prospector', timestamp: new Date().toISOString() };
+                Object.keys(data).forEach(k => { if (!data[k]) delete data[k]; });
+                history.replaceState(null, '', location.pathname);
+                try {
+                    await window.dailyFirebase.addTelemarketingLead(id, data);
+                    const color = (P.get('color') || '').trim(); if (color) setTmColor(id, color);
+                    await fetchTelemarketingLeads(false);
+                    showToast('💜 ' + (company || name) + ' added to your telemarketing list' + (color ? ' (' + color + ')' : '') + '.', 'success');
+                    document.getElementById('telemarketingLeadsContainer')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                } catch (e) { console.error(e); showToast('❌ Could not add the lead: ' + e.message, 'error'); }
+            }
             function importLeadFromLink() {
                 const P = new URLSearchParams(location.search);
                 if (!P.get('addlead')) return;
+                if (P.get('tm') === '1') { importTmLeadFromLink(P); return; }
                 const name = (P.get('name') || '').trim();
                 const phone = (P.get('phone') || '').trim();
                 if (!name && !phone) return;
                 const digits = v => String(v || '').replace(/\D/g, '');
                 let lead = leads.find(l => (name && l.name === name) || (digits(phone).length >= 7 && digits(l.phone) === digits(phone)));
                 if (!lead) {
-                    lead = { id: nextId++, name: name || 'No name', phone: phone || 'No phone', email: (P.get('email') || '').trim() || 'No email',
+                    lead = { id: newLeadId(), name: name || 'No name', phone: phone || 'No phone', email: (P.get('email') || '').trim() || 'No email',
                         url: (P.get('url') || '').trim() || 'No URL', comment: (P.get('comment') || '').trim(), dropdown: 'call back', customDropdown: '', completed: false };
                     leads.push(lead);
                 }
