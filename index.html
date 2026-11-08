@@ -2100,6 +2100,7 @@
                     <a class="btn btn-outline" href="https://taniad2169.github.io/webswan-dagigoia-task/team/" target="_blank" rel="noopener noreferrer" style="border-color:#1182f0;color:#1182f0;" title="Eva (executive assistant), Tatiana (content), Linda (legal) and Rachel (receptionist)"><i class="fas fa-users"></i> AI Office</a>
                     <a class="btn btn-outline" href="https://travel-pwa.netlify.app/" target="_blank" rel="noopener noreferrer" style="border-color:#0be0c0;color:#0b8f7d;" title="Travel Hub with Tania: fares, stays, car rentals, restaurants, events and community spots"><i class="fas fa-plane-departure"></i> Travel Hub · Tania</a>
                     <a class="btn btn-outline" href="https://ads.webswanmedianetwork.com/find/" target="_blank" rel="noopener noreferrer" style="border-color:#1b70c2;color:#0c3a61;" title="Demo of the patient/client directory with Rachel: show doctors and lawyers how people find them"><i class="fas fa-user-doctor"></i> WSMN Directory Demo</a>
+                    <button type="button" class="btn btn-outline" id="wpInspectBtn" style="border-color:#7c5cd6;color:#5b3fa8;" title="Solene's leads that have an email: audit them, then mark lavender for Eva"><i class="fas fa-magnifying-glass"></i> Leads to Inspect <span id="wpInspectBtnCount" style="background:#e6d9ff;border-radius:10px;padding:0 7px;font-size:0.8em;"></span></button>
                     <a class="btn btn-outline" href="https://app.content360.io/" target="_blank" rel="noopener noreferrer" style="border-color:#339cde;color:#339cde;" title="Schedule and publish social posts (Tatiana sends her posts here)"><i class="fas fa-calendar-check"></i> Content360</a>
                     <a class="btn btn-outline" href="https://swandesk-ai.netlify.app/admin/" target="_blank" rel="noopener noreferrer" style="border-color:#1182f0;color:#1182f0;" title="SwanDesk-AI admin: clients, agents (Jennifer, Eva, Stan), billing and the non-payment switch"><i class="fas fa-desktop"></i> SwanDesk-AI</a>
                     <a class="btn btn-outline" href="https://swandesk-ai.netlify.app/demo/" target="_blank" rel="noopener noreferrer" style="border-color:#2586e6;color:#2586e6;" title="Public SwanDesk AI demo with the video (safe to show prospects)"><i class="fas fa-play-circle"></i> SwanDesk Demo</a>
@@ -2598,6 +2599,31 @@
             </div>
         </div>
     </div>
+        <!-- ===== LEADS TO INSPECT (Solene's leads with email; hidden until the button is pressed) ===== -->
+        <style>
+            #wpInspectOverlay{display:none;position:fixed;inset:0;background:rgba(10,20,40,.5);z-index:2500;align-items:flex-start;justify-content:center;overflow:auto;padding:24px 10px}
+            #wpInspectOverlay.show{display:flex}
+            #wpInspectOverlay .wp-insp-box{background:#fff;border-radius:16px;max-width:900px;width:100%;padding:16px 16px 12px;box-shadow:0 20px 60px rgba(0,0,0,.3);position:relative}
+            .wp-insp-item{border-bottom:1px solid #eee7fb;padding:4px 0 8px}
+            .wp-insp-sub{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;font-size:.78rem;color:#475569;padding:0 6px 0 34px}
+            .wp-insp-actions{display:inline-flex;gap:6px;margin-left:auto}
+            .wp-insp-actions a,.wp-insp-actions button{border:1px solid #c9b8f2;background:#fff;color:#5b3fa8;border-radius:8px;padding:2px 9px;font-size:.75rem;font-weight:700;cursor:pointer;text-decoration:none}
+            .wp-insp-actions .wp-insp-del{border-color:#f5b5b5;color:#b42318}
+            .wp-insp-ppc{background:#fff1c2;color:#7a5200;border-radius:8px;padding:1px 7px;font-weight:800}
+        </style>
+        <div id="wpInspectOverlay" role="dialog" aria-modal="true" aria-labelledby="wpInspectTitle">
+            <div class="wp-insp-box">
+                <button type="button" class="cal-modal-close" id="wpInspectClose" aria-label="Close"><i class="fas fa-times"></i></button>
+                <h3 id="wpInspectTitle" style="margin:0 0 4px;color:#5b3fa8;"><i class="fas fa-magnifying-glass"></i> Leads to Inspect <span style="font-weight:400;font-size:.85rem;color:#6b7c8f;">· Solene's leads with email (<span id="wpInspectCount">0</span>)</span></h3>
+                <p style="margin:0 0 10px;font-size:.8rem;color:#6b7c8f;">1) Open the site and do the audit · 2) mark the lead 💜 lavender (Eva picks it up and drafts the email) · 3) Eva hands it to the caller, who calls 24 hours later · 4) Alek follows up for the appointment.</p>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;margin:0 0 10px;">
+                    <a href="https://calendar.app.google/V5vTgj1L22g4YvTq5" target="_blank" rel="noopener" style="background:#7c5cd6;color:#fff;border-radius:9px;padding:5px 12px;font-size:.82rem;font-weight:700;text-decoration:none;">📅 Tania's "Book a call" calendar</a>
+                    <button type="button" onclick="navigator.clipboard.writeText('https://calendar.app.google/V5vTgj1L22g4YvTq5').then(()=>{this.textContent='✅ Copied'})" style="border:1px solid #c9b8f2;background:#fff;color:#5b3fa8;border-radius:9px;padding:5px 12px;font-size:.82rem;font-weight:700;cursor:pointer;">📋 Copy booking link</button>
+                </div>
+                <div id="wpInspectList"></div>
+            </div>
+        </div>
+
         <div id="tmLeadModalOverlay">
             <div class="cal-modal-box" style="max-width:420px;">
                 <button class="cal-modal-close" id="tmLeadModalCloseBtn"><i class="fas fa-times"></i></button>
@@ -2801,7 +2827,7 @@
             },
             async loadTelemarketingLeads() {
                 await marketingAuthReady;
-                const leadsQuery = query(collection(marketingDb, 'leads'), orderBy('timestamp', 'desc'), limit(200));
+                const leadsQuery = query(collection(marketingDb, 'leads'), orderBy('timestamp', 'desc'), limit(600));
                 const snapshot = await getDocs(leadsQuery);
                 return snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
             }
@@ -2898,13 +2924,21 @@
                 if (role === 'claude' || role === 'eva') {
                     const b = document.createElement('div'); b.id = 'roleBanner';
                     b.style.cssText = 'position:sticky;top:0;z-index:50;background:' + (role === 'eva' ? '#e6d9ff;color:#3b2470' : '#d8f3fb;color:#04263d') + ';padding:8px 14px;font-weight:700;font-size:0.85rem;display:flex;gap:10px;align-items:center;justify-content:space-between;border-bottom:2px solid ' + (role === 'eva' ? '#9b7ae0' : '#48d6fa');
-                    b.innerHTML = '<span>' + (role === 'eva' ? '💜 Eva view: lavender leads only. Draft each email with the audit attached and save it to Drafts for Tania to send.' : '🤖 Claude (CTO) is signed in with a login code') + '</span><button type="button" id="roleLogout" style="border:1px solid currentColor;background:#fff;border-radius:8px;padding:3px 10px;cursor:pointer;font-weight:700;">Log out</button>';
+                    b.innerHTML = '<span>' + (role === 'eva' ? '💜 Eva view: lavender leads only. Draft each email with the audit attached and save it to Drafts for Tania to send.' : '🤖 Claude (CTO) is signed in with a login code') + '</span>' + (role === 'eva' ? '<button type="button" id="wpInspectBtnEva" style="border:1px solid currentColor;background:#fff;border-radius:8px;padding:3px 10px;cursor:pointer;font-weight:700;margin-left:auto;">🔎 Leads to Inspect</button>' : '') + '<button type="button" id="roleLogout" style="border:1px solid currentColor;background:#fff;border-radius:8px;padding:3px 10px;cursor:pointer;font-weight:700;">Log out</button>';
                     appContent.prepend(b);
                     document.getElementById('roleLogout').onclick = () => { sessionStorage.removeItem('wp_role'); location.reload(); };
                 }
                 if (role === 'eva') evaOnlyLeads();
                 try { renderTelemarketingLeads(); } catch (e) {}
             }
+            // Leads to Inspect: hidden until the button is pressed; X, Escape or a click outside closes it
+            function openInspect() { if (!telemarketingLeads.length && typeof fetchTelemarketingLeads === 'function') fetchTelemarketingLeads(false); try { renderTelemarketingLeads(); } catch (e) {} document.getElementById('wpInspectOverlay').classList.add('show'); }
+            function closeInspect() { document.getElementById('wpInspectOverlay').classList.remove('show'); }
+            document.addEventListener('click', (e) => {
+                if (e.target.closest('#wpInspectBtn, #wpInspectBtnEva')) openInspect();
+                else if (e.target.closest('#wpInspectClose') || e.target.id === 'wpInspectOverlay') closeInspect();
+            });
+            document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && document.getElementById('wpInspectOverlay').classList.contains('show') && !document.getElementById('tmLeadModalOverlay').classList.contains('show')) closeInspect(); });
             // Eva sees only the lead list: hide every other part of WorkPilot (pop-up windows stay usable)
             function evaOnlyLeads() {
                 const keep = document.getElementById('telemarketingLeadsContainer'); if (!keep) return;
@@ -5717,7 +5751,9 @@
             function loadTmColors() { try { const o = JSON.parse(localStorage.getItem('webswan_tm_colors') || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
             function setTmColor(id, color) {
                 const all = loadTmColors(); if (color) all[String(id)] = color; else delete all[String(id)]; // empty = back to the automatic color
-                localStorage.setItem('webswan_tm_colors', JSON.stringify(all)); scheduleFirebaseAutoSave();
+                localStorage.setItem('webswan_tm_colors', JSON.stringify(all));
+                if (color === 'lavender') { try { const ed = loadTmEdits(); ed[String(id)] = Object.assign(ed[String(id)] || {}, { lavenderAt: new Date().toISOString() }); localStorage.setItem('webswan_tm_edits', JSON.stringify(ed)); const lv = telemarketingLeads.find(l => String(l.id) === String(id)); if (lv) lv.lavenderAt = ed[String(id)].lavenderAt; } catch (e) {} }
+                scheduleFirebaseAutoSave();
             }
 
             function renderTelemarketingLeads() {
@@ -5725,9 +5761,12 @@
                 if (!el) return;
                 const tmHasInfo = (l) => ['decisionMakerName', 'name', 'companyName', 'phone', 'email', 'website', 'comment', 'serviceInterested', 'industry'].some(k => l[k] && String(l[k]).trim());
                 const tmGone = new Set(tmDismissed.map(String));
+                const isSol = (l) => l.source === 'solene'; // Tania, Nov 7: Solene's leads with email live in the hidden "Leads to Inspect" list
                 const visibleAll = telemarketingLeads.filter(l => !tmGone.has(String(l.id)) && tmHasInfo(l) && !(l.source === 'voice-studio' && /do not call/i.test(String(l.category || l.status || ''))) && !(l.source === 'voice-studio' && ['4156189200', '4158770687', '5166100203'].includes(String(l.phone || '').replace(/\D/g, '').slice(-10)))); // Tania's own test calls are hidden
+                const visibleMain = visibleAll.filter(l => !isSol(l));
                 if (!visibleAll.length) {
                     el.innerHTML = '';
+                    renderInspectList([]);
                     return;
                 }
                 // Leads pushed from the Lead Prospector are ocean blue; telemarketing calls stay pink/red.
@@ -5765,10 +5804,10 @@
                 const tmRank = (l) => TM_RANK[tmColorOf(l)] || 0;
                 const byRank = (a, b) => (tmRank(b) - tmRank(a)) || String(b.timestamp || '').localeCompare(String(a.timestamp || ''));
                 const groups = [
-                    { list: visibleAll.filter(l => isAI(l) && tmRank(l) >= 1).sort(byRank), title: '<i class="fas fa-star"></i> AI Calls: real conversations (call these first) · <span style="background:#ffe0b2;color:#7a3b00;padding:0 6px;border-radius:6px">orange hot: email + appointment</span> <span style="background:#50b9fa;color:#04263d;padding:0 6px;border-radius:6px">sky: my appointment with the doctor/attorney</span> <span style="background:#c8f0c8;color:#14532d;padding:0 6px;border-radius:6px">green: email or Rachel</span> <span style="background:#e6d9ff;color:#3b2470;padding:0 6px;border-radius:6px">lavender: audit sent</span> <span style="background:#fff3a3;color:#4a3b00;padding:0 6px;border-radius:6px">yellow: spoke to a person</span>', color: '#8a6d00', border: '#e0b100', hl: 'aiblue', refresh: false },
-                    { list: visibleAll.filter(l => !isPros(l) && !isAI(l)), title: '<i class="fas fa-phone-volume"></i> From Telemarketing Calls', color: '#ad1457', border: '#ec407a', hl: 'pink', refresh: true },
-                    { list: visibleAll.filter(l => isAI(l) && tmRank(l) === 0).sort(byRank), title: '<i class="fas fa-robot"></i> AI Calls (Voice Studio) · <span style="background:#dbeafe;color:#1d4ed8;padding:0 6px;border-radius:6px">blue</span> hang up, voicemail, phone menu, another AI', color: '#1d4ed8', border: '#1d4ed8', hl: 'aiblue', refresh: false },
-                    { list: visibleAll.filter(isPros), title: '<i class="fas fa-magnifying-glass-location"></i> From Lead Prospector', color: '#0077be', border: '#0077be', hl: 'ocean', refresh: false }
+                    { list: visibleMain.filter(l => isAI(l) && tmRank(l) >= 1).sort(byRank), title: '<i class="fas fa-star"></i> AI Calls: real conversations (call these first) · <span style="background:#ffe0b2;color:#7a3b00;padding:0 6px;border-radius:6px">orange hot: email + appointment</span> <span style="background:#50b9fa;color:#04263d;padding:0 6px;border-radius:6px">sky: my appointment with the doctor/attorney</span> <span style="background:#c8f0c8;color:#14532d;padding:0 6px;border-radius:6px">green: email or Rachel</span> <span style="background:#e6d9ff;color:#3b2470;padding:0 6px;border-radius:6px">lavender: audit sent</span> <span style="background:#fff3a3;color:#4a3b00;padding:0 6px;border-radius:6px">yellow: spoke to a person</span>', color: '#8a6d00', border: '#e0b100', hl: 'aiblue', refresh: false },
+                    { list: visibleMain.filter(l => !isPros(l) && !isAI(l)), title: '<i class="fas fa-phone-volume"></i> From Telemarketing Calls', color: '#ad1457', border: '#ec407a', hl: 'pink', refresh: true },
+                    { list: visibleMain.filter(l => isAI(l) && tmRank(l) === 0).sort(byRank), title: '<i class="fas fa-robot"></i> AI Calls (Voice Studio) · <span style="background:#dbeafe;color:#1d4ed8;padding:0 6px;border-radius:6px">blue</span> hang up, voicemail, phone menu, another AI', color: '#1d4ed8', border: '#1d4ed8', hl: 'aiblue', refresh: false },
+                    { list: visibleMain.filter(isPros), title: '<i class="fas fa-magnifying-glass-location"></i> From Lead Prospector', color: '#0077be', border: '#0077be', hl: 'ocean', refresh: false }
                 ];
                 // Eva (login code) only sees the lavender leads
                 if (window.WP_ROLE === 'eva') groups.splice(0, groups.length, { list: visibleAll.filter(l => tmColorOf(l) === 'lavender').sort(byRank), title: '💜 Lavender leads: audit emails (Eva)', color: '#5b3fa8', border: '#9b7ae0', hl: 'lavender', refresh: true });
@@ -5802,8 +5841,52 @@
                         </div>`;
                 }
                 el.innerHTML = html;
+                renderInspectList(visibleAll.filter(isSol));
+                function renderInspectList(list) {
+                    const box = document.getElementById('wpInspectList'); if (!box) return;
+                    const eva = window.WP_ROLE === 'eva';
+                    const shown = (eva ? list.filter(l => tmColorOf(l) === 'lavender') : list).sort((a, b) => (tmRank(b) - tmRank(a)) || String(a.companyName || '').localeCompare(String(b.companyName || '')));
+                    const cnt = document.getElementById('wpInspectCount'); if (cnt) cnt.textContent = shown.length;
+                    const btnCnt = document.getElementById('wpInspectBtnCount'); if (btnCnt) btnCnt.textContent = list.filter(l => tmColorOf(l) !== 'lavender').length;
+                    if (!shown.length) { box.innerHTML = '<p style="color:#6b7c8f;font-size:0.9rem;">' + (eva ? 'No lavender leads here yet. Tania marks a lead lavender when its audit is ready.' : 'No leads to inspect right now.') + '</p>'; return; }
+                    const esc = (v) => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+                    box.innerHTML = shown.map(lead => {
+                        const due = lead.lavenderAt ? new Date(Date.parse(lead.lavenderAt) + 24 * 3600e3) : null;
+                        let site = String(lead.website || ''); if (site && !/^https?:/i.test(site)) site = 'https://' + site;
+                        return '<div class="wp-insp-item">' + tmRowHTML(lead, 'lavender')
+                            + '<div class="wp-insp-sub">'
+                            + (lead.ppc ? '<span class="wp-insp-ppc" title="Google labels them Sponsored: Rebecca uses the PPC script">💰 PPC</span>' : '')
+                            + '<span>' + esc([lead.serviceInterested || lead.industry, lead.city, lead.state].filter(Boolean).join(' · ')) + '</span>'
+                            + (lead.email ? '<span>✉️ ' + esc(lead.email) + '</span>' : '')
+                            + (lead.phone ? '<span>📞 ' + esc(lead.phone) + '</span>' : '')
+                            + (lead.hook ? '<span style="color:#b42318;">⚠️ ' + esc(lead.hook) + '</span>' : '')
+                            + (due ? '<span style="color:#5b3fa8;font-weight:700;">💜 Audit sent ' + esc(new Date(lead.lavenderAt).toLocaleDateString()) + ' · first call after ' + esc(due.toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })) + '</span>' : '')
+                            + '<span class="wp-insp-actions">'
+                            + (site ? '<a href="' + esc(site) + '" target="_blank" rel="noopener" title="Open their website to audit it">🌐 Site</a>' : '')
+                            + (eva ? '' : '<button type="button" class="wp-insp-crm" data-tm-id="' + esc(lead.id) + '" title="Open this lead in the CRM">🗂 CRM</button>')
+                            + '<button type="button" class="wp-insp-cal" data-tm-id="' + esc(lead.id) + '" title="Add a follow-up to Google Calendar">📅 Calendar</button>'
+                            + (eva ? '' : '<button type="button" class="wp-insp-del" data-tm-id="' + esc(lead.id) + '" title="Delete this lead from the list">🗑 Delete</button>')
+                            + '</span></div></div>';
+                    }).join('');
+                }
+                const tmRoots = [el, document.getElementById('wpInspectList')].filter(Boolean);
+                const tmQA = (sel) => tmRoots.flatMap(r => [...r.querySelectorAll(sel)]);
+                const tmFind = (id) => telemarketingLeads.find(l => String(l.id) === String(id));
+                tmQA('.wp-insp-crm').forEach(b => b.addEventListener('click', (e) => { e.stopPropagation(); const l = tmFind(b.dataset.tmId); if (!l) return;
+                    openLeadInCRM({ name: l.companyName || l.name || '', phone: l.phone || '', email: l.email || '', url: l.website || '', comment: [l.decisionMakerName ? 'Contact: ' + l.decisionMakerName : '', l.myNotes ? 'My notes: ' + l.myNotes : '', l.comment || ''].filter(Boolean).join('\n') }); }));
+                tmQA('.wp-insp-cal').forEach(b => b.addEventListener('click', (e) => { e.stopPropagation(); const l = tmFind(b.dataset.tmId); if (!l) return;
+                    const d = new Date(Date.now() + 24 * 3600e3); d.setHours(10, 0, 0, 0); const d2 = new Date(d.getTime() + 15 * 60000);
+                    const z = (x) => x.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+                    const url = 'https://calendar.google.com/calendar/render?action=TEMPLATE&authuser=thewebswann@gmail.com&ctz=America/Los_Angeles'
+                        + '&text=' + encodeURIComponent('Follow up: ' + (l.companyName || l.name || 'lead'))
+                        + '&details=' + encodeURIComponent([l.decisionMakerName, l.phone, l.email, l.website, l.myNotes].filter(Boolean).join('\n') + '\n\nFrom WorkPilot · Leads to Inspect')
+                        + '&dates=' + z(d) + '/' + z(d2);
+                    window.open(url, '_blank', 'noopener'); }));
+                tmQA('.wp-insp-del').forEach(b => b.addEventListener('click', (e) => { e.stopPropagation(); const l = tmFind(b.dataset.tmId);
+                    if (!confirm('Delete ' + ((l && (l.companyName || l.name)) || 'this lead') + ' from Leads to Inspect?')) return;
+                    const id = String(b.dataset.tmId); if (!tmDismissed.includes(id)) { tmDismissed.push(id); saveTmDismissed(); } renderTelemarketingLeads(); showToast('🗑 Lead deleted from Leads to Inspect.', 'success'); }));
 
-                el.querySelectorAll('.tm-lead-row').forEach((row) => {
+                tmQA('.tm-lead-row').forEach((row) => {
                     row.addEventListener('click', (e) => {
                         if (e.target.closest('.tm-dismiss-btn') || e.target.closest('.tm-push-btn') || e.target.closest('.tm-color-btn')) return;
                         const id = row.dataset.tmId;
@@ -5811,27 +5894,27 @@
                         if (lead) openTmLeadModal(lead);
                     });
                 });
-                el.querySelectorAll('.tm-color-btn').forEach((btn) => {
+                tmQA('.tm-color-btn').forEach((btn) => {
                     btn.addEventListener('click', (e) => { e.stopPropagation(); setTmColor(btn.dataset.tmId, btn.dataset.color); renderTelemarketingLeads(); });
                 });
-                el.querySelectorAll('.tm-listen-btn').forEach((btn) => {
+                tmQA('.tm-listen-btn').forEach((btn) => {
                     btn.addEventListener('click', (e) => { e.stopPropagation(); openCallRecording(btn.dataset.callId); });
                 });
-                el.querySelectorAll('.tm-edit-btn').forEach((btn) => {
+                tmQA('.tm-edit-btn').forEach((btn) => {
                     btn.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const lead = telemarketingLeads.find(l => String(l.id) === String(btn.dataset.tmId));
                         if (lead) openTmLeadModal(lead, true);
                     });
                 });
-                el.querySelectorAll('.tm-push-btn:not(.tm-edit-btn):not(.tm-listen-btn)').forEach((btn) => {
+                tmQA('.tm-push-btn:not(.tm-edit-btn):not(.tm-listen-btn)').forEach((btn) => {
                     btn.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const lead = telemarketingLeads.find(l => String(l.id) === String(btn.dataset.tmId));
                         if (lead) pushTmLeadToForm(lead);
                     });
                 });
-                el.querySelectorAll('.tm-dismiss-btn').forEach((btn) => {
+                tmQA('.tm-dismiss-btn').forEach((btn) => {
                     btn.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const id = btn.dataset.tmId;
@@ -6058,11 +6141,11 @@
                 evaLead = lead;
                 document.getElementById('evaTo').value = lead.email || '';
                 document.getElementById('evaTpl').value = 'audit';
-                document.getElementById('evaAgent').value = '';
+                document.getElementById('evaAgent').value = lead.ppc ? 'rebecca' : '';
                 document.getElementById('evaAddress').value = localStorage.getItem('webswan_eva_address') || '';
                 document.getElementById('evaReply').value = ''; document.getElementById('evaReplyMsg').textContent = '';
                 document.getElementById('evaState').value = evaGuessState(lead);
-                evaIssues = []; evaAds = []; evaRenderFindings();
+                evaIssues = []; evaAds = lead.ppc ? ['Google pay-per-click (Sponsored on Google)'] : []; evaRenderFindings();
                 document.getElementById('evaCall').innerHTML = evaCallSummary(lead);
                 ['evaAudit', 'evaFlyer'].forEach(id => document.getElementById(id).value = '');
                 document.getElementById('evaFlyerUrl').value = '';
@@ -6096,7 +6179,7 @@
                     if (!r.ok) throw new Error(d.error || ('Error ' + r.status));
                     if (d.reachable === false) { evaRenderFindings('<span style="color:#b42318">Their website did not open. That is a finding too: you can mention it.</span>'); evaIssues = [{ label: 'Website not loading', on: true, sev: 'high' }]; evaRenderFindings(); evaFill(false); return; }
                     evaIssues = (d.issues || []).filter(i => i.key !== 'builder').map(i => ({ label: i.label, sev: i.severity, on: i.severity !== 'low' }));
-                    evaAds = Array.isArray(d.ads) ? d.ads : [];
+                    evaAds = Array.isArray(d.ads) ? d.ads : []; if (evaLead && evaLead.ppc && !evaAds.length) evaAds = ['Google pay-per-click (Sponsored on Google)'];
                     if (evaAds.length) document.getElementById('evaCall').innerHTML += '<br>💰 Running ads: <b>' + tmEsc(evaAds.join(', ')) + '</b> (Rebecca will bring up pay-per-click on her call; Eva never mentions it)';
                     if (d.emails && d.emails.length && !document.getElementById('evaTo').value) document.getElementById('evaTo').value = d.emails[0];
                     if (!evaIssues.length) { evaRenderFindings('<span style="color:#157a5e">✅ No big problems found on their website.</span>'); evaFill(false); return; }
