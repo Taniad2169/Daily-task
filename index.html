@@ -2635,6 +2635,7 @@
                     <button class="btn btn-outline" id="tmEditBtn" style="border-color:#ad1457;color:#ad1457;"><i class="fas fa-pen"></i> Edit</button>
                     <button class="btn" id="tmPushToFormBtn" style="background:#0077b6;color:white;border-color:#0077b6;"><i class="fas fa-share-square"></i> Push to Lead Form</button>
                     <button class="btn" id="tmEvaDraftBtn" type="button" style="background:#7c5cd6;color:white;border-color:#7c5cd6;"><i class="fas fa-envelope"></i> Email draft (Eva)</button>
+                    <button class="btn" id="tmSiteFooterBtn" type="button" onclick="window.wpOpenLeadSite()" style="background:linear-gradient(90deg,#77c6e0,#0be0c0);color:#062743;border-color:#0be0c0;font-weight:800;"><i class="fas fa-globe"></i> Open website</button>
                 </div>
             </div>
         </div>
@@ -5822,9 +5823,8 @@
                 });
                 // Tania, Nov 8: a button on every lead to open the website for her audit (or find it on Google when no site was saved).
                 function tmSiteBtn(lead) {
-                    let site = String(lead.website || '').trim();
-                    if (site && !/^https?:\/\//i.test(site)) site = 'https://' + site;
-                    const ok = /^https?:\/\/[^\s"'<>]+\.[^\s"'<>]+/.test(site);
+                    const site = tmFindSite(lead);
+                    const ok = !!site;
                     const q = String(lead.companyName || lead.name || '').trim();
                     if (ok) return '<a class="tm-push-btn tm-site-btn" href="' + site.replace(/"/g, '%22') + '" target="_blank" rel="noopener" title="View the website (for the audit)" aria-label="View website" style="color:#0b6e5f;text-decoration:none;"><i class="fas fa-globe"></i></a>';
                     if (q && !/^caller /i.test(q)) return '<a class="tm-push-btn tm-site-btn" href="https://www.google.com/search?q=' + encodeURIComponent(q + ' ' + (lead.state || '') + ' website') + '" target="_blank" rel="noopener" title="No website saved: find it on Google" aria-label="Find website on Google" style="color:#64748b;text-decoration:none;"><i class="fas fa-magnifying-glass"></i></a>';
@@ -6009,6 +6009,35 @@
             const tmEsc = (v) => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
             // One pop-up for viewing, editing and highlighting: every box can be highlighted with ✍️ Text highlight, and typing is saved by itself.
+            // Tania, Nov 8: find the lead's website even when it wasn't saved in the Website box:
+            // the lead itself, its notes, the same lead in Voice Studio (same browser), then the email's domain.
+            function tmFindSite(lead) {
+                const norm = (u) => { u = String(u || '').trim().replace(/[),.;]+$/, ''); if (!u) return ''; if (!/^https?:\/\//i.test(u)) u = 'https://' + u; return /^https?:\/\/[^\s"'<>]+\.[a-z]{2,}/i.test(u) ? u : ''; };
+                const fromText = (t) => { t = String(t || ''); const m = t.match(/Website:\s*([^\s|;,]+)/i) || t.match(/https?:\/\/[^\s|;,"'<>]+/i) || t.match(/\bwww\.[a-z0-9-]+(\.[a-z0-9-]+)+/i); return m ? norm(m[1] && /Website/i.test(m[0]) ? m[1] : m[0]) : ''; };
+                const free = /@(gmail|yahoo|hotmail|outlook|aol|icloud|live|msn|me|ymail|comcast|att)\./i;
+                const fromEmail = (e) => { e = String(e || '').trim(); return e.includes('@') && !free.test(e) ? norm(e.split('@')[1]) : ''; };
+                let site = norm(lead.website) || fromText(lead.comment) || fromText(lead.myNotes);
+                let vs = null;
+                if (!site) {
+                    try {
+                        const ph = String(lead.phone || '').replace(/\D/g, '').slice(-10);
+                        const d = JSON.parse(localStorage.getItem('webswan_voice_v1') || '{}');
+                        vs = ph.length === 10 ? (d.leads || []).find(l => String(l.phone || '').replace(/\D/g, '').slice(-10) === ph) : null;
+                        if (vs) site = norm(vs.r && vs.r.website) || fromText(vs.notes) || fromText(vs.scanReport);
+                    } catch (e) {}
+                }
+                return site || fromEmail(lead.email) || (vs ? fromEmail(vs.email) : '');
+            }
+            window.wpOpenLeadSite = function () { tmOpenSite(tmCurrentLead); };
+            function tmOpenSite(lead) {
+                const typed = document.querySelector('#tmLeadModalBody [data-tm-edit="website"]');
+                let site = String(typed ? typed.value : '').trim(); if (site && !/^https?:\/\//i.test(site)) site = 'https://' + site;
+                if (!/^https?:\/\/[^\s]+\.[^\s]+/.test(site)) site = tmFindSite(lead || {});
+                if (site) { window.open(site, '_blank', 'noopener'); return; }
+                const q = String((lead && (lead.companyName || lead.name)) || '').trim();
+                if (q) window.open('https://www.google.com/search?q=' + encodeURIComponent(q + ' ' + ((lead && lead.state) || '') + ' website'), '_blank', 'noopener');
+                else showToast('No website or practice name on this lead yet.', 'error');
+            }
             function openTmLeadModal(lead) {
                 const body = document.getElementById('tmLeadModalBody');
                 if (!body) return;
@@ -6019,6 +6048,7 @@
                 if (tmPushBtnEl) tmPushBtnEl.innerHTML = '<i class="fas fa-share-square"></i> Save &amp; push to Lead Form';
                 if (tmEditBtnEl) tmEditBtnEl.style.display = 'none';
                 const tmSaveEl = document.getElementById('tmSaveEditBtn'); if (tmSaveEl) tmSaveEl.style.display = '';
+                const tmSiteF = document.getElementById('tmSiteFooterBtn'); if (tmSiteF) tmSiteF.innerHTML = (lead.website || tmFindSite(lead)) ? '<i class="fas fa-globe"></i> Open website' : '<i class="fas fa-magnifying-glass"></i> Find website';
                 const lbl = (t) => '<span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ad1457;display:block;">' + t + '</span>';
                 const info = [
                     ['Status', lead.category],
@@ -6031,7 +6061,10 @@
                     + '<textarea data-tm-edit="' + k + '" rows="' + (area ? 6 : 1) + '"' + (area ? '' : ' style="min-height:0;resize:none;"') + '>' + tmEsc(v) + '</textarea></div>';
                 body.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:4px 12px;margin-bottom:6px;">' + info + '</div>'
                     + fld('companyName', 'Practice / business', lead.companyName || lead.name) + fld('decisionMakerName', 'Contact (doctor, attorney or owner)', lead.decisionMakerName)
-                    + fld('phone', 'Phone', lead.phone) + fld('email', 'Email', lead.email) + fld('website', 'Website', lead.website)
+                    + fld('phone', 'Phone', lead.phone) + fld('email', 'Email', lead.email)
+                    + (function () { const w = String(lead.website || '').trim() || tmFindSite(lead); return '<div class="field-group" data-hlkey="' + tmHlKey(lead, 'website') + '" style="margin-bottom:9px;"><label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ad1457;display:block;">Website' + (w && !String(lead.website || '').trim() ? ' <span style="text-transform:none;font-weight:600;color:#0b6e5f;">(found in the lead notes)</span>' : '') + '</label>'
+                        + '<div style="position:relative;"><textarea data-tm-edit="website" rows="1" style="min-height:0;resize:none;padding-right:96px;">' + tmEsc(w) + '</textarea>'
+                        + '<button type="button" onclick="window.wpOpenLeadSite()" title="Open their website (for the audit)" aria-label="Open website" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;border-radius:8px;padding:5px 10px;font-weight:800;font-size:0.78rem;cursor:pointer;background:linear-gradient(90deg,#77c6e0,#0be0c0);color:#062743;">🌐 Open</button></div></div>'; })()
                     + '<div class="field-group my-notes-group" data-hlkey="' + tmHlKey(lead, 'myNotes') + '" style="margin-bottom:9px;">'
                     +   '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><label style="font-size:0.75rem;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:#c2185b;">📝 My notes (Tania)</label>'
                     +   '<button type="button" onclick="stampNote()" style="border:1px solid #f48fb1;background:#fff;color:#c2185b;border-radius:8px;padding:2px 9px;font-size:0.72rem;font-weight:700;cursor:pointer;">+ New dated note</button></div>'
