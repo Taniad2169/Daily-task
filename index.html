@@ -5751,8 +5751,8 @@
                 const tmColors = loadTmColors();
                 // Orange: appointment or showed interest. Green: gave at least an email. Yellow: spoke to a human. Blue: nobody spoke (voicemail, machine, no answer).
                 const aiSpoke = (l) => { const said = aiSaid(l); return !!said && !aiBOT.test(said) && !(aiIVR.test(said) && !aiHUMAN.test(said)); };
-                // Sent to Rachel: a live transfer or Rachel's number ((239) 667-0151 / (347) 646-7086), from the outcome or the call summary.
-                const aiRachel = (l) => /transferred to rachel|got rachel'?s number|transferr?(ed|ing) (you |them |the caller )?(over )?to rachel|rachel'?s (number|direct line)|(239)\D{0,4}667\D{0,3}0151|(347)\D{0,4}646\D{0,3}7086/i.test(String(l.category || l.status || '') + ' ' + String(l.comment || '').replace(/^What they said:.*$/gim, ''));
+                // Sent to Rachel: a live transfer or Rachel's number ((239) 667-0151 / (316) 248-6839; old: (347) 646-7086), from the outcome or the call summary.
+                const aiRachel = (l) => /transferred to rachel|got rachel'?s number|transferr?(ed|ing) (you |them |the caller )?(over )?to rachel|rachel'?s (number|direct line)|(239)\D{0,4}667\D{0,3}0151|(347)\D{0,4}646\D{0,3}7086|(316)\D{0,4}248\D{0,3}6839/i.test(String(l.category || l.status || '') + ' ' + String(l.comment || '').replace(/^What they said:.*$/gim, ''));
                 const aiAuto = (l) => {
                     const c = String(l.category || l.status || '');
                     if (/appointment/i.test(c)) return 'orange';                                        // hot: email + appointment
