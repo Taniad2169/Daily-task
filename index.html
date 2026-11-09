@@ -5802,6 +5802,15 @@
                     return aiGood(l) ? 'yellow' : 'blue';                                              // spoke to a person (call back, talked, interested)
                 };
                 const tmColorOf = (l) => tmColors[String(l.id)] || (isAI(l) ? aiAuto(l) : '');
+                // Tania, Nov 8: save WorkPilot's lead list (colors, notes, websites) in this browser so Eva in the AI Office
+                // (same site) always has it, even when she can't sign in to WorkPilot's database herself.
+                try {
+                    const snap = visibleAll.slice(0, 600).map((l0) => { const l = typeof applyTmEdits === 'function' ? applyTmEdits(l0) : l0; return {
+                        id: l.id, company: l.companyName || l.company || '', contact: l.decisionMakerName || l.name || '', phone: l.phone || '', email: l.email || '',
+                        website: (typeof tmFindSite === 'function' ? tmFindSite(l) : l.website) || '', state: l.state || '', industry: l.industry || l.serviceInterested || '',
+                        color: tmColorOf(l0) || '', lavenderAt: l.lavenderAt || '', notes: [l.comment, l.myNotes].filter(Boolean).join(' | ').slice(0, 1200) }; });
+                    localStorage.setItem('webswan_wp_snapshot', JSON.stringify({ at: Date.now(), leads: snap }));
+                } catch (e) { /* storage full: Eva falls back to the live database */ }
                 const tmRank = (l) => TM_RANK[tmColorOf(l)] || 0;
                 const byRank = (a, b) => (tmRank(b) - tmRank(a)) || String(b.timestamp || '').localeCompare(String(a.timestamp || ''));
                 const groups = [
