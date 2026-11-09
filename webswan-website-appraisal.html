@@ -149,6 +149,7 @@ pre.email{white-space:pre-wrap;background:#f7f9fc;border:1px solid var(--line);b
     <div><label>Number of pages</label><input id="pages" type="number" min="1" placeholder="auto-estimated"></div>
     <div><label>SSL certificate expires</label><input id="sslExp" type="date"></div>
     <div><label>SSL issuer</label><input id="sslIssuer" placeholder="Let's Encrypt, Sectigo…"></div>
+    <div><label>Domain value from GoDaddy / EstiBot ($, optional)</label><input id="domainOverride" type="number" min="0" placeholder="leave blank to use our estimate"><div class="hint"><a href="https://www.godaddy.com/domain-value-appraisal" target="_blank" rel="noopener">Open GoDaddy's free domain appraisal ↗</a></div></div>
   </div>
 </section>
 
@@ -505,6 +506,47 @@ function trafficFindings(add){
   else if(t==="growing")add("traffic","pass","Traffic is growing","Upward 12-month trend.","Growth earns a higher multiple.");
 }
 
+/* ---------- domain name (URL) appraisal ---------- */
+const TLDX={com:1,ai:.6,io:.45,org:.4,net:.35,co:.35,app:.3,dev:.25,us:.2,me:.2,tv:.25,store:.12,shop:.15,online:.08,site:.06,xyz:.05,info:.08,biz:.08};
+const KW_HIGH=["insurance","lawyer","attorney","law","legal","loan","loans","mortgage","credit","finance","bank","invest","dental","dentist","injury","rehab","clinic","medical","doctor","health","realty","realestate","homes","plumbing","roofing","hvac","solar","casino","crypto","hotel","travel","software","cloud","ai"];
+const KW_MED=["shop","store","buy","market","home","care","auto","car","cars","beauty","spa","salon","fitness","gym","pet","pets","food","cafe","tech","web","design","media","digital","studio","group","pro","hub","global","consult","services","cleaning","repair","school","learn","jobs","events","wedding","fashion","style","art","music"];
+function domainAppraisal(host,age){
+  host=(host||"").toLowerCase().replace(/^www\./,"");if(!host)return null;
+  const parts=host.split(".");if(parts.length<2)return null;
+  let tld=parts[parts.length-1],name=parts[parts.length-2];
+  if(parts.length>=3&&/^(co|com|org|net|gov|edu|ac)$/.test(name)&&tld.length===2){tld=name+"."+tld;name=parts[parts.length-3]}
+  const F=[];const len=name.length;
+  const baseTbl=[[3,15000],[4,5000],[5,2500],[6,1500],[7,1000],[8,700],[10,450],[14,250],[20,120],[99,60]];
+  let v=baseTbl.find(r=>len<=r[0])[1];F.push(["Length",len+" characters",money(v)+" base"]);
+  const tm=TLDX[tld]??(tld.includes(".")||tld.length===2?.25:.12);v*=tm;F.push(["Extension","."+tld,tm===1?"Premium (.com)":"×"+tm]);
+  const hy=(name.match(/-/g)||[]).length;if(hy){const m=Math.max(.25,Math.pow(.45,hy));v*=m;F.push(["Hyphens",hy+"","×"+m.toFixed(2)])}
+  const dg=/\d/.test(name)&&!/^\d+$/.test(name);if(dg){v*=.5;F.push(["Numbers mixed in","yes","×0.5"])}
+  const clean=name.replace(/-/g,"");
+  const hi=KW_HIGH.filter(k=>clean.includes(k)),md=KW_MED.filter(k=>clean.includes(k));
+  if(clean===hi[0]||clean===md[0]){v*=2.5;F.push(["Exact keyword",clean,"×2.5"])}
+  else if(hi.length){v*=1.6;F.push(["High-value keyword",hi.slice(0,2).join(", "),"×1.6"])}
+  else if(md.length){v*=1.25;F.push(["Commercial keyword",md.slice(0,2).join(", "),"×1.25"])}
+  else F.push(["Keywords","brand name / no common keyword","×1.0"]);
+  if(/[bcdfghjklmnpqrstvwxz]{4,}/.test(clean)){v*=.7;F.push(["Hard to say","consonant cluster","×0.7"])}
+  else if(len<=10&&/^[a-z]+$/.test(clean)){v*=1.15;F.push(["Brandable","short and easy to say","×1.15"])}
+  if(age){const m=1+Math.min(age,20)*.03;v*=m;F.push(["Domain age",age+" yrs","×"+m.toFixed(2)])}
+  v=Math.max(50,v);
+  return {domain:name+"."+tld,est:roundNice(v),low:roundNice(v*.5),high:roundNice(v*1.8),factors:F};
+}
+
+function domainPower(value,rd,age){
+  const nameS=clamp((Math.log10(Math.max(value,30))-1.5)/(4.3-1.5)*100,0,100);
+  const linkS=rd!=null?clamp(Math.log10(rd+1)/3*100,0,100):null;
+  const ageS=age!=null?clamp(age/15*100,0,100):null;
+  let parts=[[nameS,.4,"Name quality (from its price)"]];if(linkS!=null)parts.push([linkS,.4,"Backlink authority ("+rd+" referring domains)"]);if(ageS!=null)parts.push([ageS,.2,"Age & trust ("+age+" yrs)"]);
+  const w=parts.reduce((a,p)=>a+p[1],0);const score=Math.round(parts.reduce((a,p)=>a+p[0]*p[1],0)/w);
+  const tiers=[[80,"Premium","A top-tier name with real authority. Rare and valuable — protect it and keep it renewed."],[65,"Strong","A strong, trusted domain. It helps the business rank and is easy for customers to remember."],
+    [45,"Good","A solid domain. More quality backlinks and content would push it into the strong range."],[25,"Fair","An average domain. It works, but it doesn't help much in search or with brand recall yet."],
+    [0,"Weak","A low-authority name. Value will come mostly from the website and the business, not the address."]];
+  const t=tiers.find(x=>score>=x[0]);
+  return {score,tier:t[1],meaning:t[2],parts:parts.map(p=>[p[2],Math.round(p[0])]),partial:linkS==null||ageS==null};
+}
+
 /* ---------- scoring & valuation ---------- */
 function scores(F,mode){const out={};for(const k in CATS){let s=100;F.filter(f=>f.cat===k).forEach(f=>{const pts=SEVPTS[f.sev]*(mode==="fixed"?(1-(f.fixable??1)):1);s*=1-pts/100});out[k]=Math.round(s)}
   const w=(keys)=>{let a=0,b=0;keys.forEach(k=>{a+=out[k]*CATS[k].w;b+=CATS[k].w});return a/b};
@@ -532,12 +574,15 @@ function valuation(F,facts,sc,mode){
   const pages=facts.pages;const rp=redesignPrice(pages,[]).total;
   const rebuild=rp*(0.25+0.75*T/100);
   const age=num("age")||0,rd=num("refdomains")||0,em=num("email")||0,so=num("social")||0;
-  const brand=Math.min(2500,age*150)+Math.min(5000,rd*20)+Math.min(3000,em*0.75)+Math.min(1500,so*0.02);
-  const asset=trafficAsset+rebuild+brand;
+  const brand=Math.min(5000,rd*20)+Math.min(3000,em*0.75)+Math.min(1500,so*0.02);
+  const dom=domainAppraisal(facts.host,num("age"));const ovr=num("domainOverride");
+  const domainVal=ovr!=null?ovr:(dom?dom.est:0);
+  const asset=trafficAsset+rebuild+brand+domainVal;
   let base=income!=null?Math.max(income,asset):asset;
   let drag=0;if(mode!=="fixed"){F.forEach(f=>{if(f.legal)drag+=LEGALDRAG[f.sev]||0});drag=Math.min(.12,drag)}
   const value=base*(1-drag);
-  return {value,income,mult,profit,profitNote,asset,trafficMonthly,trafficAsset,rebuild,brand,drag,base,model}}
+  const power=dom?domainPower(domainVal,num("refdomains"),num("age")):null;
+  return {value,income,mult,profit,profitNote,asset,trafficMonthly,trafficAsset,rebuild,brand,drag,base,model,dom,domainVal,domOvr:ovr!=null,power}}
 function confidence(){const keys=["visitors","bounce","session","organic","profit","age","refdomains"];let n=keys.filter(k=>num(k)!=null).length;if($("#trend").value)n++;if(PSI.mobile||PSI.desktop)n++;return n/(keys.length+2)}
 
 /* ---------- gauge ---------- */
@@ -572,7 +617,7 @@ function generate(){
   F.forEach(f=>{f.valueImpact=lost*(SEVPTS[f.sev]*(f.fixable??1)+(f.legal?(LEGALDRAG[f.sev]||0)*300:0))/wsum});
   F.sort((a,b)=>SEVORDER[a.sev]-SEVORDER[b.sev]||b.valueImpact-a.valueImpact);
   renderReport({F,facts,sc,scF,now,fixed,cur,fx,lost,spread,conf,fixCost,fixHours,rd,redesign,crit,highs,sig,rate});
-  try{const keep={};["url","bizName","model","visitors","bounce","session","pps","organic","trend","revenue","profit","age","refdomains","email","social","hours","pages","sslExp","sslIssuer"].forEach(k=>keep[k]=$("#"+k).value);localStorage.setItem("wsAppraisalLast",JSON.stringify(keep))}catch(e){}
+  try{const keep={};["url","bizName","model","visitors","bounce","session","pps","organic","trend","revenue","profit","age","refdomains","email","social","hours","pages","sslExp","sslIssuer","domainOverride"].forEach(k=>keep[k]=$("#"+k).value);localStorage.setItem("wsAppraisalLast",JSON.stringify(keep))}catch(e){}
 }
 
 function renderReport(R){
@@ -589,8 +634,9 @@ function renderReport(R){
   if(now.income!=null)methodRows.push(`<tr><td>Income method</td><td>${money(now.profit)}/mo profit${now.profitNote?" ("+now.profitNote+")":""} × 12 × ${now.mult.toFixed(2)}x</td><td class="num">${money(now.income)}</td></tr>`);
   methodRows.push(`<tr><td>Traffic value</td><td>${num("visitors")!=null?`${num("visitors").toLocaleString()} visits × ${(num("organic")??50)}% organic × $${S("cpc")} CPC = ${money(now.trafficMonthly)}/mo ad-equivalent, × ${(1+2*sc.traffic/100).toFixed(1)} months`:"No traffic data"}</td><td class="num">${money(now.trafficAsset)}</td></tr>`);
   methodRows.push(`<tr><td>Build / replacement value</td><td>${facts.pages} page(s), depreciated for technical health (${sc._tech}/100)</td><td class="num">${money(now.rebuild)}</td></tr>`);
-  methodRows.push(`<tr><td>Brand assets</td><td>Domain age, backlinks, email list, social following</td><td class="num">${money(now.brand)}</td></tr>`);
-  methodRows.push(`<tr><td><b>Asset method total</b></td><td>Traffic + build + brand</td><td class="num"><b>${money(now.asset)}</b></td></tr>`);
+  methodRows.push(`<tr><td>Domain name (URL)</td><td>${now.dom?esc(now.dom.domain):"—"} — ${now.domOvr?"value you entered (GoDaddy/EstiBot)":"WebSwan domain estimate"}</td><td class="num">${money(now.domainVal)}</td></tr>`);
+  methodRows.push(`<tr><td>Brand assets</td><td>Backlinks, email list, social following</td><td class="num">${money(now.brand)}</td></tr>`);
+  methodRows.push(`<tr><td><b>Asset method total</b></td><td>Traffic + build + domain + brand</td><td class="num"><b>${money(now.asset)}</b></td></tr>`);
   if(now.drag)methodRows.push(`<tr><td>Compliance risk discount</td><td>Legal exposure a buyer would price in (privacy / ADA / security)</td><td class="num">−${Math.round(now.drag*100)}%</td></tr>`);
   const email=pitchEmail(R,site,biz,low,high);
   $("#report").innerHTML=`
@@ -629,6 +675,15 @@ function renderReport(R){
       <tr><td colspan="2" style="padding-top:10px"><b>Option B — WebSwan redesign</b></td></tr>${rd.items.map(i=>`<tr><td>${esc(i[0])}</td><td class="num">${money(i[1])}</td></tr>`).join("")}<tr><td><b>Redesign total</b></td><td class="num"><b>${money(rd.total)}</b></td></tr></table>
       <p class="small">Redesign includes mobile-first build, speed optimization, SSL/security setup, on-page SEO and schema, accessibility and cookie-consent compliance, analytics setup, and fixing all broken links.</p></div>
   </div>
+  ${now.dom?`<div class="sec"><h3>Domain name (URL) appraisal — ${esc(now.dom.domain)}</h3><div class="two">
+    <div class="box"><div class="small">Estimated domain value${now.domOvr?" (value you entered)":""}</div><div style="font-size:28px;font-weight:800;color:var(--navy)">${money(now.domainVal)}</div>
+      ${now.domOvr?`<div class="small">WebSwan estimate for comparison: ${money(now.dom.est)} (range ${money(now.dom.low)}–${money(now.dom.high)})</div>`:`<div class="small">Range ${money(now.dom.low)} – ${money(now.dom.high)}</div>`}
+      <div style="display:flex;align-items:center;gap:12px;margin-top:12px">${gauge(now.power.score,"Domain Power",80)}<div><div style="font-size:18px;font-weight:800;color:var(--navy)">${now.power.tier}</div><div class="small">${esc(now.power.meaning)}</div></div></div>
+      <table class="calc" style="margin-top:6px">${now.power.parts.map(p=>`<tr><td>${esc(p[0])}</td><td class="num">${p[1]}/100</td></tr>`).join("")}</table>
+      ${now.power.partial?`<p class="small"><b>Partial score:</b> add the domain age and referring domains (from Ahrefs or Semrush) in step 3 for the full Domain Power reading.</p>`:""}
+      <p class="small">This is the web address alone, apart from the website built on it. It's already included in the total value above. Domain values are estimates; actual sale prices depend on finding the right buyer.</p></div>
+    <div class="box"><h4>What drives it</h4><table class="calc">${now.dom.factors.map(f=>`<tr><td>${esc(f[0])}</td><td>${esc(f[1])}</td><td class="num">${esc(f[2])}</td></tr>`).join("")}</table></div>
+  </div></div>`:""}
   <div class="sec two">
     <div class="box"><h4>Technology detected</h4><div class="chips">${(facts.stack.length?facts.stack:["Not identified"]).map(s=>`<span>${esc(s)}</span>`).join("")}${facts.generator?`<span>${esc(facts.generator)}</span>`:""}</div>
       <h4 style="margin-top:12px">Analytics &amp; tracking</h4><div class="chips">${facts.trackers.length?facts.trackers.map(t=>`<span>${esc(t.n)}</span>`).join(""):"<span>None found</span>"}</div>
@@ -665,7 +720,8 @@ I ran a full appraisal on ${site} — the same things a buyer, investor or Googl
 Here's the short version:
 • Estimated value today: ${money(cur)} (range ${money(low)}–${money(high)})
 • Value being held back by current issues: ${money(lost)}
-• Estimated value once fixed: ${money(fx)}
+• Estimated value once fixed: ${money(fx)}${R.now.dom?`
+• Domain name (${R.now.dom.domain}) on its own: about ${money(R.now.domainVal)} — Domain Power ${R.now.power.score}/100 (${R.now.power.tier})`:""}
 
 The biggest issues:
 ${top.length?top.map(f=>"• "+f.title+" — "+f.impact).join("\n"):"• A handful of smaller items — details in the attached report."}
@@ -690,7 +746,7 @@ $("#file").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;
 $("#saveSettings").onclick=saveSettings;
 $("#resetSettings").onclick=()=>{for(const k in DEFAULTS)$("#"+k).value=DEFAULTS[k];saveSettings()};
 $("#go").onclick=generate;
-$("#clearAll").onclick=()=>{["url","bizName","src","visitors","bounce","session","pps","organic","revenue","profit","age","refdomains","email","social","hours","pages","sslExp","sslIssuer"].forEach(k=>$("#"+k).value="");$("#trend").value="";PSI={mobile:null,desktop:null};$("#psiStatus").textContent="";$("#srcInfo").textContent="";$("#report").style.display="none";try{localStorage.removeItem("wsAppraisalLast")}catch(e){}};
+$("#clearAll").onclick=()=>{["url","bizName","src","domainOverride","visitors","bounce","session","pps","organic","revenue","profit","age","refdomains","email","social","hours","pages","sslExp","sslIssuer"].forEach(k=>$("#"+k).value="");$("#trend").value="";PSI={mobile:null,desktop:null};$("#psiStatus").textContent="";$("#srcInfo").textContent="";$("#report").style.display="none";try{localStorage.removeItem("wsAppraisalLast")}catch(e){}};
 $("#runPsi").onclick=async()=>{
   let url=$("#url").value.trim();
   if(!url){const m=$("#src").value.match(/<link[^>]+rel=["']canonical["'][^>]*href=["']([^"']+)/i);if(m)url=m[1]}
