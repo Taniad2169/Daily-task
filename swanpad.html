@@ -1,0 +1,1789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SwanPad - Personal Notepad</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f0f7fe',
+              100: '#e1effd',
+              200: '#c2defb',
+              300: '#8cc1f5', /* Accent Color */
+              400: '#5ba2eb',
+              500: '#3d90e0', /* Primary Color */
+              600: '#2b75c7',
+              700: '#235da3',
+              800: '#1e4f87',
+              900: '#1d436f',
+              bg: '#fafbfc'   /* Canvas Background */
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 7px;
+      height: 7px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #3d90e0;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #8cc1f5;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #ffffff;
+    }
+    .custom-shadow {
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+    }
+    .card-hover {
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .card-hover:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 18px 32px -8px rgba(0, 0, 0, 0.25);
+    }
+  </style>
+</head>
+
+<body class="bg-[#3d90e0] text-slate-800 font-sans min-h-screen flex flex-col antialiased selection:bg-[#8cc1f5] selection:text-[#123e6b]">
+<!-- ===== WebSwan private gate: enter email, then tap 7 times. Soft lock (client-side). ===== -->
+<script>
+(function(){
+  "use strict";
+  var ALLOWED = ["thewebswann@gmail.com","taniadomingue373@gmail.com"]; // Tania's emails
+  var KEY = "ws_gate_" + (location.pathname.replace(/[^a-z0-9]/gi,"_") || "page");
+  var NEED = 7;
+  try { if (localStorage.getItem(KEY) === "open") return; } catch(e){}
+
+  var ov = document.createElement("div");
+  ov.setAttribute("role","dialog"); ov.setAttribute("aria-modal","true"); ov.setAttribute("aria-label","Private page sign in");
+  ov.style.cssText = "position:fixed;inset:0;z-index:2147483647;background:linear-gradient(135deg,#0f2a4a,#2586e6);display:flex;align-items:center;justify-content:center;padding:20px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+  ov.innerHTML =
+    '<div style="width:100%;max-width:380px;background:#fff;border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.35);padding:30px 26px;text-align:center">'
+    + '<div style="font-size:34px">🦢</div>'
+    + '<h1 style="margin:8px 0 4px;font-size:20px;color:#0f2a4a">The WebSwan</h1>'
+    + '<p id="wsg-sub" style="margin:0 0 18px;font-size:13.5px;color:#5d6b7e">Private page. Sign in with your email to continue.</p>'
+    + '<div id="wsg-step1">'
+    +   '<input id="wsg-email" type="email" inputmode="email" autocomplete="email" placeholder="you@example.com" aria-label="Your email" '
+    +     'style="width:100%;box-sizing:border-box;padding:13px 14px;font-size:16px;border:1px solid #cfe0ec;border-radius:12px;outline:none;color:#1c2533">'
+    +   '<button id="wsg-go" style="width:100%;margin-top:12px;padding:13px;font-size:15px;font-weight:700;color:#fff;background:#2586e6;border:0;border-radius:12px;cursor:pointer">Continue</button>'
+    + '</div>'
+    + '<div id="wsg-step2" style="display:none">'
+    +   '<p style="margin:0 0 14px;font-size:13.5px;color:#5d6b7e">Tap the swan <b>7 times</b> to open.</p>'
+    +   '<button id="wsg-tap" aria-label="Tap to open" style="width:120px;height:120px;font-size:52px;background:#eef6ff;border:3px solid #8cc1f5;border-radius:50%;cursor:pointer;user-select:none;-webkit-user-select:none;transition:transform .05s">🦢</button>'
+    +   '<div id="wsg-count" style="margin-top:14px;font-size:15px;font-weight:700;color:#0f2a4a">0 / 7</div>'
+    + '</div>'
+    + '<p id="wsg-msg" role="alert" style="min-height:16px;margin:12px 0 0;font-size:12.5px;color:#c62828"></p>'
+    + '</div>';
+
+  function mount(){
+    (document.body || document.documentElement).appendChild(ov);
+    try { document.documentElement.style.overflow = "hidden"; document.body.style.overflow = "hidden"; } catch(e){}
+    var email = ov.querySelector("#wsg-email"), go = ov.querySelector("#wsg-go"),
+        s1 = ov.querySelector("#wsg-step1"), s2 = ov.querySelector("#wsg-step2"),
+        tap = ov.querySelector("#wsg-tap"), count = ov.querySelector("#wsg-count"),
+        msg = ov.querySelector("#wsg-msg"), sub = ov.querySelector("#wsg-sub");
+    var taps = 0;
+    function submit(){
+      var v = (email.value || "").trim().toLowerCase();
+      if (ALLOWED.indexOf(v) === -1){ msg.textContent = "That email doesn't have access to this page."; email.focus(); return; }
+      msg.textContent = ""; s1.style.display = "none"; s2.style.display = "block";
+      sub.textContent = "Welcome back. Almost there."; tap.focus();
+    }
+    go.addEventListener("click", submit);
+    email.addEventListener("keydown", function(e){ if (e.key === "Enter") submit(); });
+    tap.addEventListener("click", function(){
+      taps++; tap.style.transform = "scale(0.92)"; setTimeout(function(){ tap.style.transform = "scale(1)"; }, 60);
+      count.textContent = Math.min(taps, NEED) + " / " + NEED;
+      if (taps >= NEED){
+        try { localStorage.setItem(KEY, "open"); } catch(e){}
+        try { document.documentElement.style.overflow = ""; document.body.style.overflow = ""; } catch(e){}
+        ov.remove();
+      }
+    });
+    setTimeout(function(){ try{ email.focus(); }catch(e){} }, 60);
+  }
+  if (document.body) mount(); else document.addEventListener("DOMContentLoaded", mount);
+})();
+</script>
+<!-- ===== end WebSwan private gate ===== -->
+
+
+  <!-- ==================== HEADER ==================== -->
+  <header class="bg-[#3d90e0] border-b border-[#8cc1f5]/30 sticky top-0 z-40 shadow-md backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+      <div class="flex items-center justify-between h-20">
+        
+        <!-- Brand Logo / WS Motif -->
+        <div class="flex items-center space-x-3.5">
+          <div class="w-11 h-11 rounded-2xl bg-white p-1 shadow-md flex items-center justify-center transform hover:rotate-3 transition duration-300">
+            <div class="w-full h-full bg-[#f0f7fe] rounded-[12px] flex items-center justify-center text-[#3d90e0] font-black tracking-tighter text-lg">
+              <i class="fa-solid fa-dove text-base text-[#3d90e0] mr-0.5"></i>
+              <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#3d90e0] to-[#8cc1f5]">WS</span>
+            </div>
+          </div>
+          <div>
+            <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-1.5 drop-shadow-sm">
+              SwanPad <span class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-[#8cc1f5] text-[#123e6b]">Notepad</span>
+            </h1>
+            <p class="text-xs text-white/80 font-medium">Grocery • Reminders • Notes</p>
+          </div>
+        </div>
+
+        <!-- Category Navigation Tabs in Header -->
+        <nav class="hidden md:flex items-center bg-white p-1.5 rounded-2xl shadow-lg border border-white/60">
+          <button onclick="switchCategory('all')" id="tab-all" class="cat-tab px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 text-slate-700 hover:text-[#123e6b]">
+            <i class="fa-solid fa-layer-group text-xs"></i>
+            <span>All Notes</span>
+            <span id="badge-all" class="text-[11px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-700 font-bold border border-slate-200">0</span>
+          </button>
+
+          <button onclick="switchCategory('grocery')" id="tab-grocery" class="cat-tab px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 text-slate-700 hover:text-[#123e6b]">
+            <i class="fa-solid fa-cart-shopping text-xs"></i>
+            <span>Grocery Shopping</span>
+            <span id="badge-grocery" class="text-[11px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-700 font-bold border border-slate-200">0</span>
+          </button>
+
+          <button onclick="switchCategory('reminder')" id="tab-reminder" class="cat-tab px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 text-slate-700 hover:text-[#123e6b]">
+            <i class="fa-regular fa-bell text-xs"></i>
+            <span>Reminder</span>
+            <span id="badge-reminder" class="text-[11px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-700 font-bold border border-slate-200">0</span>
+          </button>
+
+          <button onclick="switchCategory('notes')" id="tab-notes" class="cat-tab px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 text-slate-700 hover:text-[#123e6b]">
+            <i class="fa-regular fa-note-sticky text-xs"></i>
+            <span>Notes</span>
+            <span id="badge-notes" class="text-[11px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-700 font-bold border border-slate-200">0</span>
+          </button>
+
+          <button onclick="switchCategory('translator')" id="tab-translator" class="cat-tab px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 text-slate-700 hover:text-[#123e6b]">
+            <i class="fa-solid fa-language text-xs"></i>
+            <span>Language Translator</span>
+            <span id="badge-translator" class="text-[11px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-700 font-bold border border-slate-200">0</span>
+          </button>
+        </nav>
+
+        <!-- New Note CTA & User Badge -->
+        <div class="flex items-center space-x-2 sm:space-x-3">
+          <!-- Phone Sync Button -->
+          <button onclick="openSyncModal()" title="View & Sync on Your Phone" class="bg-white/15 hover:bg-white/25 border border-white/30 text-white text-xs sm:text-sm font-semibold px-3 sm:px-3.5 py-2.5 rounded-xl transition duration-200 flex items-center gap-1.5 backdrop-blur-sm">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+            </span>
+            <i class="fa-solid fa-mobile-screen-button text-xs"></i>
+            <span class="hidden md:inline">Phone Sync</span>
+          </button>
+
+          <button onclick="openNoteEditor()" class="bg-[#8cc1f5] hover:bg-[#a6d3fa] active:scale-95 text-[#123e6b] text-sm font-bold px-4 py-2.5 rounded-xl transition duration-200 shadow-md shadow-black/15 flex items-center gap-2">
+            <i class="fa-solid fa-plus text-xs"></i>
+            <span class="hidden sm:inline">New Note</span>
+          </button>
+
+          <!-- User profile avatar / pill -->
+          <div class="flex items-center pl-1 border-l border-white/30">
+            <div class="w-10 h-10 rounded-full ring-2 ring-[#8cc1f5] ring-offset-2 ring-offset-[#3d90e0] overflow-hidden bg-white flex items-center justify-center shadow-md" title="My Notepad">
+              <i class="fa-solid fa-user text-[#3d90e0]"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile Category Navigation Subbar -->
+      <div class="md:hidden flex items-center justify-between overflow-x-auto py-2 px-2 bg-white rounded-2xl shadow-md space-x-2 my-2 no-scrollbar">
+        <button onclick="switchCategory('all')" id="mob-tab-all" class="whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700">
+          All
+        </button>
+        <button onclick="switchCategory('grocery')" id="mob-tab-grocery" class="whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700">
+          <i class="fa-solid fa-cart-shopping mr-1 text-[#3d90e0]"></i>Grocery
+        </button>
+        <button onclick="switchCategory('reminder')" id="mob-tab-reminder" class="whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700">
+          <i class="fa-regular fa-bell mr-1 text-[#3d90e0]"></i>Reminder
+        </button>
+        <button onclick="switchCategory('notes')" id="mob-tab-notes" class="whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700">
+          <i class="fa-regular fa-note-sticky mr-1 text-[#3d90e0]"></i>Notes
+        </button>
+        <button onclick="switchCategory('translator')" id="mob-tab-translator" class="whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700">
+          <i class="fa-solid fa-language mr-1 text-[#3d90e0]"></i>Translator
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== MAIN CONTENT AREA ==================== -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+
+    <!-- Search, Filter & Quick Statistics Bar -->
+    <div class="bg-white border border-white/80 rounded-3xl p-5 sm:p-6 mb-8 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
+      
+      <!-- Category Info / Title -->
+      <div class="w-full md:w-auto flex items-center gap-3.5">
+        <div id="active-category-icon" class="w-12 h-12 rounded-2xl bg-[#8cc1f5]/25 text-[#123e6b] flex items-center justify-center text-xl font-bold shadow-sm">
+          <i class="fa-solid fa-layer-group"></i>
+        </div>
+        <div>
+          <h2 id="active-category-title" class="text-lg sm:text-xl font-bold text-slate-900 leading-snug">All Notes</h2>
+          <p id="active-category-subtitle" class="text-xs sm:text-sm text-slate-500 font-medium">Viewing all items across your notepad</p>
+        </div>
+      </div>
+
+      <!-- Search Input & Quick Action -->
+      <div class="w-full md:w-auto flex-1 max-w-md flex items-center gap-2.5">
+        <div class="relative w-full">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+          <input 
+            type="text" 
+            id="search-input" 
+            oninput="handleSearch()"
+            placeholder="Search titles or note contents..." 
+            class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:border-[#3d90e0] focus:ring-2 focus:ring-[#8cc1f5]/50 outline-none text-sm transition bg-slate-50 focus:bg-white text-slate-800"
+          >
+          <button id="clear-search-btn" onclick="clearSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs">
+            <i class="fa-solid fa-circle-xmark"></i>
+          </button>
+        </div>
+
+        <button onclick="openNoteEditor()" title="Create in this category" class="p-2.5 rounded-xl bg-[#8cc1f5] hover:bg-[#a6d3fa] text-[#123e6b] font-bold transition duration-200 shadow-sm">
+          <i class="fa-solid fa-pen-to-square"></i>
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Dedicated Interactive Translator Studio (Active for Language Translator) -->
+    <div id="translator-studio" class="hidden bg-white rounded-3xl p-6 sm:p-7 shadow-2xl mb-8 border border-white/80">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-5 mb-5 border-b border-slate-100 gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-[#8cc1f5]/25 text-[#123e6b] flex items-center justify-center text-lg font-bold shadow-sm">
+            <i class="fa-solid fa-language"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-extrabold text-slate-900">Interactive Language Translator</h3>
+            <p class="text-xs text-slate-500 font-medium">Type your text, pick your target dialect, and view your translation below</p>
+          </div>
+        </div>
+
+        <button onclick="clearTranslator()" class="text-xs text-slate-400 hover:text-rose-500 font-semibold self-start sm:self-auto flex items-center gap-1.5 transition">
+          <i class="fa-regular fa-trash-can"></i> Clear Fields
+        </button>
+      </div>
+
+      <!-- Two-Panel Translation Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        
+        <!-- Source Input Panel -->
+        <div class="flex flex-col space-y-2.5 bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+              <i class="fa-solid fa-keyboard text-[#3d90e0]"></i> Input Text
+            </label>
+            <div class="relative">
+              <select id="source-lang-select" class="text-xs font-semibold bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-slate-700 outline-none focus:border-[#3d90e0]">
+                <option value="auto">🌐 Auto-Detect</option>
+                <option value="English">🇺🇸 English</option>
+                <option value="French">🇫🇷 French (Français)</option>
+                <option value="Spanish">🇪🇸 Spanish (Español)</option>
+                <option value="Brazilian Portuguese">🇧🇷 Brazilian Portuguese</option>
+              </select>
+            </div>
+          </div>
+
+          <textarea 
+            id="translator-input" 
+            rows="6" 
+            placeholder="Type anything in English, French, Spanish, or Brazilian Portuguese..." 
+            class="w-full p-3.5 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm leading-relaxed focus:border-[#3d90e0] focus:ring-2 focus:ring-[#8cc1f5]/40 outline-none transition resize-y"
+          ></textarea>
+
+          <div class="flex items-center justify-between pt-1">
+            <span class="text-[11px] text-slate-400 font-medium">Type words, phrases, or full sentences</span>
+          </div>
+        </div>
+
+        <!-- Target Output Panel -->
+        <div class="flex flex-col space-y-2.5 bg-slate-50 p-4 sm:p-5 rounded-2xl border border-slate-200">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+              <i class="fa-solid fa-bullseye text-[#3d90e0]"></i> Target Dialect
+            </label>
+            <div class="relative">
+              <select id="target-lang-select" class="text-xs font-bold bg-[#8cc1f5] text-[#123e6b] border border-[#8cc1f5] rounded-lg px-2.5 py-1 outline-none shadow-sm cursor-pointer">
+                <option value="Brazilian Portuguese (Português do Brasil)">🇧🇷 Brazilian Portuguese</option>
+                <option value="Cuban Spanish (Español Cubano)">🇨🇺 Cuban Spanish</option>
+                <option value="Dominican Spanish (Español Dominicano)">🇩🇴 Dominican Spanish</option>
+                <option value="Mexican Spanish (Español Mexicano)">🇲🇽 Mexican Spanish</option>
+                <option value="French (Français)">🇫🇷 French</option>
+                <option value="English">🇺🇸 English</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="relative flex-1">
+            <textarea 
+              id="translator-output" 
+              rows="6" 
+              readonly 
+              placeholder="Your translated text will appear here..." 
+              class="w-full p-3.5 rounded-xl border border-slate-200 bg-white text-slate-800 text-sm font-medium leading-relaxed outline-none resize-y transition shadow-inner"
+            ></textarea>
+            
+            <div id="translator-loading" class="hidden absolute inset-0 bg-white/90 backdrop-blur-[1px] rounded-xl flex items-center justify-center flex-col gap-2">
+              <i class="fa-solid fa-spinner fa-spin text-2xl text-[#3d90e0]"></i>
+              <span class="text-xs font-bold text-[#123e6b]">Translating with native dialect nuances...</span>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+            <span id="target-lang-badge" class="text-[11px] font-bold text-[#123e6b] bg-[#8cc1f5]/30 px-2 py-0.5 rounded-md">
+              Ready to translate
+            </span>
+            <div class="flex items-center gap-2">
+              <button onclick="copyTranslatorOutput()" title="Copy translation" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-[#8cc1f5] text-slate-700 hover:text-[#123e6b] text-xs font-bold transition flex items-center gap-1.5">
+                <i class="fa-regular fa-copy"></i> Copy
+              </button>
+              <button onclick="saveTranslationAsNote()" title="Save as a note and sync to phone" class="px-3 py-1.5 rounded-lg bg-[#8cc1f5] hover:bg-[#a6d3fa] text-[#123e6b] text-xs font-bold transition shadow-sm flex items-center gap-1.5">
+                <i class="fa-solid fa-bookmark"></i> Save to Notes
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Action Footer with Primary Translate Button -->
+      <div class="mt-5 pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <p class="text-xs text-slate-500">
+          Native colloquialisms applied for Brazilian Portuguese, Cuban, Dominican, and Mexican Spanish.
+        </p>
+        <button id="main-translate-btn" onclick="executeLiveTranslation()" class="w-full sm:w-auto px-7 py-3 rounded-xl bg-[#8cc1f5] hover:bg-[#a6d3fa] active:scale-95 text-[#123e6b] font-extrabold text-sm shadow-md transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-wand-magic-sparkles"></i>
+          <span>Translate Now</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== GROCERY SHOPPING CALCULATOR (Tania, Nov 10) ==================== -->
+    <div id="grocery-calc" class="hidden bg-white rounded-3xl p-5 sm:p-6 shadow-2xl mb-8 border border-white/80">
+      <div class="flex items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-100">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-[#8cc1f5]/25 text-[#123e6b] flex items-center justify-center text-lg font-bold shadow-sm"><i class="fa-solid fa-calculator"></i></div>
+          <div>
+            <h3 class="text-lg font-extrabold text-slate-900">Shopping Calculator</h3>
+            <p class="text-xs text-slate-500 font-medium">Add each item and its price &mdash; see your total before the cashier.</p>
+          </div>
+        </div>
+        <button id="gc-clear" class="text-xs text-slate-400 hover:text-rose-500 font-semibold flex items-center gap-1.5 transition"><i class="fa-regular fa-trash-can"></i> Clear all</button>
+      </div>
+
+      <!-- Add row -->
+      <div class="grid grid-cols-12 gap-2 sm:gap-3">
+        <input id="gc-name" type="text" placeholder="Item (optional)" class="col-span-12 sm:col-span-5 px-3.5 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#3d90e0] focus:ring-2 focus:ring-[#8cc1f5]/40 outline-none text-base">
+        <input id="gc-price" type="text" inputmode="decimal" placeholder="Price" aria-label="Price" class="col-span-5 sm:col-span-3 px-3.5 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#3d90e0] focus:ring-2 focus:ring-[#8cc1f5]/40 outline-none text-base">
+        <input id="gc-qty" type="number" min="1" step="1" value="1" aria-label="Quantity" class="col-span-3 sm:col-span-2 px-3 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#3d90e0] focus:ring-2 focus:ring-[#8cc1f5]/40 outline-none text-base text-center">
+        <button id="gc-add" class="col-span-4 sm:col-span-2 bg-[#3d90e0] hover:bg-[#2f7fcf] active:scale-95 text-white font-bold rounded-xl transition shadow-md flex items-center justify-center gap-1.5"><i class="fa-solid fa-plus"></i> Add</button>
+      </div>
+
+      <!-- Items list -->
+      <ul id="gc-list" class="mt-4 space-y-2"></ul>
+      <p id="gc-empty" class="mt-4 text-center text-sm text-slate-400 py-6">No items yet. Add your first item above. 🛒</p>
+
+      <!-- Totals -->
+      <div class="mt-5 pt-4 border-t border-slate-100 space-y-3">
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <label class="text-sm font-semibold text-slate-600 flex items-center gap-2">Sales tax
+            <span class="relative"><input id="gc-tax" type="text" inputmode="decimal" value="0" class="w-16 px-2 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-center outline-none focus:border-[#3d90e0]">%</span>
+          </label>
+          <label class="text-sm font-semibold text-slate-600 flex items-center gap-2">Budget $
+            <input id="gc-budget" type="text" inputmode="decimal" placeholder="optional" class="w-24 px-2 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-center outline-none focus:border-[#3d90e0]">
+          </label>
+        </div>
+        <div class="flex items-center justify-between text-sm text-slate-500"><span id="gc-count">0 items</span><span id="gc-subtotal">Subtotal $0.00</span></div>
+        <div id="gc-taxrow" class="hidden items-center justify-between text-sm text-slate-500"><span>Tax</span><span id="gc-taxamt">$0.00</span></div>
+        <div class="flex items-center justify-between bg-[#8cc1f5]/20 rounded-2xl px-4 py-3">
+          <span class="text-base font-bold text-[#123e6b]">Total</span>
+          <span id="gc-total" class="text-2xl font-extrabold text-[#123e6b]">$0.00</span>
+        </div>
+        <p id="gc-budgetmsg" class="hidden text-center text-sm font-bold"></p>
+      </div>
+    </div>
+
+    <!-- Notes Grid Container -->
+    <div id="notes-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <!-- Dynamic note cards injected here by JS -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="empty-state" class="hidden flex-col items-center justify-center py-16 px-6 text-center bg-white rounded-3xl shadow-2xl max-w-md mx-auto border border-white/80">
+      <div class="w-20 h-20 rounded-3xl bg-[#8cc1f5]/25 text-[#123e6b] flex items-center justify-center text-3xl mb-4 shadow-inner">
+        <i class="fa-regular fa-clipboard"></i>
+      </div>
+      <h3 class="text-xl font-bold text-slate-800 mb-1.5" id="empty-title">No notes found</h3>
+      <p class="text-sm text-slate-500 max-w-sm mb-6" id="empty-subtitle">You haven't added any notes here yet. Jot down your thoughts with up to 5,000 words capacity!</p>
+      <button onclick="openNoteEditor()" class="bg-[#8cc1f5] hover:bg-[#a6d3fa] text-[#123e6b] text-sm font-bold px-6 py-3 rounded-xl transition duration-200 shadow-md flex items-center gap-2">
+        <i class="fa-solid fa-plus"></i> Create Note Now
+      </button>
+    </div>
+
+  </main>
+
+  <!-- ==================== NOTE VIEW / PREVIEW MODAL ==================== -->
+  <div id="view-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
+    <div class="bg-white rounded-3xl border border-slate-100 shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden transform scale-95 transition-transform duration-200" id="view-modal-content">
+      
+      <!-- Modal Top Bar -->
+      <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-white">
+        <div class="flex items-center gap-2">
+          <span id="view-modal-category-badge" class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider"></span>
+          <span id="view-modal-word-count" class="text-xs text-slate-400 font-medium"></span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button onclick="editCurrentViewingNote()" title="Edit Note" class="p-2 rounded-xl text-[#123e6b] bg-[#8cc1f5]/20 hover:bg-[#8cc1f5] transition">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+          <button onclick="copyCurrentNoteContent()" title="Copy Text" class="p-2 rounded-xl text-[#123e6b] bg-[#8cc1f5]/20 hover:bg-[#8cc1f5] transition">
+            <i class="fa-regular fa-copy"></i>
+          </button>
+          <button onclick="closeViewModal()" title="Close" class="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 sm:p-8 overflow-y-auto flex-1 space-y-4 bg-white">
+        <h2 id="view-modal-title" class="text-2xl font-extrabold text-slate-900 break-words leading-tight"></h2>
+        <div class="flex items-center text-xs text-slate-400 gap-3 pb-3 border-b border-slate-100">
+          <span><i class="fa-regular fa-clock mr-1 text-[#3d90e0]"></i>Last updated: <span id="view-modal-date"></span></span>
+        </div>
+        <div id="view-modal-body" class="text-slate-700 text-sm sm:text-base leading-relaxed whitespace-pre-wrap break-words"></div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+        <span>Capacity: <strong class="text-[#3d90e0]">5,000 Words max</strong></span>
+        <button onclick="closeViewModal()" class="px-4 py-2 bg-[#8cc1f5] hover:bg-[#a6d3fa] font-bold text-[#123e6b] rounded-xl transition shadow-sm">
+          Close
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== NOTE EDITOR MODAL (ADD / EDIT) ==================== -->
+  <div id="editor-modal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
+    <div class="bg-white rounded-3xl border border-slate-100 shadow-2xl max-w-3xl w-full max-h-[94vh] flex flex-col overflow-hidden transform scale-95 transition-transform duration-200" id="editor-modal-content">
+      
+      <!-- Editor Header -->
+      <div class="px-6 py-4 border-b border-slate-100 bg-white flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-[#8cc1f5] text-[#123e6b] flex items-center justify-center text-sm shadow-sm font-bold">
+            <i class="fa-solid fa-file-pen" id="editor-header-icon"></i>
+          </div>
+          <div>
+            <h3 class="text-base sm:text-lg font-bold text-slate-900" id="editor-header-title">Create New Note</h3>
+            <p class="text-xs text-slate-500 font-medium">Capture details, checklists or reminders</p>
+          </div>
+        </div>
+
+        <button onclick="closeEditorModal()" class="w-8 h-8 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <!-- Editor Form -->
+      <div class="p-6 overflow-y-auto flex-1 space-y-5 bg-white">
+        
+        <!-- Category & Title row -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <!-- Category Picker -->
+          <div class="md:col-span-1">
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              Category <span class="text-rose-500">*</span>
+            </label>
+            <div class="relative">
+              <select id="editor-category" class="w-full appearance-none pl-3.5 pr-8 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-800 text-sm font-semibold focus:border-[#3d90e0] focus:ring-2 focus:ring-[#8cc1f5]/30 outline-none transition cursor-pointer">
+                <option value="grocery">🛒 Grocery Shopping</option>
+                <option value="reminder">⏰ Reminder</option>
+                <option value="notes">📝 Notes</option>
+                <option value="translator">🌐 Language Translator (PT-BR, ES, FR)</option>
+              </select>
+              <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+            </div>
+          </div>
+
+          <!-- Title Input -->
+          <div class="md:col-span-2">
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+              Note Title <span class="text-rose-500">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="editor-title" 
+              placeholder="e.g., Weekly Market List, Mom's Birthday, Project Ideas..."
+              maxlength="120"
+              class="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-slate-800 text-sm font-semibold focus:border-[#3d90e0] focus:ring-2 focus:ring-[#8cc1f5]/40 outline-none transition placeholder:font-normal placeholder:text-slate-400"
+            >
+          </div>
+        </div>
+
+        <!-- Quick Formatting helper toolbar for grocery / note items -->
+        <div class="flex flex-wrap items-center justify-between gap-2 p-2 bg-slate-50 rounded-xl border border-slate-200 text-xs">
+          <div class="flex items-center gap-1.5">
+            <button type="button" onclick="insertTemplate('bullet')" class="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-[#8cc1f5] text-slate-700 hover:text-[#123e6b] font-medium transition flex items-center gap-1.5">
+              <i class="fa-solid fa-list-ul text-[#3d90e0]"></i> Bullet List
+            </button>
+            <button type="button" onclick="insertTemplate('check')" class="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-[#8cc1f5] text-slate-700 hover:text-[#123e6b] font-medium transition flex items-center gap-1.5">
+              <i class="fa-regular fa-square-check text-[#3d90e0]"></i> Checklist
+            </button>
+            <button type="button" onclick="insertTemplate('grocery')" class="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-[#8cc1f5] text-slate-700 hover:text-[#123e6b] font-medium transition flex items-center gap-1.5">
+              <i class="fa-solid fa-basket-shopping text-[#3d90e0]"></i> Grocery Template
+            </button>
+          </div>
+
+          <button type="button" onclick="clearEditorBody()" class="text-slate-400 hover:text-rose-500 px-2 py-1 text-xs transition">
+            <i class="fa-regular fa-trash-can mr-1"></i>Clear
+          </button>
+        </div>
+
+        <!-- Content Area with 5,000 words limit -->
+        <div class="relative">
+          <div class="flex items-center justify-between mb-1.5">
+            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+              Note Body
+            </label>
+            <div class="flex items-center space-x-2 text-xs font-semibold">
+              <span id="word-count-badge" class="px-2 py-0.5 rounded-md bg-[#8cc1f5]/25 text-[#123e6b]">0 / 5,000 words</span>
+            </div>
+          </div>
+
+          <textarea 
+            id="editor-body" 
+            rows="12" 
+            oninput="handleContentInput()"
+            placeholder="Type your notes here... (Up to 5,000 words allowed)"
+            class="w-full p-4 rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white text-slate-800 text-sm leading-relaxed focus:border-[#3d90e0] focus:ring-2 focus:ring-[#8cc1f5]/40 outline-none transition placeholder:text-slate-400 resize-y"
+          ></textarea>
+
+          <!-- Capacity Visual Progress Bar -->
+          <div class="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
+            <div id="word-progress-bar" class="bg-gradient-to-r from-[#8cc1f5] to-[#3d90e0] h-1.5 rounded-full transition-all duration-300 w-0"></div>
+          </div>
+          <p id="word-warning" class="hidden text-xs text-rose-500 font-semibold mt-1 flex items-center gap-1">
+            <i class="fa-solid fa-triangle-exclamation"></i> You have reached the maximum 5,000 word capacity limit.
+          </p>
+        </div>
+
+      </div>
+
+      <!-- Editor Footer Action Buttons -->
+      <div class="px-6 py-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+        <button type="button" onclick="closeEditorModal()" class="px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 font-semibold text-sm transition">
+          Cancel
+        </button>
+
+        <div class="flex items-center gap-3">
+          <button type="button" onclick="saveNote()" class="px-6 py-2.5 rounded-xl bg-[#8cc1f5] hover:bg-[#a6d3fa] active:scale-95 text-[#123e6b] font-bold text-sm shadow-md shadow-black/10 transition flex items-center gap-2">
+            <i class="fa-solid fa-check"></i>
+            <span id="save-button-text">Save Note</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ==================== CUSTOM CONFIRMATION MODAL (NO ALERT) ==================== -->
+  <div id="confirm-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-sm w-full p-6 text-center transform scale-95 transition-transform duration-200" id="confirm-modal-content">
+      <div class="w-14 h-14 rounded-full bg-rose-100 text-rose-500 mx-auto flex items-center justify-center text-2xl mb-4">
+        <i class="fa-solid fa-trash-can"></i>
+      </div>
+      <h3 class="text-base font-bold text-slate-800 mb-1" id="confirm-modal-title">Delete Note?</h3>
+      <p class="text-xs text-slate-500 mb-6" id="confirm-modal-desc">Are you sure you want to delete this note? This action cannot be undone.</p>
+      <div class="grid grid-cols-2 gap-3">
+        <button onclick="closeConfirmModal()" class="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition">
+          Cancel
+        </button>
+        <button id="confirm-action-btn" class="w-full py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-semibold text-xs transition shadow-md shadow-rose-500/20">
+          Yes, Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PHONE SYNC MODAL ==================== -->
+  <div id="sync-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm hidden opacity-0 transition-opacity duration-200">
+    <div class="bg-white rounded-3xl border border-slate-100 shadow-2xl max-w-md w-full overflow-hidden transform scale-95 transition-transform duration-200" id="sync-modal-content">
+      <!-- Modal Header -->
+      <div class="px-6 py-4 bg-[#3d90e0] text-white flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-[#8cc1f5] text-[#123e6b] flex items-center justify-center font-bold">
+            <i class="fa-solid fa-mobile-screen-button"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-base leading-tight">Sync With Your Phone</h3>
+            <p class="text-[11px] text-white/80">View and edit your notes from any mobile device</p>
+          </div>
+        </div>
+        <button onclick="closeSyncModal()" class="text-white/80 hover:text-white text-lg">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 text-center space-y-4">
+        <!-- Live QR Code -->
+        <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 inline-block shadow-inner mx-auto">
+          <img id="sync-qr-code" src="" alt="Scan with Phone" class="w-44 h-44 mx-auto rounded-lg" onerror="this.src='https://placehold.co/180x180/3d90e0/ffffff?text=Scan+QR'">
+        </div>
+        
+        <p class="text-xs text-slate-600 leading-relaxed">
+          Open your cellphone camera and scan the code above, or tap the button below to copy the direct phone link.
+        </p>
+
+        <!-- Copy Link Button -->
+        <div class="space-y-2">
+          <button onclick="copySyncLink()" class="w-full py-3 bg-[#8cc1f5] hover:bg-[#a6d3fa] text-[#123e6b] font-bold text-sm rounded-xl transition duration-200 shadow-md flex items-center justify-center gap-2">
+            <i class="fa-solid fa-link text-xs"></i>
+            <span>Copy Phone Link</span>
+          </button>
+        </div>
+
+        <!-- Sync Passcode / Key section -->
+        <div class="pt-3 border-t border-slate-100 text-left">
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Your Personal Notebook Sync ID</label>
+          <div class="flex items-center gap-2">
+            <input type="text" id="sync-id-input" class="w-full text-xs font-mono font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 outline-none" readonly>
+            <button onclick="copySyncIdOnly()" class="px-3 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition">
+              Copy
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-3 bg-slate-50 border-t border-slate-100 text-right">
+        <button onclick="closeSyncModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-bold rounded-xl transition">
+          Done
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Message -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 text-sm font-semibold text-white transition-all duration-300 transform translate-y-16 opacity-0 pointer-events-none">
+    <i id="toast-icon" class="fa-solid fa-circle-check text-base"></i>
+    <span id="toast-message">Action successful</span>
+  </div>
+
+  <!-- ==================== JAVASCRIPT LOGIC & CLOUD SYNC ==================== -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // Max Word Limit Constant
+    const MAX_WORDS = 5000;
+    
+    // Category configurations
+    const CATEGORIES = {
+      grocery: {
+        name: 'Grocery Shopping',
+        icon: 'fa-solid fa-cart-shopping',
+        color: '#3d90e0',
+        badgeBg: 'bg-[#8cc1f5]/25',
+        badgeText: 'text-[#123e6b]',
+        border: 'border-[#8cc1f5]/60',
+        subtitle: 'Manage pantry items, produce & weekly groceries'
+      },
+      reminder: {
+        name: 'Reminder',
+        icon: 'fa-regular fa-bell',
+        color: '#3d90e0',
+        badgeBg: 'bg-[#8cc1f5]/25',
+        badgeText: 'text-[#123e6b]',
+        border: 'border-[#8cc1f5]/60',
+        subtitle: 'Appointments, important deadlines & follow-ups'
+      },
+      notes: {
+        name: 'Notes',
+        icon: 'fa-regular fa-note-sticky',
+        color: '#3d90e0',
+        badgeBg: 'bg-[#8cc1f5]/25',
+        badgeText: 'text-[#123e6b]',
+        border: 'border-[#8cc1f5]/60',
+        subtitle: 'General ideas, musings, long-form thoughts & memos'
+      },
+      translator: {
+        name: 'Language Translator',
+        icon: 'fa-solid fa-language',
+        color: '#3d90e0',
+        badgeBg: 'bg-[#8cc1f5]/25',
+        badgeText: 'text-[#123e6b]',
+        border: 'border-[#8cc1f5]/60',
+        subtitle: 'Brazilian Portuguese, Cuban/Dominican/Mexican Spanish & French'
+      }
+    };
+
+    // State Variables
+    let notes = [];
+    let activeCategory = 'all'; // 'all', 'grocery', 'reminder', 'notes'
+    let currentEditingId = null;
+    let currentViewingId = null;
+    let notePendingDeletionId = null;
+
+    // Cloud & Sync Variables
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'swanpad-notepad-app';
+    let db = null;
+    let auth = null;
+    let authUser = null;
+    let syncId = getOrInitSyncId();
+
+    // Default Starter Notes
+    const defaultNotes = [
+      {
+        id: 'starter-1',
+        notebookId: syncId,
+        title: 'Weekly Supermarket & Organic Produce',
+        category: 'grocery',
+        body: `[ ] Organic Whole Milk (2 cartons)
+[ ] Fresh Strawberries & Blueberries
+[ ] Hass Avocados (4 pack)
+[ ] Artisan Sourdough Bread
+[ ] Baby Spinach & Arugula
+[ ] Extra Virgin Olive Oil (Cold pressed)
+[ ] Greek Yogurt (Plain, 0% fat)
+[ ] Wild caught salmon fillets`,
+        updatedAt: new Date().toISOString()
+      },
+      {
+        id: 'starter-2',
+        notebookId: syncId,
+        title: 'Schedule Annual Dental Checkup & Car Service',
+        category: 'reminder',
+        body: `1. Call Dr. Harrison's clinic to confirm 10:30 AM appointment on Thursday.
+2. Bring updated insurance card and prescription glasses.
+3. Drop off the car for scheduled oil change and tire rotation.
+4. Pick up dry cleaning on the way back before 6:00 PM.`,
+        updatedAt: new Date(Date.now() - 3600000 * 4).toISOString()
+      },
+      {
+        id: 'starter-3',
+        notebookId: syncId,
+        title: 'Reflections & Goals for the Upcoming Season',
+        category: 'notes',
+        body: `Notes on creative projects and upcoming goals:
+
+- Focus on balanced living: carve out 45 minutes every morning for walking and quiet reflection.
+- Finish reading the architectural history volume by the end of this month.
+- Plan the weekend family gathering at the park pavilion.
+
+"Simplicity is the keynote of all true elegance." Keep notes organized and actionable every single day!`,
+        updatedAt: new Date(Date.now() - 3600000 * 24).toISOString()
+      }
+    ];
+
+    // Determine or generate Sync ID (Supports cross-device linking)
+    function getOrInitSyncId() {
+      // 1. Check URL query/hash params for sync key
+      const urlParams = new URLSearchParams(window.location.search);
+      let key = urlParams.get('sync') || (window.location.hash.startsWith('#sync=') ? window.location.hash.replace('#sync=', '') : null);
+
+      if (!key) {
+        try {
+          key = localStorage.getItem('ws_swanpad_sync_id');
+        } catch (e) {}
+      }
+
+      if (!key) {
+        key = 'SWAN-' + Math.random().toString(36).substring(2, 7).toUpperCase();
+      }
+
+      try {
+        localStorage.setItem('ws_swanpad_sync_id', key);
+      } catch (e) {}
+
+      // Keep in hash so copying current URL automatically includes the sync key
+      if (!window.location.hash.includes(key)) {
+        try {
+          window.location.hash = 'sync=' + key;
+        } catch (e) {}
+      }
+
+      return key;
+    }
+
+    // Initialize cloud database & real-time sync
+    async function initCloudSync() {
+      try {
+        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+          const firebaseConfig = JSON.parse(__firebase_config);
+          const app = initializeApp(firebaseConfig);
+          auth = getAuth(app);
+          db = getFirestore(app);
+
+          // Authenticate (Custom Token or Anonymous)
+          if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+            const cred = await signInWithCustomToken(auth, __initial_auth_token);
+            authUser = cred.user;
+          } else {
+            const cred = await signInAnonymously(auth);
+            authUser = cred.user;
+          }
+
+          if (!authUser) return;
+
+          // Subscribe to Cloud Data (Path Rule: /artifacts/{appId}/public/data/notes)
+          const notesCol = collection(db, 'artifacts', appId, 'public', 'data', 'notes');
+          onSnapshot(notesCol, (snapshot) => {
+            const fetched = [];
+            snapshot.forEach(docSnap => {
+              const data = docSnap.data();
+              if (data && data.notebookId === syncId) {
+                fetched.push(data);
+              }
+            });
+
+            if (fetched.length > 0) {
+              notes = fetched;
+            } else if (notes.length === 0) {
+              // Populate starter notes to cloud for first time
+              notes = [...defaultNotes];
+              notes.forEach(item => {
+                setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notes', item.id), item);
+              });
+            }
+
+            renderNotes(document.getElementById('search-input')?.value || '');
+            updateBadges();
+          }, (err) => {
+            console.warn("Cloud real-time listener error, using local fallback:", err);
+          });
+        } else {
+          // Local fallback
+          loadLocalFallback();
+        }
+      } catch (err) {
+        console.warn("Could not connect to cloud storage; running in local mode:", err);
+        loadLocalFallback();
+      }
+    }
+
+    function loadLocalFallback() {
+      try {
+        const stored = localStorage.getItem('ws_swanpad_notes_' + syncId);
+        if (stored) {
+          notes = JSON.parse(stored);
+        } else {
+          notes = [...defaultNotes];
+        }
+      } catch (e) {
+        notes = [...defaultNotes];
+      }
+      renderNotes();
+      updateBadges();
+    }
+
+    function saveNoteLocalFallback() {
+      try {
+        localStorage.setItem('ws_swanpad_notes_' + syncId, JSON.stringify(notes));
+      } catch (e) {}
+    }
+
+    // Initialize application on load
+    window.addEventListener('DOMContentLoaded', () => {
+      updateCategoryUI();
+      initCloudSync();
+      updateBadges();
+      setupSyncUI();
+    });
+
+    // Word Counting Utility
+    function countWords(str) {
+      if (!str || typeof str !== 'string') return 0;
+      const trimmed = str.trim();
+      if (!trimmed) return 0;
+      return trimmed.split(/\s+/).length;
+    }
+
+    // Category Switching
+    function switchCategory(cat) {
+      activeCategory = cat;
+      updateCategoryUI();
+      renderNotes(document.getElementById('search-input')?.value || '');
+    }
+
+    function updateCategoryUI() {
+      const tabs = ['all', 'grocery', 'reminder', 'notes', 'translator'];
+      tabs.forEach(tabKey => {
+        const desktopBtn = document.getElementById(`tab-${tabKey}`);
+        const mobileBtn = document.getElementById(`mob-tab-${tabKey}`);
+        
+        const isActive = activeCategory === tabKey;
+        if (desktopBtn) {
+          if (isActive) {
+            desktopBtn.className = "cat-tab px-4 py-2 rounded-xl text-sm font-bold transition-all duration-200 flex items-center gap-2 bg-[#8cc1f5] text-[#123e6b] shadow-sm";
+            const badge = desktopBtn.querySelector('span:last-child');
+            if (badge) {
+              badge.className = "text-[11px] px-1.5 py-0.2 rounded-full bg-white text-[#123e6b] font-extrabold";
+            }
+          } else {
+            desktopBtn.className = "cat-tab px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 text-slate-700 hover:text-[#123e6b] hover:bg-slate-100";
+            const badge = desktopBtn.querySelector('span:last-child');
+            if (badge) {
+              badge.className = "text-[11px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-600 font-bold";
+            }
+          }
+        }
+
+        if (mobileBtn) {
+          if (isActive) {
+            mobileBtn.className = "whitespace-nowrap px-3.5 py-1.5 rounded-xl text-xs font-bold bg-[#8cc1f5] text-[#123e6b] shadow-sm";
+          } else {
+            mobileBtn.className = "whitespace-nowrap px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700";
+          }
+        }
+      });
+
+      const titleElem = document.getElementById('active-category-title');
+      const subtitleElem = document.getElementById('active-category-subtitle');
+      const iconElem = document.getElementById('active-category-icon');
+      const translatorStudio = document.getElementById('translator-studio');
+
+      if (activeCategory === 'all') {
+        titleElem.textContent = "All Notes";
+        subtitleElem.textContent = "Viewing all items across your notepad";
+        iconElem.innerHTML = `<i class="fa-solid fa-layer-group"></i>`;
+        if (translatorStudio) translatorStudio.classList.add('hidden');
+      } else if (activeCategory === 'translator') {
+        const config = CATEGORIES.translator;
+        titleElem.textContent = config.name;
+        subtitleElem.textContent = "Translate between English, French, Spanish dialects & Brazilian Portuguese";
+        iconElem.innerHTML = `<i class="${config.icon}"></i>`;
+        if (translatorStudio) translatorStudio.classList.remove('hidden');
+      } else {
+        const config = CATEGORIES[activeCategory];
+        titleElem.textContent = config.name;
+        subtitleElem.textContent = config.subtitle;
+        iconElem.innerHTML = `<i class="${config.icon}"></i>`;
+        if (translatorStudio) translatorStudio.classList.add('hidden');
+      }
+    }
+
+    function updateBadges() {
+      const allCount = notes.length;
+      const groceryCount = notes.filter(n => n.category === 'grocery').length;
+      const reminderCount = notes.filter(n => n.category === 'reminder').length;
+      const notesCount = notes.filter(n => n.category === 'notes').length;
+      const translatorCount = notes.filter(n => n.category === 'translator').length;
+
+      document.getElementById('badge-all').textContent = allCount;
+      document.getElementById('badge-grocery').textContent = groceryCount;
+      document.getElementById('badge-reminder').textContent = reminderCount;
+      document.getElementById('badge-notes').textContent = notesCount;
+      document.getElementById('badge-translator').textContent = translatorCount;
+    }
+
+    function renderNotes(filterKeyword = '') {
+      const container = document.getElementById('notes-grid');
+      const emptyState = document.getElementById('empty-state');
+      if (!container || !emptyState) return;
+      container.innerHTML = '';
+
+      const query = filterKeyword.trim().toLowerCase();
+
+      let filtered = notes.filter(note => {
+        const matchesCategory = (activeCategory === 'all') || (note.category === activeCategory);
+        if (!matchesCategory) return false;
+
+        if (query) {
+          const inTitle = note.title.toLowerCase().includes(query);
+          const inBody = note.body.toLowerCase().includes(query);
+          return inTitle || inBody;
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        container.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        emptyState.classList.add('flex');
+
+        if (query) {
+          document.getElementById('empty-title').textContent = "No matching notes found";
+          document.getElementById('empty-subtitle').textContent = `No notes match your search "${query}". Try adjusting keywords.`;
+        } else if (activeCategory !== 'all') {
+          const config = CATEGORIES[activeCategory];
+          document.getElementById('empty-title').textContent = `No ${config.name} notes`;
+          document.getElementById('empty-subtitle').textContent = `You haven't written any ${config.name.toLowerCase()} items yet. Create one!`;
+        } else {
+          document.getElementById('empty-title').textContent = "Your notepad is empty";
+          document.getElementById('empty-subtitle').textContent = "Start by creating your first note with up to 5,000 words.";
+        }
+        return;
+      }
+
+      container.classList.remove('hidden');
+      emptyState.classList.add('hidden');
+      emptyState.classList.remove('flex');
+
+      filtered.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+
+      filtered.forEach(note => {
+        const catConfig = CATEGORIES[note.category] || CATEGORIES.notes;
+        const words = countWords(note.body);
+        const card = document.createElement('div');
+        card.className = "bg-white rounded-2xl border border-brand-200/70 p-5 custom-shadow card-hover flex flex-col justify-between group cursor-pointer relative overflow-hidden";
+        card.onclick = (e) => {
+          if (e.target.closest('.action-btn')) return;
+          viewNote(note.id);
+        };
+
+        const formattedDate = new Date(note.updatedAt).toLocaleDateString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        });
+
+        let snippet = note.body.trim().substring(0, 140);
+        if (note.body.length > 140) snippet += '...';
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between mb-3">
+            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${catConfig.badgeBg} ${catConfig.badgeText}">
+              <i class="${catConfig.icon} text-[11px]"></i>
+              ${catConfig.name}
+            </span>
+
+            <div class="flex items-center space-x-1 opacity-90 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+              <button onclick="editNote('${note.id}')" title="Edit Note" class="action-btn w-8 h-8 rounded-lg text-slate-500 hover:text-[#3d90e0] hover:bg-[#e1effd] flex items-center justify-center transition">
+                <i class="fa-solid fa-pen text-xs"></i>
+              </button>
+              <button onclick="promptDeleteNote('${note.id}')" title="Delete Note" class="action-btn w-8 h-8 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 flex items-center justify-center transition">
+                <i class="fa-regular fa-trash-can text-xs"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <h3 class="font-bold text-slate-900 text-base leading-snug group-hover:text-[#3d90e0] transition break-words">
+              ${escapeHtml(note.title)}
+            </h3>
+          </div>
+
+          <p class="text-slate-600 text-xs sm:text-sm line-clamp-3 leading-relaxed mb-4 whitespace-pre-line flex-1">
+            ${escapeHtml(snippet || 'No additional note content.')}
+          </p>
+
+          <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400 font-medium">
+            <span class="flex items-center gap-1">
+              <i class="fa-regular fa-clock text-[#8cc1f5]"></i> ${formattedDate}
+            </span>
+            <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-semibold text-[11px]">
+              ${words.toLocaleString()} / 5,000 words
+            </span>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    function handleContentInput() {
+      const textarea = document.getElementById('editor-body');
+      let text = textarea.value;
+      let words = countWords(text);
+
+      const badge = document.getElementById('word-count-badge');
+      const progressBar = document.getElementById('word-progress-bar');
+      const warning = document.getElementById('word-warning');
+
+      if (words > MAX_WORDS) {
+        const trimmedTokens = text.trim().split(/\s+/).slice(0, MAX_WORDS);
+        textarea.value = trimmedTokens.join(' ');
+        words = MAX_WORDS;
+        warning.classList.remove('hidden');
+      } else {
+        warning.classList.add('hidden');
+      }
+
+      const percentage = Math.min(100, Math.round((words / MAX_WORDS) * 100));
+      progressBar.style.width = percentage + '%';
+
+      if (percentage > 90) {
+        badge.className = "px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 font-bold";
+        progressBar.className = "bg-amber-500 h-1.5 rounded-full transition-all duration-300";
+      } else {
+        badge.className = "px-2 py-0.5 rounded-md bg-[#8cc1f5]/25 text-[#123e6b] font-bold";
+        progressBar.className = "bg-gradient-to-r from-[#8cc1f5] to-[#3d90e0] h-1.5 rounded-full transition-all duration-300";
+      }
+
+      badge.textContent = `${words.toLocaleString()} / ${MAX_WORDS.toLocaleString()} words`;
+    }
+
+    function openNoteEditor(noteId = null) {
+      currentEditingId = noteId;
+      const modal = document.getElementById('editor-modal');
+      const modalContent = document.getElementById('editor-modal-content');
+      const headerTitle = document.getElementById('editor-header-title');
+      const saveBtnText = document.getElementById('save-button-text');
+      const categorySelect = document.getElementById('editor-category');
+      const titleInput = document.getElementById('editor-title');
+      const bodyTextarea = document.getElementById('editor-body');
+
+      if (noteId) {
+        const note = notes.find(n => n.id === noteId);
+        if (note) {
+          headerTitle.textContent = "Edit Note";
+          saveBtnText.textContent = "Update Note";
+          categorySelect.value = note.category;
+          titleInput.value = note.title;
+          bodyTextarea.value = note.body;
+        }
+      } else {
+        headerTitle.textContent = "Create New Note";
+        saveBtnText.textContent = "Save Note";
+        categorySelect.value = (activeCategory !== 'all') ? activeCategory : 'grocery';
+        titleInput.value = '';
+        bodyTextarea.value = '';
+      }
+
+      handleContentInput();
+
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        modalContent.classList.remove('scale-95');
+        modalContent.classList.add('scale-100');
+        titleInput.focus();
+      }, 10);
+    }
+
+    function closeEditorModal() {
+      const modal = document.getElementById('editor-modal');
+      const modalContent = document.getElementById('editor-modal-content');
+
+      modal.classList.add('opacity-0');
+      modalContent.classList.remove('scale-100');
+      modalContent.classList.add('scale-95');
+
+      setTimeout(() => {
+        modal.classList.add('hidden');
+        currentEditingId = null;
+      }, 200);
+    }
+
+    async function saveNote() {
+      const titleInput = document.getElementById('editor-title');
+      const categorySelect = document.getElementById('editor-category');
+      const bodyTextarea = document.getElementById('editor-body');
+
+      const title = titleInput.value.trim();
+      const category = categorySelect.value;
+      const body = bodyTextarea.value;
+
+      if (!title) {
+        showToast("Please provide a title for your note.", "error");
+        titleInput.focus();
+        return;
+      }
+
+      const words = countWords(body);
+      if (words > MAX_WORDS) {
+        showToast("Note exceeds the 5,000 word capacity limit.", "error");
+        return;
+      }
+
+      let noteItem = null;
+
+      if (currentEditingId) {
+        const index = notes.findIndex(n => n.id === currentEditingId);
+        if (index !== -1) {
+          notes[index] = {
+            ...notes[index],
+            title: title,
+            category: category,
+            body: body,
+            notebookId: syncId,
+            updatedAt: new Date().toISOString()
+          };
+          noteItem = notes[index];
+          showToast("Note updated & synced to your phone!");
+        }
+      } else {
+        noteItem = {
+          id: 'note_' + Date.now(),
+          notebookId: syncId,
+          title: title,
+          category: category,
+          body: body,
+          updatedAt: new Date().toISOString()
+        };
+        notes.unshift(noteItem);
+        showToast("Note saved & ready on your phone!");
+      }
+
+      // Sync to cloud
+      if (db && authUser && noteItem) {
+        try {
+          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notes', noteItem.id), noteItem);
+        } catch (err) {
+          console.error("Cloud save error:", err);
+        }
+      }
+      saveNoteLocalFallback();
+
+      closeEditorModal();
+      renderNotes(document.getElementById('search-input')?.value || '');
+      updateBadges();
+    }
+
+    function viewNote(noteId) {
+      const note = notes.find(n => n.id === noteId);
+      if (!note) return;
+      currentViewingId = noteId;
+
+      const catConfig = CATEGORIES[note.category] || CATEGORIES.notes;
+      const modal = document.getElementById('view-modal');
+      const modalContent = document.getElementById('view-modal-content');
+
+      document.getElementById('view-modal-title').textContent = note.title;
+      document.getElementById('view-modal-body').textContent = note.body;
+      
+      const badgeElem = document.getElementById('view-modal-category-badge');
+      badgeElem.className = `px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${catConfig.badgeBg} ${catConfig.badgeText}`;
+      badgeElem.innerHTML = `<i class="${catConfig.icon} mr-1"></i> ${catConfig.name}`;
+
+      const words = countWords(note.body);
+      document.getElementById('view-modal-word-count').textContent = `${words.toLocaleString()} / 5,000 words`;
+
+      const formatted = new Date(note.updatedAt).toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      document.getElementById('view-modal-date').textContent = formatted;
+
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        modalContent.classList.remove('scale-95');
+        modalContent.classList.add('scale-100');
+      }, 10);
+    }
+
+    function closeViewModal() {
+      const modal = document.getElementById('view-modal');
+      const modalContent = document.getElementById('view-modal-content');
+
+      modal.classList.add('opacity-0');
+      modalContent.classList.remove('scale-100');
+      modalContent.classList.add('scale-95');
+
+      setTimeout(() => {
+        modal.classList.add('hidden');
+        currentViewingId = null;
+      }, 200);
+    }
+
+    function editCurrentViewingNote() {
+      const idToEdit = currentViewingId;
+      closeViewModal();
+      setTimeout(() => {
+        openNoteEditor(idToEdit);
+      }, 200);
+    }
+
+    function copyCurrentNoteContent() {
+      const note = notes.find(n => n.id === currentViewingId);
+      if (!note) return;
+
+      const fullText = `${note.title}\n\n${note.body}`;
+      const tempArea = document.createElement("textarea");
+      tempArea.value = fullText;
+      document.body.appendChild(tempArea);
+      tempArea.select();
+      try {
+        document.execCommand('copy');
+        showToast("Copied note to clipboard!");
+      } catch (err) {
+        showToast("Unable to copy to clipboard", "error");
+      }
+      document.body.removeChild(tempArea);
+    }
+
+    function editNote(id) {
+      openNoteEditor(id);
+    }
+
+    function promptDeleteNote(noteId) {
+      notePendingDeletionId = noteId;
+      const modal = document.getElementById('confirm-modal');
+      const modalContent = document.getElementById('confirm-modal-content');
+
+      const actionBtn = document.getElementById('confirm-action-btn');
+      actionBtn.onclick = executeDeleteNote;
+
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        modalContent.classList.remove('scale-95');
+        modalContent.classList.add('scale-100');
+      }, 10);
+    }
+
+    function closeConfirmModal() {
+      const modal = document.getElementById('confirm-modal');
+      const modalContent = document.getElementById('confirm-modal-content');
+
+      modal.classList.add('opacity-0');
+      modalContent.classList.remove('scale-100');
+      modalContent.classList.add('scale-95');
+
+      setTimeout(() => {
+        modal.classList.add('hidden');
+        notePendingDeletionId = null;
+      }, 200);
+    }
+
+    async function executeDeleteNote() {
+      if (!notePendingDeletionId) return;
+      const idToDelete = notePendingDeletionId;
+      notes = notes.filter(n => n.id !== idToDelete);
+
+      if (db && authUser) {
+        try {
+          await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notes', idToDelete));
+        } catch (err) {
+          console.error("Cloud delete error:", err);
+        }
+      }
+      saveNoteLocalFallback();
+
+      closeConfirmModal();
+      renderNotes(document.getElementById('search-input')?.value || '');
+      updateBadges();
+      showToast("Note deleted");
+    }
+
+    function handleSearch() {
+      const input = document.getElementById('search-input');
+      const clearBtn = document.getElementById('clear-search-btn');
+      if (input.value.length > 0) {
+        clearBtn.classList.remove('hidden');
+      } else {
+        clearBtn.classList.add('hidden');
+      }
+      renderNotes(input.value);
+    }
+
+    function clearSearch() {
+      const input = document.getElementById('search-input');
+      input.value = '';
+      document.getElementById('clear-search-btn').classList.add('hidden');
+      renderNotes('');
+      input.focus();
+    }
+
+    function insertTemplate(type) {
+      const textarea = document.getElementById('editor-body');
+      let addition = '';
+
+      if (type === 'bullet') {
+        addition = "\n• Item 1\n• Item 2\n• Item 3\n";
+      } else if (type === 'check') {
+        addition = "\n[ ] Task or item one\n[ ] Task or item two\n[ ] Task or item three\n";
+      } else if (type === 'grocery') {
+        addition = `
+[ ] Fresh Produce:
+  - Apples & Bananas
+  - Salad Greens
+[ ] Dairy & Eggs:
+  - Milk
+  - Cheddar Cheese
+[ ] Pantry Staples:
+  - Olive oil
+  - Whole wheat pasta
+`;
+      }
+
+      textarea.value += addition;
+      handleContentInput();
+      textarea.focus();
+    }
+
+    // Live Dedicated Translator Logic
+    async function executeLiveTranslation() {
+      const inputElem = document.getElementById('translator-input');
+      const outputElem = document.getElementById('translator-output');
+      const sourceSelect = document.getElementById('source-lang-select');
+      const targetSelect = document.getElementById('target-lang-select');
+      const loadingOverlay = document.getElementById('translator-loading');
+      const translateBtn = document.getElementById('main-translate-btn');
+      const badgeElem = document.getElementById('target-lang-badge');
+
+      const text = inputElem.value.trim();
+      if (!text) {
+        showToast("Please enter text to translate.", "error");
+        inputElem.focus();
+        return;
+      }
+
+      const sourceLang = sourceSelect.value === 'auto' ? 'English, French, Spanish, or Brazilian Portuguese (auto-detected)' : sourceSelect.value;
+      const targetLang = targetSelect.value;
+
+      loadingOverlay.classList.remove('hidden');
+      translateBtn.disabled = true;
+
+      const systemPrompt = `You are a world-class professional translator and cultural linguist.
+Translate the user's text from ${sourceLang} into ${targetLang}.
+Adhere strictly to native speech conventions:
+- If target is Brazilian Portuguese: use natural, authentic Brazilian Portuguese phrasing.
+- If target is Cuban Spanish: use authentic Cuban vocabulary and rhythm (e.g. asere, qué bolá, etc., when fitting colloquial tone).
+- If target is Dominican Spanish: use authentic Dominican expressions and flow (e.g. qué lo qué, jevi, etc., when fitting colloquial tone).
+- If target is Mexican Spanish: use authentic Mexican phrasing (e.g. qué onda, chido, ahorita, etc., when fitting colloquial tone).
+- If target is French: use natural, idiomatic French phrasing.
+- If target is English: use clear, natural conversational American English.
+
+Output ONLY the translated text in the target language. Do not add conversational intro or meta explanation.`;
+
+      const apiKey = "";
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+      try {
+        const payload = {
+          contents: [{ parts: [{ text: text }] }],
+          systemInstruction: { parts: [{ text: systemPrompt }] }
+        };
+
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        const translatedText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+        if (translatedText) {
+          outputElem.value = translatedText.trim();
+          badgeElem.textContent = `Translated into ${targetLang}`;
+          showToast(`Translated into ${targetLang}!`);
+        } else {
+          showToast("Could not complete translation. Please try again.", "error");
+        }
+      } catch (err) {
+        console.error("Translation error:", err);
+        showToast("Translation service unavailable. Please check connection.", "error");
+      } finally {
+        loadingOverlay.classList.add('hidden');
+        translateBtn.disabled = false;
+      }
+    }
+
+    function clearTranslator() {
+      document.getElementById('translator-input').value = '';
+      document.getElementById('translator-output').value = '';
+      document.getElementById('target-lang-badge').textContent = 'Ready to translate';
+      document.getElementById('translator-input').focus();
+    }
+
+    function copyTranslatorOutput() {
+      const outputElem = document.getElementById('translator-output');
+      const text = outputElem.value.trim();
+      if (!text) {
+        showToast("Nothing to copy yet. Translate text first!", "error");
+        return;
+      }
+      const tempArea = document.createElement("textarea");
+      tempArea.value = text;
+      document.body.appendChild(tempArea);
+      tempArea.select();
+      try {
+        document.execCommand('copy');
+        showToast("Translation copied to clipboard!");
+      } catch (err) {
+        showToast("Could not copy text", "error");
+      }
+      document.body.removeChild(tempArea);
+    }
+
+    async function saveTranslationAsNote() {
+      const inputElem = document.getElementById('translator-input');
+      const outputElem = document.getElementById('translator-output');
+      const targetSelect = document.getElementById('target-lang-select');
+
+      const originalText = inputElem.value.trim();
+      const translation = outputElem.value.trim();
+
+      if (!translation) {
+        showToast("Please translate text first before saving as a note.", "error");
+        return;
+      }
+
+      const shortTitle = originalText.length > 40 ? originalText.substring(0, 37) + '...' : originalText;
+      const targetLang = targetSelect.value;
+
+      const noteTitle = `Translation: ${shortTitle || targetLang}`;
+      const noteBody = `SOURCE TEXT:\n${originalText}\n\nTRANSLATION (${targetLang}):\n${translation}`;
+
+      const newNote = {
+        id: 'note_' + Date.now(),
+        notebookId: syncId,
+        title: noteTitle,
+        category: 'translator',
+        body: noteBody,
+        updatedAt: new Date().toISOString()
+      };
+
+      notes.unshift(newNote);
+
+      if (db && authUser) {
+        try {
+          await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'notes', newNote.id), newNote);
+        } catch (e) {
+          console.error("Cloud save note error:", e);
+        }
+      }
+      saveNoteLocalFallback();
+
+      renderNotes(document.getElementById('search-input')?.value || '');
+      updateBadges();
+      showToast("Saved translation note! Synced to your phone.");
+    }
+
+    function clearEditorBody() {
+      const textarea = document.getElementById('editor-body');
+      textarea.value = '';
+      handleContentInput();
+      textarea.focus();
+    }
+
+    // Phone Sync Management
+    function setupSyncUI() {
+      const input = document.getElementById('sync-id-input');
+      if (input) input.value = syncId;
+      
+      const phoneUrl = getSyncUrl();
+      const qrImg = document.getElementById('sync-qr-code');
+      if (qrImg) {
+        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(phoneUrl)}&color=123e6b`;
+      }
+    }
+
+    function getSyncUrl() {
+      const base = window.location.href.split('#')[0].split('?')[0];
+      return `${base}?sync=${encodeURIComponent(syncId)}#sync=${encodeURIComponent(syncId)}`;
+    }
+
+    function openSyncModal() {
+      setupSyncUI();
+      const modal = document.getElementById('sync-modal');
+      const content = document.getElementById('sync-modal-content');
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        modal.classList.remove('opacity-0');
+        content.classList.remove('scale-95');
+        content.classList.add('scale-100');
+      }, 10);
+    }
+
+    function closeSyncModal() {
+      const modal = document.getElementById('sync-modal');
+      const content = document.getElementById('sync-modal-content');
+      modal.classList.add('opacity-0');
+      content.classList.remove('scale-100');
+      content.classList.add('scale-95');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 200);
+    }
+
+    function copySyncLink() {
+      const link = getSyncUrl();
+      const tempArea = document.createElement("textarea");
+      tempArea.value = link;
+      document.body.appendChild(tempArea);
+      tempArea.select();
+      try {
+        document.execCommand('copy');
+        showToast("Phone link copied! Send it to your cellphone.");
+      } catch (e) {
+        showToast("Could not copy link", "error");
+      }
+      document.body.removeChild(tempArea);
+    }
+
+    function copySyncIdOnly() {
+      const tempArea = document.createElement("textarea");
+      tempArea.value = syncId;
+      document.body.appendChild(tempArea);
+      tempArea.select();
+      try {
+        document.execCommand('copy');
+        showToast("Sync ID copied!");
+      } catch (e) {}
+      document.body.removeChild(tempArea);
+    }
+
+    function showToast(message, type = "success") {
+      const toast = document.getElementById('toast');
+      const toastMsg = document.getElementById('toast-message');
+      const toastIcon = document.getElementById('toast-icon');
+
+      toastMsg.textContent = message;
+      if (type === "error") {
+        toast.className = "fixed bottom-6 right-6 z-50 px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 text-sm font-semibold text-white bg-rose-600 transition-all duration-300 transform translate-y-0 opacity-100";
+        toastIcon.className = "fa-solid fa-circle-exclamation text-base";
+      } else {
+        toast.className = "fixed bottom-6 right-6 z-50 px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 text-sm font-bold text-[#123e6b] bg-[#8cc1f5] transition-all duration-300 transform translate-y-0 opacity-100";
+        toastIcon.className = "fa-solid fa-circle-check text-base text-[#123e6b]";
+      }
+
+      setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('translate-y-16', 'opacity-0');
+      }, 2600);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/[&<>'"]/g, 
+        tag => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          "'": '&#39;',
+          '"': '&quot;'
+        }[tag] || tag)
+      );
+    }
+
+    // Bind event handlers to window for HTML inline access
+    window.switchCategory = switchCategory;
+    window.openNoteEditor = openNoteEditor;
+    window.closeEditorModal = closeEditorModal;
+    window.saveNote = saveNote;
+    window.viewNote = viewNote;
+    window.closeViewModal = closeViewModal;
+    window.editCurrentViewingNote = editCurrentViewingNote;
+    window.copyCurrentNoteContent = copyCurrentNoteContent;
+    window.editNote = editNote;
+    window.promptDeleteNote = promptDeleteNote;
+    window.closeConfirmModal = closeConfirmModal;
+    window.executeDeleteNote = executeDeleteNote;
+    window.handleSearch = handleSearch;
+    window.clearSearch = clearSearch;
+    window.insertTemplate = insertTemplate;
+    window.clearEditorBody = clearEditorBody;
+    window.handleContentInput = handleContentInput;
+    window.executeLiveTranslation = executeLiveTranslation;
+    window.clearTranslator = clearTranslator;
+    window.copyTranslatorOutput = copyTranslatorOutput;
+    window.saveTranslationAsNote = saveTranslationAsNote;
+    window.openSyncModal = openSyncModal;
+    window.closeSyncModal = closeSyncModal;
+    window.copySyncLink = copySyncLink;
+    window.copySyncIdOnly = copySyncIdOnly;
+  </script>
+  <!-- Grocery calculator logic (Tania, Nov 10) -->
+  <script>
+  (function(){
+    "use strict";
+    var KEY="swanpad_grocery_calc_v1";
+    var state={items:[],tax:0,budget:null};
+    var $=function(id){return document.getElementById(id);};
+    function load(){ try{ var r=JSON.parse(localStorage.getItem(KEY)); if(r&&typeof r==="object"){ state.items=Array.isArray(r.items)?r.items:[]; state.tax=+r.tax||0; state.budget=(r.budget==null?null:+r.budget);} }catch(e){} }
+    function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+    function money(n){ return "$"+(Math.round((n+Number.EPSILON)*100)/100).toFixed(2); }
+    function num(v){ var n=parseFloat(String(v==null?"":v).replace(/[^0-9.,-]/g,"").replace(",",".")); return isFinite(n)?n:0; }
+    function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];}); }
+    function subtotal(){ return state.items.reduce(function(a,it){ return a + num(it.price)*(it.qty||1); },0); }
+    function render(){
+      var list=$("gc-list"); if(!list) return;
+      list.innerHTML = state.items.map(function(it){
+        var line=num(it.price)*(it.qty||1);
+        return '<li class="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2.5 '+(it.got?"opacity-60":"")+'">'
+          +'<button data-got="'+it.id+'" aria-label="Mark as in cart" class="w-7 h-7 shrink-0 rounded-lg border-2 '+(it.got?"bg-[#3d90e0] border-[#3d90e0] text-white":"border-slate-300 text-transparent")+' flex items-center justify-center"><i class="fa-solid fa-check text-xs"></i></button>'
+          +'<span class="flex-1 min-w-0 truncate text-sm '+(it.got?"line-through text-slate-400":"text-slate-700")+'">'+(it.qty>1?('<b>'+it.qty+'&times;</b> '):"")+esc(it.name||"Item")+'</span>'
+          +'<span class="text-sm font-semibold text-slate-800 tabular-nums">'+money(line)+'</span>'
+          +'<button data-del="'+it.id+'" aria-label="Remove item" class="w-7 h-7 shrink-0 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>'
+          +'</li>';
+      }).join("");
+      $("gc-empty").style.display = state.items.length ? "none" : "block";
+      var sub=subtotal(), taxAmt=sub*(num(state.tax)/100), total=sub+taxAmt;
+      $("gc-count").textContent = state.items.length + (state.items.length===1?" item":" items");
+      $("gc-subtotal").textContent = "Subtotal "+money(sub);
+      var taxrow=$("gc-taxrow");
+      if(num(state.tax)>0){ taxrow.classList.remove("hidden"); taxrow.classList.add("flex"); $("gc-taxamt").textContent=money(taxAmt); }
+      else { taxrow.classList.add("hidden"); taxrow.classList.remove("flex"); }
+      $("gc-total").textContent = money(total);
+      var bm=$("gc-budgetmsg");
+      if(state.budget!=null && state.budget>0){
+        var diff=state.budget-total; bm.classList.remove("hidden");
+        if(diff>=0){ bm.textContent="\u2705 "+money(diff)+" left in your budget"; bm.className="text-center text-sm font-bold text-emerald-600"; }
+        else { bm.textContent="\u26A0\uFE0F Over budget by "+money(-diff); bm.className="text-center text-sm font-bold text-rose-600"; }
+      } else { bm.classList.add("hidden"); }
+      save();
+    }
+    function addItem(){
+      var name=$("gc-name"), price=$("gc-price"), qty=$("gc-qty");
+      var p=num(price.value); if(!(p>0)){ price.focus(); price.classList.add("ring-2","ring-rose-300"); setTimeout(function(){price.classList.remove("ring-2","ring-rose-300");},800); return; }
+      var q=Math.max(1, Math.floor(num(qty.value)||1));
+      state.items.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6), name:(name.value||"").trim().slice(0,60), price:p, qty:q, got:false});
+      name.value=""; price.value=""; qty.value="1"; render(); name.focus();
+    }
+    function wire(){
+      if(!$("gc-add")) return;
+      $("gc-add").addEventListener("click", addItem);
+      ["gc-name","gc-price","gc-qty"].forEach(function(id){ $(id).addEventListener("keydown", function(e){ if(e.key==="Enter") addItem(); }); });
+      $("gc-list").addEventListener("click", function(e){
+        var g=e.target.closest("[data-got]"), d=e.target.closest("[data-del]");
+        if(g){ var it=state.items.find(function(x){return x.id===g.getAttribute("data-got");}); if(it){ it.got=!it.got; render(); } }
+        else if(d){ state.items=state.items.filter(function(x){return x.id!==d.getAttribute("data-del");}); render(); }
+      });
+      $("gc-tax").addEventListener("input", function(){ state.tax=num(this.value); render(); });
+      $("gc-budget").addEventListener("input", function(){ var v=this.value.trim(); state.budget = v===""?null:num(v); render(); });
+      $("gc-clear").addEventListener("click", function(){ if(!state.items.length || confirm("Clear the whole shopping list?")){ state.items=[]; render(); } });
+      load();
+      $("gc-tax").value = state.tax||0;
+      if(state.budget!=null) $("gc-budget").value = state.budget;
+      render();
+      // Show the calculator only in the Grocery category.
+      var panel=$("grocery-calc");
+      function toggle(cat){ if(panel){ if(cat==="grocery"){ panel.classList.remove("hidden"); } else { panel.classList.add("hidden"); } } }
+      if(typeof window.switchCategory==="function"){ var orig=window.switchCategory; window.switchCategory=function(cat){ orig(cat); toggle(cat); }; }
+      // In case the app restored a saved category on load:
+      try{ if(window.activeCategory==="grocery") toggle("grocery"); }catch(e){}
+    }
+    if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", wire); else wire();
+  })();
+  </script>
+</body>
+</html>
