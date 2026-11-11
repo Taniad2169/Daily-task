@@ -5072,7 +5072,7 @@
             // Little picker: Monica (doctors), George (attorneys), Rebecca (Media Network / ads), Alek (Spanish).
             function openVoiceAgentPicker(lead) {
                 const old = document.getElementById('wpVoiceAgentOverlay'); if (old) old.remove();
-                const name = lead.name || lead.contact || 'this lead';
+                const name = lead.companyName || lead.decisionMakerName || lead.name || lead.contact || 'this lead';
                 const ov = document.createElement('div');
                 ov.id = 'wpVoiceAgentOverlay';
                 ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,20,40,0.55);z-index:100000;display:flex;align-items:center;justify-content:center;padding:16px;';
@@ -5104,8 +5104,13 @@
                 const phone = wpGuessPhone(lead);
                 if (phone.length < 10) { showToast('📞 Not sent — this lead has no valid US phone number.', 'error'); return; }
                 const clean = (v) => { v = String(v == null ? '' : v).trim(); return /^no (name|phone|email|url|comment)$/i.test(v) ? '' : v; };
-                const payload = { id: 'wp-' + String(lead.id || Date.now()), name: clean(lead.name), contact: clean(lead.contact), business: clean(lead.companyName || lead.name),
-                    phone, state, agent, notes: clean(typeof commentWithExtras === 'function' ? commentWithExtras(lead) : lead.comment) };
+                // Works for both a Completed-Tasks lead and a telemarketing/AI-call lead (different field names).
+                const contact = clean(lead.contact || lead.decisionMakerName);
+                const business = clean(lead.companyName || lead.name);
+                const dispName = clean(lead.decisionMakerName || lead.name || lead.companyName);
+                let extra = ''; try { extra = (typeof commentWithExtras === 'function' && !lead.source) ? commentWithExtras(lead) : (lead.comment || ''); } catch (e) { extra = lead.comment || ''; }
+                const notes = [clean(lead.myNotes), clean(extra)].filter(Boolean).join(' — ');   // your highlighted note first, then the call summary / comment
+                const payload = { id: 'wp-' + String(lead.id || Date.now()), name: dispName, contact, business, phone, state, agent, notes };
                 try {
                     const tok = await window.wpGmail.idToken();
                     if (!tok) throw new Error('Google sign-in missing — open the AI Office once to sign in, then try again.');
@@ -5991,6 +5996,7 @@
                             ${tmCallId(lead) ? `<button class="tm-push-btn tm-listen-btn" data-call-id="${tmCallId(lead)}" title="Listen to the call recording right here" style="color:#1d4ed8;"><i class="fas fa-headphones"></i></button>` : ''}
                             <span class="tm-color-dots" style="display:inline-flex;gap:4px;align-items:center;">${[['blue', '#1d4ed8', 'Blue: hang up, voicemail, phone menu, another AI'], ['yellow', '#ffd600', 'Yellow: spoke to a person (call back later)'], ['green', '#2e7d32', "Green: got an email, transferred to Rachel or got Rachel's number"], ['lavender', '#c4a8f5', 'Lavender: audit sent'], ['orange', '#f57c00', 'Orange: hot lead, email + appointment'], ['sky', '#50b9fa', 'Sky blue: I have an appointment to talk to the doctor/attorney'], ['lightgrey', '#cbd0d8', 'Light grey: Eva edited the draft — ready for you to attach the audit and send']].map(([c, bg, t]) => `<button class="tm-color-btn" data-tm-id="${lead.id}" data-color="${c}" title="${t}" aria-label="${t}" style="width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 ${tmColorOf(lead) === c ? '3px #111' : '1px #9aa'};background:${bg};cursor:pointer;padding:0;"></button>`).join('')}${tmColors[String(lead.id)] ? `<button class="tm-color-btn" data-tm-id="${lead.id}" data-color="" title="Undo: go back to the automatic color" aria-label="Undo color" style="border:1px solid #9aa;background:#fff;border-radius:10px;font-size:11px;padding:0 6px;height:18px;cursor:pointer;">↺ undo</button>` : ''}</span>
                             <button class="tm-done-btn tm-done-pill${done ? ' is-done' : ''}" data-tm-id="${lead.id}" title="${done ? 'Clear the check — mark not done' : 'Click after you call or make an audit for this lead, so you know you already did it'}" aria-label="Mark done">${done ? '✓ Done' : '☐ Done'}</button>
+                            <button class="tm-voice-btn tm-push-btn" data-tm-id="${lead.id}" title="Send or move this lead to a Voice Studio agent (Monica, George, Rebecca or Alek)" aria-label="Send to a Voice Studio agent" style="color:#1d4ed8;"><i class="fas fa-phone-volume"></i></button>
                             <button class="tm-push-btn tm-edit-btn" data-tm-id="${lead.id}" title="Edit (name, email, comments), then push to the Lead Form" style="color:#ad1457;"><i class="fas fa-pen"></i></button>
                             <button class="tm-push-btn" data-tm-id="${lead.id}" title="Push to Lead Form"><i class="fas fa-share-square"></i></button>
                             <button class="delete-completed tm-dismiss-btn" data-tm-id="${lead.id}" title="Dismiss"><i class="fas fa-times-circle"></i></button>
@@ -6062,11 +6068,18 @@
                         if (lead) openTmLeadModal(lead, true);
                     });
                 });
-                tmQA('.tm-push-btn:not(.tm-edit-btn):not(.tm-listen-btn):not(.tm-done-btn)').forEach((btn) => {
+                tmQA('.tm-push-btn:not(.tm-edit-btn):not(.tm-listen-btn):not(.tm-done-btn):not(.tm-voice-btn)').forEach((btn) => {
                     btn.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const lead = telemarketingLeads.find(l => String(l.id) === String(btn.dataset.tmId));
                         if (lead) pushTmLeadToForm(lead);
+                    });
+                });
+                tmQA('.tm-voice-btn').forEach((btn) => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const lead = telemarketingLeads.find(l => String(l.id) === String(btn.dataset.tmId));
+                        if (lead) openVoiceAgentPicker(lead);
                     });
                 });
                 tmQA('.tm-done-btn').forEach((btn) => {
