@@ -1565,6 +1565,10 @@
         [data-highlight="indigo"] { background: #5c69f2 !important; box-shadow: inset 0 0 0 2px #3f4bd1; color: #ffffff !important; }
         [data-highlight="charcoal"] { background: #36454f !important; box-shadow: inset 0 0 0 2px #232d33; color: #ffffff !important; }
         [data-highlight="crimson"] { background: #911e1a !important; box-shadow: inset 0 0 0 2px #5e1411; color: #ffffff !important; }
+        [data-highlight="lightgrey"] { background: #d4d9e0 !important; box-shadow: inset 0 0 0 2px #9aa2ad; color: #374151 !important; }
+        .tm-lead-done { border-left: 4px solid #1b8f3a; opacity: 0.72; }
+        .tm-lead-done .item-text { text-decoration: line-through; text-decoration-color: rgba(27,143,58,0.6); }
+        .tm-done-mark { margin-left: 2px; }
         [data-highlight="charcoal"] input, [data-highlight="charcoal"] textarea, [data-highlight="charcoal"] label,
         [data-highlight="crimson"] input, [data-highlight="crimson"] textarea, [data-highlight="crimson"] label { color: #ffffff !important; background: rgba(255,255,255,0.15) !important; }
         [data-highlight="charcoal"] input, [data-highlight="charcoal"] textarea,
@@ -2659,6 +2663,7 @@
                         <span style="font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">🩺 This practice's situation</span>
                         <button type="button" id="evaScanBtn" style="border:1px solid #7c5cd6;background:#fff;color:#5b3fa8;border-radius:8px;padding:3px 10px;font-size:0.75rem;font-weight:700;cursor:pointer;">🔎 Check their website</button>
                     </div>
+                    <div id="evaTaniaNotes" style="display:none;font-size:0.84rem;margin-top:6px;background:#fff8d6;border:2px solid #f48fb1;border-left:6px solid #e91e63;border-radius:9px;padding:8px 10px;color:#4a0d2a;font-weight:600;"></div>
                     <div id="evaCall" style="font-size:0.8rem;color:#334155;margin-top:4px;"></div>
                     <div id="evaFindings" style="font-size:0.82rem;margin-top:4px;"></div>
                     <div style="font-size:0.72rem;color:#6b7c8f;margin-top:4px;">Ticked problems go into the email under the audit sentence. Untick anything you don't want to mention.</div>
@@ -2693,6 +2698,7 @@
                 <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px;">
                     <button type="button" class="btn btn-outline" id="evaCopyBtn" style="border-color:#7c5cd6;color:#5b3fa8;"><i class="fas fa-copy"></i> Copy text</button>
                     <button type="button" class="btn" id="evaSaveBtn" style="background:#7c5cd6;color:#fff;border-color:#7c5cd6;"><i class="fab fa-google"></i> Save to Gmail Drafts</button>
+                    <button type="button" class="btn" id="evaReadyBtn" style="background:#5b7083;color:#fff;border-color:#5b7083;" title="Done editing: turns this lead light grey so Tania knows the draft is ready to attach and send"><i class="fas fa-check"></i> Ready for Tania</button>
                 </div>
                 <p style="font-size:0.72rem;color:#6b7c8f;margin:8px 0 0;">Nothing is sent. The draft waits in Gmail (account you pick in the Google window, from designs@thewebswan.com) until you press Send.</p>
             </div>
@@ -4321,6 +4327,7 @@
                 'webswan_future_calls',
                 'webswan_tm_dismissed',
                 'webswan_tm_colors',
+                'webswan_tm_done',
                 'webswan_tm_edits',
                 'webswan_eva_drafts',
                 'webswan_eva_address'
@@ -4420,7 +4427,7 @@
                         return;
                     }
                     // Lead colors and edits: keep both devices' entries (this device wins on the same lead).
-                    if (key === 'webswan_tm_colors' || key === 'webswan_tm_edits') {
+                    if (key === 'webswan_tm_colors' || key === 'webswan_tm_edits' || key === 'webswan_tm_done') {
                         let a = {}, b = {}; try { a = JSON.parse(localVal || '{}'); } catch (e) {} try { b = JSON.parse(remoteVal || '{}'); } catch (e) {}
                         merged[key] = JSON.stringify(Object.assign({}, b && typeof b === 'object' ? b : {}, a && typeof a === 'object' ? a : {}));
                         return;
@@ -5751,13 +5758,26 @@
             }
             // Tania's own color for a telemarketing / AI-call lead. Orange = hot (email + appointment). Green = got an email, transferred to Rachel or got Rachel's number.
             // Yellow = spoke to a real person (call back later / need to speak to someone else). Blue = hang up, voicemail, phone menu ("press 1") or another AI.
-            const TM_RANK = { blue: 0, yellow: 1, green: 2, lavender: 3, orange: 4, sky: 5 }; // Tania, Nov 7: lavender = audit sent, sky (#50b9fa) = her own appointment with the doctor/attorney
+            const TM_RANK = { blue: 0, yellow: 1, green: 2, lavender: 3, orange: 4, lightgrey: 4, sky: 5 }; // Tania, Nov 7: lavender = audit sent, sky (#50b9fa) = her own appointment with the doctor/attorney; lightgrey = Eva edited the draft, ready for Tania to attach + send
             function loadTmColors() { try { const o = JSON.parse(localStorage.getItem('webswan_tm_colors') || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
             function setTmColor(id, color) {
                 const all = loadTmColors(); if (color) all[String(id)] = color; else delete all[String(id)]; // empty = back to the automatic color
                 localStorage.setItem('webswan_tm_colors', JSON.stringify(all));
                 if (color === 'lavender') { try { const ed = loadTmEdits(); ed[String(id)] = Object.assign(ed[String(id)] || {}, { lavenderAt: new Date().toISOString() }); localStorage.setItem('webswan_tm_edits', JSON.stringify(ed)); const lv = telemarketingLeads.find(l => String(l.id) === String(id)); if (lv) lv.lavenderAt = ed[String(id)].lavenderAt; } catch (e) {} }
                 scheduleFirebaseAutoSave();
+            }
+
+            // Tania, Nov 10: a green "✓ done" check she clicks after she has audited / edited / called a lead,
+            // so she can see at a glance who she already handled and never work the same practice twice.
+            // Works on leads of any color (yellow, blue, green, lavender…). Saved in this browser + synced like the colors.
+            function loadTmDone() { try { const o = JSON.parse(localStorage.getItem('webswan_tm_done') || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
+            function isTmDone(id) { return !!loadTmDone()[String(id)]; }
+            function toggleTmDone(id) {
+                const all = loadTmDone(); const k = String(id);
+                if (all[k]) delete all[k]; else all[k] = new Date().toISOString();
+                try { localStorage.setItem('webswan_tm_done', JSON.stringify(all)); } catch (e) {}
+                scheduleFirebaseAutoSave();
+                return !!all[k];
             }
 
             function renderTelemarketingLeads() {
@@ -5847,17 +5867,20 @@
                     const when = lead.timestamp ? new Date(lead.timestamp).toLocaleString() : '';
                     const safeName = String(lead.decisionMakerName || lead.name || lead.companyName || lead.phone || 'No name').replace(/</g, '&lt;');
                     const safeCompany = lead.companyName && (lead.decisionMakerName || lead.name) && String(lead.decisionMakerName || lead.name).trim() !== String(lead.companyName).trim() ? ' — ' + lead.companyName.replace(/</g, '&lt;') : '';
+                    const done = isTmDone(lead.id);
                     return `
-                        <div class="completed-item tm-lead-row" data-tm-id="${lead.id}">
+                        <div class="completed-item tm-lead-row${done ? ' tm-lead-done' : ''}" data-tm-id="${lead.id}">
                             <span style="font-size:1.1rem;">${lead.source === 'prospector' ? '🔎' : lead.source === 'voice-studio' ? '🤖' : emoji}</span>
-                            <span class="item-text" data-highlight="${({ blue: 'aiblue', yellow: isAI(lead) ? 'aiyellow' : 'yellow', green: 'green', orange: 'orange', lavender: 'lavender', sky: 'sky' })[tmColorOf(lead)] || hl}">${safeName}${safeCompany}</span>
+                            <span class="item-text" data-highlight="${({ blue: 'aiblue', yellow: isAI(lead) ? 'aiyellow' : 'yellow', green: 'green', orange: 'orange', lavender: 'lavender', lightgrey: 'lightgrey', sky: 'sky' })[tmColorOf(lead)] || hl}">${safeName}${safeCompany}</span>
+                            ${done ? '<span class="tm-done-mark" title="You already handled this one' + (loadTmDone()[String(lead.id)] ? ' · ' + new Date(loadTmDone()[String(lead.id)]).toLocaleString() : '') + '" style="color:#1b8f3a;font-weight:800;font-size:0.9rem;white-space:nowrap;">✓ done</span>' : ''}
                             <span class="item-type">${(lead.category || 'Lead').replace(/</g, '&lt;')}${lead.source === 'voice-studio' && lead.telemarketerId ? ' · ' + String(lead.telemarketerId).replace(/</g, '&lt;') : ''}</span>
                             <span style="font-size:0.7rem;color:#8a4a63;">${when}</span>
                             ${tmPushed.includes(String(lead.id)) ? '<span class="tm-pushed-badge"><i class="fas fa-check"></i> Pushed</span>' : ''}
                             ${String(lead.myNotes || '').trim() ? '<span title="You have notes on this lead" style="font-size:0.7rem;font-weight:700;background:#fff8d6;color:#c2185b;border:1px solid #f48fb1;border-radius:8px;padding:1px 6px;">📝 My notes</span>' : ''}
                             ${tmSiteBtn(lead)}
                             ${tmCallId(lead) ? `<button class="tm-push-btn tm-listen-btn" data-call-id="${tmCallId(lead)}" title="Listen to the call recording right here" style="color:#1d4ed8;"><i class="fas fa-headphones"></i></button>` : ''}
-                            <span class="tm-color-dots" style="display:inline-flex;gap:4px;align-items:center;">${[['blue', '#1d4ed8', 'Blue: hang up, voicemail, phone menu, another AI'], ['yellow', '#ffd600', 'Yellow: spoke to a person (call back later)'], ['green', '#2e7d32', "Green: got an email, transferred to Rachel or got Rachel's number"], ['lavender', '#c4a8f5', 'Lavender: audit sent'], ['orange', '#f57c00', 'Orange: hot lead, email + appointment'], ['sky', '#50b9fa', 'Sky blue: I have an appointment to talk to the doctor/attorney']].map(([c, bg, t]) => `<button class="tm-color-btn" data-tm-id="${lead.id}" data-color="${c}" title="${t}" aria-label="${t}" style="width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 ${tmColorOf(lead) === c ? '3px #111' : '1px #9aa'};background:${bg};cursor:pointer;padding:0;"></button>`).join('')}${tmColors[String(lead.id)] ? `<button class="tm-color-btn" data-tm-id="${lead.id}" data-color="" title="Undo: go back to the automatic color" aria-label="Undo color" style="border:1px solid #9aa;background:#fff;border-radius:10px;font-size:11px;padding:0 6px;height:18px;cursor:pointer;">↺ undo</button>` : ''}</span>
+                            <span class="tm-color-dots" style="display:inline-flex;gap:4px;align-items:center;">${[['blue', '#1d4ed8', 'Blue: hang up, voicemail, phone menu, another AI'], ['yellow', '#ffd600', 'Yellow: spoke to a person (call back later)'], ['green', '#2e7d32', "Green: got an email, transferred to Rachel or got Rachel's number"], ['lavender', '#c4a8f5', 'Lavender: audit sent'], ['orange', '#f57c00', 'Orange: hot lead, email + appointment'], ['sky', '#50b9fa', 'Sky blue: I have an appointment to talk to the doctor/attorney'], ['lightgrey', '#cbd0d8', 'Light grey: Eva edited the draft — ready for you to attach the audit and send']].map(([c, bg, t]) => `<button class="tm-color-btn" data-tm-id="${lead.id}" data-color="${c}" title="${t}" aria-label="${t}" style="width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 ${tmColorOf(lead) === c ? '3px #111' : '1px #9aa'};background:${bg};cursor:pointer;padding:0;"></button>`).join('')}${tmColors[String(lead.id)] ? `<button class="tm-color-btn" data-tm-id="${lead.id}" data-color="" title="Undo: go back to the automatic color" aria-label="Undo color" style="border:1px solid #9aa;background:#fff;border-radius:10px;font-size:11px;padding:0 6px;height:18px;cursor:pointer;">↺ undo</button>` : ''}</span>
+                            <button class="tm-push-btn tm-done-btn" data-tm-id="${lead.id}" title="${done ? 'Clear the check (not done yet)' : 'Mark done — you already audited, edited or called this one'}" aria-label="Mark done" style="color:${done ? '#1b8f3a' : '#9aa2ad'};"><i class="fas ${done ? 'fa-circle-check' : 'fa-check'}"></i></button>
                             <button class="tm-push-btn tm-edit-btn" data-tm-id="${lead.id}" title="Edit (name, email, comments), then push to the Lead Form" style="color:#ad1457;"><i class="fas fa-pen"></i></button>
                             <button class="tm-push-btn" data-tm-id="${lead.id}" title="Push to Lead Form"><i class="fas fa-share-square"></i></button>
                             <button class="delete-completed tm-dismiss-btn" data-tm-id="${lead.id}" title="Dismiss"><i class="fas fa-times-circle"></i></button>
@@ -5929,11 +5952,19 @@
                         if (lead) openTmLeadModal(lead, true);
                     });
                 });
-                tmQA('.tm-push-btn:not(.tm-edit-btn):not(.tm-listen-btn)').forEach((btn) => {
+                tmQA('.tm-push-btn:not(.tm-edit-btn):not(.tm-listen-btn):not(.tm-done-btn)').forEach((btn) => {
                     btn.addEventListener('click', (e) => {
                         e.stopPropagation();
                         const lead = telemarketingLeads.find(l => String(l.id) === String(btn.dataset.tmId));
                         if (lead) pushTmLeadToForm(lead);
+                    });
+                });
+                tmQA('.tm-done-btn').forEach((btn) => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const now = toggleTmDone(btn.dataset.tmId);
+                        try { renderTelemarketingLeads(); } catch (err) {}
+                        try { showToast(now ? '✓ Marked done — it will show a green check on your list.' : 'Check cleared.', 'success'); } catch (err) {}
                     });
                 });
                 tmQA('.tm-dismiss-btn').forEach((btn) => {
@@ -6189,6 +6220,15 @@
                 document.getElementById('evaSubject').value = t.s;
                 if (!keepBody) document.getElementById('evaBody').value = t.b;
             }
+            // Eva presses this when she has finished editing the draft: the lead turns light grey so Tania
+            // knows the draft is ready to attach the audit and send. It leaves Eva's lavender queue.
+            function evaReady() {
+                const l = evaLead; if (!l) return;
+                setTmColor(l.id, 'lightgrey');
+                document.getElementById('evaDraftOverlay').style.display = 'none';
+                try { renderTelemarketingLeads(); } catch (e) {}
+                try { showToast('🩶 Draft marked ready — Tania will attach the audit and send.', 'success'); } catch (e) {}
+            }
             function openEvaDraft(lead) {
                 if (!lead) return;
                 // take any edits typed in the lead pop-up first
@@ -6202,6 +6242,7 @@
                 document.getElementById('evaState').value = evaGuessState(lead);
                 evaIssues = []; evaAds = lead.ppc ? ['Google pay-per-click (Sponsored on Google)'] : []; evaRenderFindings();
                 document.getElementById('evaCall').innerHTML = evaCallSummary(lead);
+                (function () { const tn = String(lead.myNotes || '').trim(), el = document.getElementById('evaTaniaNotes'); if (!el) return; if (tn) { el.style.display = 'block'; el.innerHTML = "📝 <b>Tania's instructions — edit the draft to match these:</b><br>" + tmEsc(tn).replace(/\n/g, '<br>'); } else { el.style.display = 'none'; el.textContent = ''; } })();
                 ['evaAudit', 'evaFlyer'].forEach(id => document.getElementById(id).value = '');
                 document.getElementById('evaFlyerUrl').value = '';
                 document.getElementById('evaMsg').textContent = lead.email ? '' : 'No email on this lead yet. Find it with the Email Finder in Lead Prospector, then paste it here.';
@@ -6344,6 +6385,7 @@
                 if (id === 'tmEvaDraftBtn') openEvaDraft(tmCurrentLead);
                 if (id === 'evaCloseBtn') document.getElementById('evaDraftOverlay').style.display = 'none';
                 if (id === 'evaSaveBtn') evaSave();
+                if (id === 'evaReadyBtn') evaReady();
                 if (id === 'evaScanBtn') evaScan();
                 if (id === 'evaReplyBtn') {
                     const rep = document.getElementById('evaReply').value.trim(), out = document.getElementById('evaReplyMsg');
