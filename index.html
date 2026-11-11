@@ -5049,6 +5049,94 @@
                 showToast('Opening WebSwan Studio — pick the state, services and follow-up date, then Save. 🔥', 'success');
             }
 
+            // ===== Send a WorkPilot lead straight to a Voice Studio agent's call list (cold call) =====
+            const WP_US_STATES = { 'ALABAMA': 'AL', 'ALASKA': 'AK', 'ARIZONA': 'AZ', 'ARKANSAS': 'AR', 'CALIFORNIA': 'CA', 'COLORADO': 'CO', 'CONNECTICUT': 'CT', 'DELAWARE': 'DE', 'DISTRICT OF COLUMBIA': 'DC', 'FLORIDA': 'FL', 'GEORGIA': 'GA', 'HAWAII': 'HI', 'IDAHO': 'ID', 'ILLINOIS': 'IL', 'INDIANA': 'IN', 'IOWA': 'IA', 'KANSAS': 'KS', 'KENTUCKY': 'KY', 'LOUISIANA': 'LA', 'MAINE': 'ME', 'MARYLAND': 'MD', 'MASSACHUSETTS': 'MA', 'MICHIGAN': 'MI', 'MINNESOTA': 'MN', 'MISSISSIPPI': 'MS', 'MISSOURI': 'MO', 'MONTANA': 'MT', 'NEBRASKA': 'NE', 'NEVADA': 'NV', 'NEW HAMPSHIRE': 'NH', 'NEW JERSEY': 'NJ', 'NEW MEXICO': 'NM', 'NEW YORK': 'NY', 'NORTH CAROLINA': 'NC', 'NORTH DAKOTA': 'ND', 'OHIO': 'OH', 'OKLAHOMA': 'OK', 'OREGON': 'OR', 'PENNSYLVANIA': 'PA', 'RHODE ISLAND': 'RI', 'SOUTH CAROLINA': 'SC', 'SOUTH DAKOTA': 'SD', 'TENNESSEE': 'TN', 'TEXAS': 'TX', 'UTAH': 'UT', 'VERMONT': 'VT', 'VIRGINIA': 'VA', 'WASHINGTON': 'WA', 'WEST VIRGINIA': 'WV', 'WISCONSIN': 'WI', 'WYOMING': 'WY' };
+            const WP_STATE_CODES = new Set(Object.values(WP_US_STATES));
+            // Pull a 2-letter state from the lead: an explicit state field, a full state name, or an UPPERCASE code token in the text.
+            function wpGuessState(lead) {
+                const direct = String(lead.state || '').trim().toUpperCase();
+                if (WP_STATE_CODES.has(direct)) return direct;
+                const txt = [lead.name, lead.contact, lead.companyName, lead.address, lead.city, lead.comment, lead.url, lead.website].filter(Boolean).join('  ');
+                const nm = txt.toUpperCase().match(new RegExp('\\b(' + Object.keys(WP_US_STATES).join('|') + ')\\b'));
+                if (nm) return WP_US_STATES[nm[1]];
+                let found = '', m, re = /\b([A-Z]{2})\b/g;           // case-sensitive: "CA", "NV" — not the words "in"/"or"
+                while ((m = re.exec(txt))) { if (WP_STATE_CODES.has(m[1])) found = m[1]; } // last code wins (the state usually follows the city)
+                return found;
+            }
+            function wpGuessPhone(lead) {
+                let p = String(lead.phone || '').replace(/\D/g, '');
+                if (p.length >= 10) return p.slice(-10);
+                const m = [lead.name, lead.comment, lead.contact].filter(Boolean).join(' ').match(/\(?(\d{3})\)?[\s.\-]?(\d{3})[\s.\-]?(\d{4})/);
+                return m ? (m[1] + m[2] + m[3]) : '';
+            }
+            // Little picker: Monica (doctors), George (attorneys), Rebecca (Media Network / ads), Alek (Spanish).
+            function openVoiceAgentPicker(lead) {
+                const old = document.getElementById('wpVoiceAgentOverlay'); if (old) old.remove();
+                const name = lead.name || lead.contact || 'this lead';
+                const ov = document.createElement('div');
+                ov.id = 'wpVoiceAgentOverlay';
+                ov.style.cssText = 'position:fixed;inset:0;background:rgba(10,20,40,0.55);z-index:100000;display:flex;align-items:center;justify-content:center;padding:16px;';
+                const btn = 'display:flex;flex-direction:column;align-items:center;gap:2px;padding:14px 8px;border-radius:12px;border:2px solid #d4dae3;background:#f7fafc;cursor:pointer;font-weight:800;font-size:0.95rem;color:#12314f;';
+                const sub = 'font-weight:600;font-size:0.72rem;color:#64748b;';
+                ov.innerHTML = '<div style="background:#fff;border-radius:16px;max-width:430px;width:100%;padding:20px;box-shadow:0 18px 50px rgba(0,0,0,0.3);">'
+                    + '<div style="font-weight:800;font-size:1.05rem;color:#0e2a47;margin-bottom:4px;">📞 Send to Voice Studio</div>'
+                    + '<div style="font-size:0.85rem;color:#51607a;margin-bottom:14px;">Which agent should call <b>' + tmEsc(name) + '</b>? They get the name, practice, state, phone and your notes before they call.</div>'
+                    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+                    + '<button class="wp-agent-pick" data-agent="monica" style="' + btn + '">👩‍⚕️ Monica<span style="' + sub + '">Doctors</span></button>'
+                    + '<button class="wp-agent-pick" data-agent="george" style="' + btn + '">⚖️ George<span style="' + sub + '">Attorneys</span></button>'
+                    + '<button class="wp-agent-pick" data-agent="rebecca" style="' + btn + '">📣 Rebecca<span style="' + sub + '">Media Network / Ads</span></button>'
+                    + '<button class="wp-agent-pick" data-agent="alek" style="' + btn + '">🗣️ Alek<span style="' + sub + '">Spanish</span></button>'
+                    + '</div>'
+                    + '<button id="wpAgentCancel" style="margin-top:14px;width:100%;padding:9px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;color:#64748b;font-weight:700;cursor:pointer;">Cancel</button>'
+                    + '</div>';
+                document.body.appendChild(ov);
+                ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
+                document.getElementById('wpAgentCancel').addEventListener('click', () => ov.remove());
+                ov.querySelectorAll('.wp-agent-pick').forEach(b => b.addEventListener('click', async () => { const a = b.dataset.agent; ov.remove(); await doWorkpilotCall(lead, a); }));
+            }
+            async function doWorkpilotCall(lead, agent) {
+                const nm = agent[0].toUpperCase() + agent.slice(1);
+                let state = wpGuessState(lead);
+                if (!WP_STATE_CODES.has(state)) {
+                    state = (prompt('Which state is ' + (lead.name || 'this practice') + ' in? (2 letters, e.g. CA) so ' + nm + ' calls during their business hours:') || '').trim().toUpperCase();
+                    if (!/^[A-Z]{2}$/.test(state)) { showToast('📞 Not sent — a 2-letter state is needed. Try again.', 'error'); return; }
+                }
+                const phone = wpGuessPhone(lead);
+                if (phone.length < 10) { showToast('📞 Not sent — this lead has no valid US phone number.', 'error'); return; }
+                const clean = (v) => { v = String(v == null ? '' : v).trim(); return /^no (name|phone|email|url|comment)$/i.test(v) ? '' : v; };
+                const payload = { id: 'wp-' + String(lead.id || Date.now()), name: clean(lead.name), contact: clean(lead.contact), business: clean(lead.companyName || lead.name),
+                    phone, state, agent, notes: clean(typeof commentWithExtras === 'function' ? commentWithExtras(lead) : lead.comment) };
+                try {
+                    const tok = await window.wpGmail.idToken();
+                    if (!tok) throw new Error('Google sign-in missing — open the AI Office once to sign in, then try again.');
+                    const r = await fetch('https://webswan-billing.netlify.app/.netlify/functions/voice-calls', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'workpilot_call', lead: payload }) });
+                    const d = await r.json().catch(() => ({}));
+                    if (!r.ok) throw new Error(d.error || ('Voice Studio error ' + r.status));
+                    showToast('📞 Sent to ' + nm + "'s call list" + (d.updated ? ' (updated an existing one)' : ' with your notes') + '.' + (d.paused ? ' Note: the auto-dialer is paused in Voice Studio right now.' : ''), 'success');
+                } catch (e) { console.error('workpilot_call failed', e); showToast('❌ Could not send to Voice Studio: ' + (e && e.message || e), 'error'); }
+            }
+
+            // Push a regular (Completed-Tasks) lead into the telemarketing list that Voice Studio and Eva work from.
+            // color 'lavender' = send to Eva for an audit-email draft; '' = just drop it in Voice Studio (she assigns the agent there).
+            // The id is built from the name so pushing the same lead twice updates it instead of duplicating.
+            async function pushCompletedLeadToTm(lead, color) {
+                if (!window.dailyFirebase || !window.dailyFirebase.addTelemarketingLead) { showToast('Could not reach the telemarketing list.', 'error'); return false; }
+                const clean = (v) => { v = String(v == null ? '' : v).trim(); return /^no (name|phone|email|url|comment)$/i.test(v) ? '' : v; };
+                const company = clean(lead.name), contact = clean(lead.contact);
+                const slug = (company || contact || 'lead').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 55);
+                const id = 'wp-' + (slug || Date.now());
+                const data = { name: company || contact || 'Lead', companyName: company, decisionMakerName: contact,
+                    phone: clean(lead.phone), email: clean(lead.email), website: clean(lead.url),
+                    comment: clean(commentWithExtras ? commentWithExtras(lead) : lead.comment), status: 'new', source: 'prospector', timestamp: new Date().toISOString() };
+                Object.keys(data).forEach(k => { if (!data[k]) delete data[k]; });
+                try {
+                    await window.dailyFirebase.addTelemarketingLead(id, data);
+                    if (color) setTmColor(id, color);
+                    await fetchTelemarketingLeads(false);
+                    return id;
+                } catch (e) { console.error('push to telemarketing failed', e); showToast('❌ Could not push: ' + (e && e.message || e), 'error'); return false; }
+            }
+
             // Menu entries shared by the lead card "Send" menu and the Completed list menu.
             function pushMenuItemsHtml(extraAttr) {
                 const sheets = SHEET_TARGETS.map(t => `<button class="send-option" data-action="sheet:${t.key}" ${extraAttr}><i class="fas fa-table"></i> Sheet: ${t.label}</button>`).join('');
@@ -5565,6 +5653,8 @@
                             <button class="completed-send-btn" title="Send this lead"><i class="fas fa-paper-plane"></i></button>
                             <div class="edit-dropdown-content">
                                 ${pushMenuItemsHtml(`data-index="${index}"`)}
+                                <button class="send-option" data-action="eva" data-index="${index}" style="color:#5b3fa8;font-weight:700;"><i class="fas fa-envelope"></i> 💜 Email draft (Eva)</button>
+                                <button class="send-option" data-action="voice" data-index="${index}" style="color:#1d4ed8;font-weight:700;"><i class="fas fa-phone-volume"></i> 📞 Send to Voice Studio</button>
                                 <button class="color-code-btn" data-index="${index}"><i class="fas fa-palette"></i> Color Code</button>
                                 <div class="completed-color-swatches" data-index="${index}">
                                     <button class="completed-color-swatch" data-color="yellow" data-index="${index}" style="background:#ffd600;" title="Yellow"></button>
@@ -5676,6 +5766,11 @@
                             openLeadInStudio(lead);
                         } else if (action === 'alek') {
                             await pushLeadToAlekQueue(lead);
+                        } else if (action === 'eva') {
+                            const id = await pushCompletedLeadToTm(lead, 'lavender');
+                            if (id) showToast('💜 ' + (lead.name || 'Lead') + ' sent to Eva (lavender) to draft the audit email. Your notes came along.', 'success');
+                        } else if (action === 'voice') {
+                            openVoiceAgentPicker(lead);
                         }
                     });
                 });
