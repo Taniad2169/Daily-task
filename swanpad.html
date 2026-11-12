@@ -150,7 +150,7 @@
             <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-1.5 drop-shadow-sm">
               SwanPad <span class="text-xs px-2.5 py-0.5 rounded-full font-bold bg-[#8cc1f5] text-[#123e6b]">Notepad</span>
             </h1>
-            <p class="text-xs text-white/80 font-medium">Grocery • Reminders • Notes</p>
+            <p class="text-xs text-white/80 font-medium">Reminders • Notes • Translator • Live Conversation</p>
           </div>
         </div>
 
@@ -160,12 +160,6 @@
             <i class="fa-solid fa-layer-group text-xs"></i>
             <span>All Notes</span>
             <span id="badge-all" class="text-[11px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-700 font-bold border border-slate-200">0</span>
-          </button>
-
-          <button onclick="switchCategory('grocery')" id="tab-grocery" class="cat-tab px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 text-slate-700 hover:text-[#123e6b]">
-            <i class="fa-solid fa-cart-shopping text-xs"></i>
-            <span>Grocery Shopping</span>
-            <span id="badge-grocery" class="text-[11px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-700 font-bold border border-slate-200">0</span>
           </button>
 
           <button onclick="switchCategory('reminder')" id="tab-reminder" class="cat-tab px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 text-slate-700 hover:text-[#123e6b]">
@@ -182,7 +176,7 @@
 
           <button onclick="switchCategory('translator')" id="tab-translator" class="cat-tab px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 flex items-center gap-2 text-slate-700 hover:text-[#123e6b]">
             <i class="fa-solid fa-language text-xs"></i>
-            <span>Language Translator</span>
+            <span>Translator &amp; Conversation</span>
             <span id="badge-translator" class="text-[11px] px-1.5 py-0.2 rounded-full bg-slate-100 text-slate-700 font-bold border border-slate-200">0</span>
           </button>
         </nav>
@@ -217,9 +211,6 @@
       <div class="md:hidden flex items-center justify-between overflow-x-auto py-2 px-2 bg-white rounded-2xl shadow-md space-x-2 my-2 no-scrollbar">
         <button onclick="switchCategory('all')" id="mob-tab-all" class="whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700">
           All
-        </button>
-        <button onclick="switchCategory('grocery')" id="mob-tab-grocery" class="whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700">
-          <i class="fa-solid fa-cart-shopping mr-1 text-[#3d90e0]"></i>Grocery
         </button>
         <button onclick="switchCategory('reminder')" id="mob-tab-reminder" class="whitespace-nowrap px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-100 text-slate-700">
           <i class="fa-regular fa-bell mr-1 text-[#3d90e0]"></i>Reminder
@@ -386,50 +377,90 @@
       </div>
     </div>
 
-    <!-- ==================== GROCERY SHOPPING CALCULATOR (Tania, Nov 10) ==================== -->
-    <div id="grocery-calc" class="hidden bg-white rounded-3xl p-5 sm:p-6 shadow-2xl mb-8 border border-white/80">
-      <div class="flex items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-100">
-        <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-2xl bg-[#8cc1f5]/25 text-[#123e6b] flex items-center justify-center text-lg font-bold shadow-sm"><i class="fa-solid fa-calculator"></i></div>
-          <div>
-            <h3 class="text-lg font-extrabold text-slate-900">Shopping Calculator</h3>
-            <p class="text-xs text-slate-500 font-medium">Add each item and its price &mdash; see your total before the cashier.</p>
-          </div>
+    <!-- ==================== LIVE CONVERSATION WITH JENNIFER (Tania, Nov 11) ==================== -->
+  <div id="swan-live" class="hidden bg-white rounded-3xl p-5 sm:p-6 shadow-2xl mb-8 border border-white/80">
+    <div class="flex items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-100">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-[#8cc1f5]/25 text-[#123e6b] flex items-center justify-center text-lg font-bold shadow-sm"><i class="fa-solid fa-comments"></i></div>
+        <div>
+          <h3 class="text-lg font-extrabold text-slate-900">Live Conversation with Jennifer</h3>
+          <p class="text-xs text-slate-500 font-medium">Speak out loud. She answers in the language you're learning, then scores you.</p>
         </div>
-        <button id="gc-clear" class="text-xs text-slate-400 hover:text-rose-500 font-semibold flex items-center gap-1.5 transition"><i class="fa-regular fa-trash-can"></i> Clear all</button>
       </div>
+      <button id="lv-settings-btn" class="text-xs text-slate-400 hover:text-[#123e6b] font-semibold flex items-center gap-1.5 transition"><i class="fa-solid fa-gear"></i> Key</button>
+    </div>
 
-      <!-- Add row -->
-      <div class="grid grid-cols-12 gap-2 sm:gap-3">
-        <input id="gc-name" type="text" placeholder="Item (optional)" class="col-span-12 sm:col-span-5 px-3.5 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#3d90e0] focus:ring-2 focus:ring-[#8cc1f5]/40 outline-none text-base">
-        <input id="gc-price" type="text" inputmode="decimal" placeholder="Price" aria-label="Price" class="col-span-5 sm:col-span-3 px-3.5 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#3d90e0] focus:ring-2 focus:ring-[#8cc1f5]/40 outline-none text-base">
-        <input id="gc-qty" type="number" min="1" step="1" value="1" aria-label="Quantity" class="col-span-3 sm:col-span-2 px-3 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-[#3d90e0] focus:ring-2 focus:ring-[#8cc1f5]/40 outline-none text-base text-center">
-        <button id="gc-add" class="col-span-4 sm:col-span-2 bg-[#3d90e0] hover:bg-[#2f7fcf] active:scale-95 text-white font-bold rounded-xl transition shadow-md flex items-center justify-center gap-1.5"><i class="fa-solid fa-plus"></i> Add</button>
-      </div>
-
-      <!-- Items list -->
-      <ul id="gc-list" class="mt-4 space-y-2"></ul>
-      <p id="gc-empty" class="mt-4 text-center text-sm text-slate-400 py-6">No items yet. Add your first item above. 🛒</p>
-
-      <!-- Totals -->
-      <div class="mt-5 pt-4 border-t border-slate-100 space-y-3">
-        <div class="flex items-center justify-between gap-3 flex-wrap">
-          <label class="text-sm font-semibold text-slate-600 flex items-center gap-2">Sales tax
-            <span class="relative"><input id="gc-tax" type="text" inputmode="decimal" value="0" class="w-16 px-2 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-center outline-none focus:border-[#3d90e0]">%</span>
-          </label>
-          <label class="text-sm font-semibold text-slate-600 flex items-center gap-2">Budget $
-            <input id="gc-budget" type="text" inputmode="decimal" placeholder="optional" class="w-24 px-2 py-1.5 rounded-lg border border-slate-200 bg-slate-50 text-center outline-none focus:border-[#3d90e0]">
-          </label>
-        </div>
-        <div class="flex items-center justify-between text-sm text-slate-500"><span id="gc-count">0 items</span><span id="gc-subtotal">Subtotal $0.00</span></div>
-        <div id="gc-taxrow" class="hidden items-center justify-between text-sm text-slate-500"><span>Tax</span><span id="gc-taxamt">$0.00</span></div>
-        <div class="flex items-center justify-between bg-[#8cc1f5]/20 rounded-2xl px-4 py-3">
-          <span class="text-base font-bold text-[#123e6b]">Total</span>
-          <span id="gc-total" class="text-2xl font-extrabold text-[#123e6b]">$0.00</span>
-        </div>
-        <p id="gc-budgetmsg" class="hidden text-center text-sm font-bold"></p>
+    <div id="lv-setup" class="hidden mb-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+      <label for="lv-key" class="block text-xs font-bold text-slate-700 mb-1">Your Gemini API key</label>
+      <p class="text-[11px] text-slate-500 mb-2">Saved only in this browser, on this device. It is never sent anywhere except Google, and never stored in the repository.</p>
+      <div class="flex gap-2">
+        <input id="lv-key" type="password" autocomplete="off" placeholder="Paste your key" class="flex-1 min-w-0 px-3 py-2 rounded-xl border border-slate-300 text-sm">
+        <button id="lv-key-save" class="px-4 py-2 rounded-xl bg-[#8cc1f5] text-[#123e6b] text-xs font-bold">Save</button>
+        <button id="lv-key-clear" class="px-3 py-2 rounded-xl bg-white border border-slate-300 text-slate-600 text-xs font-bold">Forget</button>
       </div>
     </div>
+
+    <div class="grid sm:grid-cols-3 gap-3 mb-4">
+      <div>
+        <label for="lv-lang" class="block text-xs font-bold text-slate-700 mb-1">I'm practising</label>
+        <select id="lv-lang" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white"></select>
+      </div>
+      <div>
+        <label for="lv-scene" class="block text-xs font-bold text-slate-700 mb-1">Scene</label>
+        <select id="lv-scene" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white"></select>
+      </div>
+      <div>
+        <label for="lv-level" class="block text-xs font-bold text-slate-700 mb-1">Level</label>
+        <select id="lv-level" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white">
+          <option value="beginner">Beginner &mdash; short, slow, simple</option>
+          <option value="intermediate" selected>Intermediate &mdash; normal pace</option>
+          <option value="fluent">Fluent &mdash; full speed, slang</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="flex flex-wrap items-center gap-2 mb-4">
+      <button id="lv-start" class="px-5 py-2.5 rounded-xl bg-[#8cc1f5] hover:bg-[#a6d3fa] text-[#123e6b] font-extrabold text-sm shadow-md transition flex items-center gap-2"><i class="fa-solid fa-play"></i> Start conversation</button>
+      <button id="lv-mic" class="hidden px-5 py-2.5 rounded-xl bg-[#123e6b] hover:bg-[#1b4f85] text-white font-extrabold text-sm shadow-md transition flex items-center gap-2"><i class="fa-solid fa-microphone"></i> <span id="lv-mic-label">Hold to speak</span></button>
+      <button id="lv-type" class="hidden px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-700 text-xs font-bold transition flex items-center gap-1.5"><i class="fa-solid fa-keyboard"></i> Type instead</button>
+      <button id="lv-end" class="hidden px-4 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-700 text-xs font-bold transition flex items-center gap-1.5"><i class="fa-solid fa-flag-checkered"></i> End &amp; score me</button>
+      <span id="lv-state" class="text-xs font-bold text-slate-500" role="status" aria-live="polite"></span>
+    </div>
+
+    <div id="lv-typebar" class="hidden flex gap-2 mb-4">
+      <input id="lv-typed" type="text" placeholder="Type your reply and press Enter" class="flex-1 min-w-0 px-3 py-2.5 rounded-xl border border-slate-300 text-sm">
+      <button id="lv-send" class="px-4 py-2.5 rounded-xl bg-[#8cc1f5] text-[#123e6b] text-xs font-bold">Send</button>
+    </div>
+
+    <div id="lv-thread" class="space-y-3 max-h-[26rem] overflow-y-auto pr-1" aria-live="polite"></div>
+
+    <div id="lv-report" class="hidden mt-5 pt-4 border-t border-slate-100"></div>
+
+    <div class="mt-5 pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+      <p class="text-xs text-slate-500">Jennifer stays in your practice language. Tap any of her lines to hear it again, or to see the English.</p>
+      <button id="lv-save-note" class="px-4 py-2 rounded-xl bg-white border border-slate-200 hover:border-[#8cc1f5] text-slate-700 hover:text-[#123e6b] text-xs font-bold transition flex items-center gap-1.5"><i class="fa-solid fa-bookmark"></i> Save this session to Notes</button>
+    </div>
+  </div>
+
+  <!-- ==================== MY PERSONAL DICTIONARY (moved in from the Swan Translator) ==================== -->
+  <div id="swan-dict" class="hidden bg-white rounded-3xl p-5 sm:p-6 shadow-2xl mb-8 border border-white/80">
+    <div class="flex items-center justify-between gap-3 pb-4 mb-4 border-b border-slate-100">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-[#8cc1f5]/25 text-[#123e6b] flex items-center justify-center text-lg font-bold shadow-sm"><i class="fa-solid fa-book-bookmark"></i></div>
+        <div>
+          <h3 class="text-lg font-extrabold text-slate-900">My Personal Dictionary</h3>
+          <p class="text-xs text-slate-500 font-medium">Words and phrases you saved while practising.</p>
+        </div>
+      </div>
+      <button id="dc-clear" class="text-xs text-slate-400 hover:text-rose-500 font-semibold flex items-center gap-1.5 transition"><i class="fa-regular fa-trash-can"></i> Clear all</button>
+    </div>
+    <div class="flex flex-col sm:flex-row gap-2 mb-4">
+      <input id="dc-term" type="text" placeholder="Word or phrase" class="flex-1 min-w-0 px-3 py-2.5 rounded-xl border border-slate-300 text-sm">
+      <input id="dc-mean" type="text" placeholder="What it means" class="flex-1 min-w-0 px-3 py-2.5 rounded-xl border border-slate-300 text-sm">
+      <button id="dc-add" class="px-4 py-2.5 rounded-xl bg-[#8cc1f5] text-[#123e6b] text-xs font-bold whitespace-nowrap">Add word</button>
+    </div>
+    <ul id="dc-list" class="space-y-2"></ul>
+  </div>
 
     <!-- Notes Grid Container -->
     <div id="notes-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -938,7 +969,7 @@
     }
 
     function updateCategoryUI() {
-      const tabs = ['all', 'grocery', 'reminder', 'notes', 'translator'];
+      const tabs = ['all', 'reminder', 'notes', 'translator'];
       tabs.forEach(tabKey => {
         const desktopBtn = document.getElementById(`tab-${tabKey}`);
         const mobileBtn = document.getElementById(`mob-tab-${tabKey}`);
@@ -996,13 +1027,11 @@
 
     function updateBadges() {
       const allCount = notes.length;
-      const groceryCount = notes.filter(n => n.category === 'grocery').length;
       const reminderCount = notes.filter(n => n.category === 'reminder').length;
       const notesCount = notes.filter(n => n.category === 'notes').length;
       const translatorCount = notes.filter(n => n.category === 'translator').length;
 
       document.getElementById('badge-all').textContent = allCount;
-      document.getElementById('badge-grocery').textContent = groceryCount;
       document.getElementById('badge-reminder').textContent = reminderCount;
       document.getElementById('badge-notes').textContent = notesCount;
       document.getElementById('badge-translator').textContent = translatorCount;
@@ -1167,7 +1196,7 @@
       } else {
         headerTitle.textContent = "Create New Note";
         saveBtnText.textContent = "Save Note";
-        categorySelect.value = (activeCategory !== 'all') ? activeCategory : 'grocery';
+        categorySelect.value = (activeCategory !== 'all') ? activeCategory : 'notes';
         titleInput.value = '';
         bodyTextarea.value = '';
       }
@@ -1473,7 +1502,7 @@ Adhere strictly to native speech conventions:
 
 Output ONLY the translated text in the target language. Do not add conversational intro or meta explanation.`;
 
-      const apiKey = "";
+      const apiKey = window.SWANPAD_KEY || "";
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
 
       try {
@@ -1712,77 +1741,322 @@ Output ONLY the translated text in the target language. Do not add conversationa
     window.copySyncLink = copySyncLink;
     window.copySyncIdOnly = copySyncIdOnly;
   </script>
-  <!-- Grocery calculator logic (Tania, Nov 10) -->
+  <!-- Live Conversation + Personal Dictionary logic (Tania, Nov 11) -->
   <script>
-  (function(){
+  (function () {
     "use strict";
-    var KEY="swanpad_grocery_calc_v1";
-    var state={items:[],tax:0,budget:null};
-    var $=function(id){return document.getElementById(id);};
-    function load(){ try{ var r=JSON.parse(localStorage.getItem(KEY)); if(r&&typeof r==="object"){ state.items=Array.isArray(r.items)?r.items:[]; state.tax=+r.tax||0; state.budget=(r.budget==null?null:+r.budget);} }catch(e){} }
-    function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
-    function money(n){ return "$"+(Math.round((n+Number.EPSILON)*100)/100).toFixed(2); }
-    function num(v){ var n=parseFloat(String(v==null?"":v).replace(/[^0-9.,-]/g,"").replace(",",".")); return isFinite(n)?n:0; }
-    function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];}); }
-    function subtotal(){ return state.items.reduce(function(a,it){ return a + num(it.price)*(it.qty||1); },0); }
-    function render(){
-      var list=$("gc-list"); if(!list) return;
-      list.innerHTML = state.items.map(function(it){
-        var line=num(it.price)*(it.qty||1);
-        return '<li class="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2.5 '+(it.got?"opacity-60":"")+'">'
-          +'<button data-got="'+it.id+'" aria-label="Mark as in cart" class="w-7 h-7 shrink-0 rounded-lg border-2 '+(it.got?"bg-[#3d90e0] border-[#3d90e0] text-white":"border-slate-300 text-transparent")+' flex items-center justify-center"><i class="fa-solid fa-check text-xs"></i></button>'
-          +'<span class="flex-1 min-w-0 truncate text-sm '+(it.got?"line-through text-slate-400":"text-slate-700")+'">'+(it.qty>1?('<b>'+it.qty+'&times;</b> '):"")+esc(it.name||"Item")+'</span>'
-          +'<span class="text-sm font-semibold text-slate-800 tabular-nums">'+money(line)+'</span>'
-          +'<button data-del="'+it.id+'" aria-label="Remove item" class="w-7 h-7 shrink-0 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>'
-          +'</li>';
-      }).join("");
-      $("gc-empty").style.display = state.items.length ? "none" : "block";
-      var sub=subtotal(), taxAmt=sub*(num(state.tax)/100), total=sub+taxAmt;
-      $("gc-count").textContent = state.items.length + (state.items.length===1?" item":" items");
-      $("gc-subtotal").textContent = "Subtotal "+money(sub);
-      var taxrow=$("gc-taxrow");
-      if(num(state.tax)>0){ taxrow.classList.remove("hidden"); taxrow.classList.add("flex"); $("gc-taxamt").textContent=money(taxAmt); }
-      else { taxrow.classList.add("hidden"); taxrow.classList.remove("flex"); }
-      $("gc-total").textContent = money(total);
-      var bm=$("gc-budgetmsg");
-      if(state.budget!=null && state.budget>0){
-        var diff=state.budget-total; bm.classList.remove("hidden");
-        if(diff>=0){ bm.textContent="\u2705 "+money(diff)+" left in your budget"; bm.className="text-center text-sm font-bold text-emerald-600"; }
-        else { bm.textContent="\u26A0\uFE0F Over budget by "+money(-diff); bm.className="text-center text-sm font-bold text-rose-600"; }
-      } else { bm.classList.add("hidden"); }
-      save();
-    }
-    function addItem(){
-      var name=$("gc-name"), price=$("gc-price"), qty=$("gc-qty");
-      var p=num(price.value); if(!(p>0)){ price.focus(); price.classList.add("ring-2","ring-rose-300"); setTimeout(function(){price.classList.remove("ring-2","ring-rose-300");},800); return; }
-      var q=Math.max(1, Math.floor(num(qty.value)||1));
-      state.items.push({id:Date.now().toString(36)+Math.random().toString(36).slice(2,6), name:(name.value||"").trim().slice(0,60), price:p, qty:q, got:false});
-      name.value=""; price.value=""; qty.value="1"; render(); name.focus();
-    }
-    function wire(){
-      if(!$("gc-add")) return;
-      $("gc-add").addEventListener("click", addItem);
-      ["gc-name","gc-price","gc-qty"].forEach(function(id){ $(id).addEventListener("keydown", function(e){ if(e.key==="Enter") addItem(); }); });
-      $("gc-list").addEventListener("click", function(e){
-        var g=e.target.closest("[data-got]"), d=e.target.closest("[data-del]");
-        if(g){ var it=state.items.find(function(x){return x.id===g.getAttribute("data-got");}); if(it){ it.got=!it.got; render(); } }
-        else if(d){ state.items=state.items.filter(function(x){return x.id!==d.getAttribute("data-del");}); render(); }
+    var KEY_API = "swanpad_ai_key_v1", KEY_DICT = "swanpad_dictionary_v1", KEY_PREF = "swanpad_live_pref_v1";
+    var $ = function (id) { return document.getElementById(id); };
+    var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
+    var ls = {
+      get: function (k, d) { try { var v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } },
+      set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+      del: function (k) { try { localStorage.removeItem(k); } catch (e) {} }
+    };
+    function toast(m, t) { if (typeof window.showToast === "function") window.showToast(m, t); }
+
+    var LANGS = [
+      { v: "Spanish", label: "Spanish", bcp: "es-US", voice: "es" },
+      { v: "Mexican Spanish", label: "Spanish (Mexican)", bcp: "es-MX", voice: "es" },
+      { v: "Cuban Spanish", label: "Spanish (Cuban)", bcp: "es-US", voice: "es" },
+      { v: "Dominican Spanish", label: "Spanish (Dominican)", bcp: "es-DO", voice: "es" },
+      { v: "French", label: "French", bcp: "fr-FR", voice: "fr" },
+      { v: "Haitian Creole", label: "Haitian Creole", bcp: "fr-FR", voice: "fr" },
+      { v: "Brazilian Portuguese", label: "Portuguese (Brazilian)", bcp: "pt-BR", voice: "pt" },
+      { v: "Italian", label: "Italian", bcp: "it-IT", voice: "it" },
+      { v: "English", label: "English", bcp: "en-US", voice: "en" }
+    ];
+    var SCENES = [
+      { v: "a friendly everyday chat: how your day went, your family, the weather, what you ate", label: "Everyday small talk" },
+      { v: "a restaurant: you are the customer ordering food, asking about dishes and paying", label: "Restaurant" },
+      { v: "an airport and a taxi: check-in, bags, gate, then giving a driver the address", label: "Airport and taxi" },
+      { v: "a doctor's office: booking the visit, describing how you feel, understanding instructions", label: "Doctor's office" },
+      { v: "a business call: you are a web developer explaining website compliance to a prospective client", label: "Business call (your work)" },
+      { v: "a market or store: asking prices, sizes, colours, and haggling politely", label: "Shopping" },
+      { v: "a hotel: checking in, asking about the room, wifi and breakfast, reporting a problem", label: "Hotel" }
+    ];
+
+    var S = { on: false, lang: LANGS[0], scene: SCENES[0], level: "intermediate", turns: [], busy: false, rec: null, listening: false };
+
+    function apiKey() { return ls.get(KEY_API, "") || ""; }
+    function setState(t) { var e = $("lv-state"); if (e) e.textContent = t || ""; }
+
+    // ---------- Gemini ----------
+    async function ask(systemText, history, userText) {
+      var key = apiKey();
+      if (!key) { $("lv-setup").classList.remove("hidden"); throw new Error("Add your Gemini API key first (the Key button above)."); }
+      var contents = history.slice();
+      if (userText) contents.push({ role: "user", parts: [{ text: userText }] });
+      var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(key);
+      var res = await fetch(url, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: contents, systemInstruction: { parts: [{ text: systemText }] } })
       });
-      $("gc-tax").addEventListener("input", function(){ state.tax=num(this.value); render(); });
-      $("gc-budget").addEventListener("input", function(){ var v=this.value.trim(); state.budget = v===""?null:num(v); render(); });
-      $("gc-clear").addEventListener("click", function(){ if(!state.items.length || confirm("Clear the whole shopping list?")){ state.items=[]; render(); } });
-      load();
-      $("gc-tax").value = state.tax||0;
-      if(state.budget!=null) $("gc-budget").value = state.budget;
-      render();
-      // Show the calculator only in the Grocery category.
-      var panel=$("grocery-calc");
-      function toggle(cat){ if(panel){ if(cat==="grocery"){ panel.classList.remove("hidden"); } else { panel.classList.add("hidden"); } } }
-      if(typeof window.switchCategory==="function"){ var orig=window.switchCategory; window.switchCategory=function(cat){ orig(cat); toggle(cat); }; }
-      // In case the app restored a saved category on load:
-      try{ if(window.activeCategory==="grocery") toggle("grocery"); }catch(e){}
+      var data = await res.json();
+      if (!res.ok) throw new Error((data && data.error && data.error.message) || ("Gemini " + res.status));
+      var out = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
+      if (!out) throw new Error("Jennifer didn't answer. Try again.");
+      return out.trim();
     }
-    if(document.readyState==="loading") document.addEventListener("DOMContentLoaded", wire); else wire();
+
+    function sysPrompt() {
+      var pace = S.level === "beginner" ? "Use short, simple sentences and speak slowly and clearly. Six words or fewer when you can."
+        : S.level === "fluent" ? "Speak at full native speed and use real slang and idioms."
+        : "Speak at a normal, natural pace with everyday vocabulary.";
+      return "You are Jennifer, a warm, patient conversation partner helping Tania practise " + S.lang.v + " by talking out loud, like a language tutor on a phone call.\n"
+        + "The scene is " + S.scene.v + ". Stay in that scene.\n"
+        + "RULES:\n"
+        + "- Reply ONLY in " + S.lang.v + ". Never switch to English, even if she writes in English.\n"
+        + "- " + pace + "\n"
+        + "- One or two sentences per turn, then ALWAYS end with a question so she has to answer.\n"
+        + "- If she makes a mistake, do not lecture. Answer naturally, and work the correct form into your own reply so she hears it right.\n"
+        + "- Never explain grammar unless she asks in English.\n"
+        + "- Never write stage directions, asterisks or emoji. Only the words you would say out loud.\n"
+        + "- If she is stuck or silent, ask an easier question.\n"
+        + "Return ONLY your spoken line.";
+    }
+
+    function scorePrompt() {
+      return "You are Jennifer, a language coach. Below is a practice conversation in " + S.lang.v + " between you and Tania.\n"
+        + "Score HER " + S.lang.v + ", not yours. Reply as strict JSON only, no code fence:\n"
+        + '{"score":<1-10 integer>,"headline":"<one short sentence in English>","good":["<up to 3 things she did well, English>"],"fix":[{"said":"<what she said>","better":"<the natural way to say it>","why":"<short English reason>"}],"words":[{"term":"<useful word or phrase in ' + S.lang.v + '>","mean":"<English meaning>"}]}\n'
+        + "Give at most 3 fixes and at most 5 words. Be encouraging but honest. If she barely spoke, say so and score low.";
+    }
+
+    // ---------- speech ----------
+    function speak(text) {
+      try {
+        if (!window.speechSynthesis) return;
+        window.speechSynthesis.cancel();
+        var u = new SpeechSynthesisUtterance(text);
+        u.lang = S.lang.bcp;
+        var vs = window.speechSynthesis.getVoices() || [];
+        var pick = vs.filter(function (v) { return v.lang && v.lang.toLowerCase().indexOf(S.lang.voice) === 0; });
+        var fem = pick.filter(function (v) { return /female|woman|google|paulina|monica|luciana|amelie|aurelie|alice/i.test(v.name); });
+        if (fem.length) u.voice = fem[0]; else if (pick.length) u.voice = pick[0];
+        u.rate = S.level === "beginner" ? 0.85 : S.level === "fluent" ? 1.05 : 0.95;
+        window.speechSynthesis.speak(u);
+      } catch (e) {}
+    }
+
+    function recognizer() {
+      var R = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!R) return null;
+      var r = new R();
+      r.lang = S.lang.bcp; r.interimResults = false; r.maxAlternatives = 1; r.continuous = false;
+      return r;
+    }
+
+    function micStop() {
+      S.listening = false;
+      if (S.rec) { try { S.rec.stop(); } catch (e) {} S.rec = null; }
+      var b = $("lv-mic"); if (b) { b.classList.remove("ring-4", "ring-rose-300"); }
+      var l = $("lv-mic-label"); if (l) l.textContent = "Hold to speak";
+    }
+
+    function micStart() {
+      if (S.busy || S.listening) return;
+      var r = recognizer();
+      if (!r) { toast("This browser can't hear you. Use “Type instead”.", "error"); typeMode(true); return; }
+      S.rec = r; S.listening = true;
+      var b = $("lv-mic"); if (b) b.classList.add("ring-4", "ring-rose-300");
+      var l = $("lv-mic-label"); if (l) l.textContent = "Listening…";
+      setState("Listening…");
+      r.onresult = function (ev) {
+        var said = "";
+        try { said = ev.results[0][0].transcript || ""; } catch (e) {}
+        micStop();
+        if (said.trim()) send(said.trim()); else setState("I didn't catch that. Try again.");
+      };
+      r.onerror = function (ev) { micStop(); setState(ev && ev.error === "not-allowed" ? "Microphone blocked. Allow it in your browser, or type instead." : "I didn't catch that. Try again."); };
+      r.onend = function () { if (S.listening) micStop(); };
+      try { r.start(); } catch (e) { micStop(); setState("Couldn't start the microphone."); }
+    }
+
+    // ---------- thread ----------
+    function bubble(who, text, extra) {
+      var wrap = document.createElement("div");
+      var mine = who === "me";
+      wrap.className = "flex " + (mine ? "justify-end" : "justify-start");
+      var b = document.createElement("div");
+      b.className = "max-w-[85%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed " + (mine ? "bg-[#123e6b] text-white rounded-br-md" : "bg-slate-100 text-slate-800 rounded-bl-md cursor-pointer");
+      b.innerHTML = '<span class="block text-[10px] font-bold uppercase tracking-wide opacity-60 mb-0.5">' + (mine ? "You" : "Jennifer") + "</span>" + esc(text) + (extra ? '<span class="block mt-1 text-[11px] opacity-70">' + esc(extra) + "</span>" : "");
+      if (!mine) b.onclick = function () { speak(text); };
+      wrap.appendChild(b);
+      $("lv-thread").appendChild(wrap);
+      $("lv-thread").scrollTop = $("lv-thread").scrollHeight;
+    }
+
+    async function send(text) {
+      if (S.busy) return;
+      S.busy = true; setState("Jennifer is thinking…");
+      bubble("me", text);
+      S.turns.push({ role: "user", parts: [{ text: text }] });
+      try {
+        var reply = await ask(sysPrompt(), S.turns, null);
+        S.turns.push({ role: "model", parts: [{ text: reply }] });
+        bubble("jen", reply);
+        speak(reply);
+        setState("Your turn.");
+      } catch (e) { setState(""); toast(e.message, "error"); }
+      S.busy = false;
+    }
+
+    async function start() {
+      S.lang = LANGS[+$("lv-lang").value] || LANGS[0];
+      S.scene = SCENES[+$("lv-scene").value] || SCENES[0];
+      S.level = $("lv-level").value;
+      ls.set(KEY_PREF, JSON.stringify({ l: $("lv-lang").value, s: $("lv-scene").value, v: S.level }));
+      if (!apiKey()) { $("lv-setup").classList.remove("hidden"); toast("Add your Gemini API key to start.", "error"); return; }
+      S.on = true; S.turns = []; $("lv-thread").innerHTML = ""; $("lv-report").classList.add("hidden"); $("lv-report").innerHTML = "";
+      $("lv-start").classList.add("hidden");
+      $("lv-mic").classList.remove("hidden"); $("lv-type").classList.remove("hidden"); $("lv-end").classList.remove("hidden");
+      S.busy = true; setState("Jennifer is calling…");
+      try {
+        var open = await ask(sysPrompt(), [], "Greet me and open the scene with one short line and a question.");
+        S.turns.push({ role: "user", parts: [{ text: "Greet me and open the scene with one short line and a question." }] });
+        S.turns.push({ role: "model", parts: [{ text: open }] });
+        bubble("jen", open); speak(open); setState("Your turn. Press the mic and speak.");
+      } catch (e) { setState(""); toast(e.message, "error"); reset(); }
+      S.busy = false;
+    }
+
+    function reset() {
+      S.on = false; micStop();
+      $("lv-start").classList.remove("hidden");
+      $("lv-mic").classList.add("hidden"); $("lv-type").classList.add("hidden"); $("lv-end").classList.add("hidden");
+      $("lv-typebar").classList.add("hidden");
+      setState("");
+    }
+
+    function typeMode(force) {
+      var bar = $("lv-typebar");
+      if (force) bar.classList.remove("hidden"); else bar.classList.toggle("hidden");
+      if (!bar.classList.contains("hidden")) $("lv-typed").focus();
+    }
+
+    async function finish() {
+      if (!S.turns.length) { reset(); return; }
+      S.busy = true; setState("Scoring you…");
+      var script = S.turns.map(function (t) {
+        return (t.role === "user" ? "Tania: " : "Jennifer: ") + (t.parts && t.parts[0] ? t.parts[0].text : "");
+      }).join("\n");
+      try {
+        var raw = await ask(scorePrompt(), [], script);
+        var j = null;
+        try { j = JSON.parse(raw.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim()); } catch (e) {}
+        renderReport(j, raw);
+      } catch (e) { toast(e.message, "error"); }
+      S.busy = false; setState(""); reset();
+    }
+
+    function renderReport(j, raw) {
+      var box = $("lv-report"); box.classList.remove("hidden");
+      if (!j || typeof j.score === "undefined") { box.innerHTML = '<p class="text-sm text-slate-700 whitespace-pre-wrap">' + esc(raw) + "</p>"; return; }
+      var n = Math.max(1, Math.min(10, parseInt(j.score, 10) || 1));
+      var colour = n >= 8 ? "bg-emerald-100 text-emerald-700" : n >= 5 ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-700";
+      var html = '<div class="flex items-center gap-3 mb-3"><div class="w-14 h-14 rounded-2xl ' + colour + ' flex items-center justify-center text-2xl font-extrabold">' + n + '</div>'
+        + '<div><p class="text-xs font-bold uppercase tracking-wide text-slate-400">Your ' + esc(S.lang.label) + ' this session</p>'
+        + '<p class="text-sm font-bold text-slate-800">' + esc(j.headline || "") + "</p></div></div>";
+      if (Array.isArray(j.good) && j.good.length) html += '<p class="text-xs font-bold text-slate-700 mb-1">What you did well</p><ul class="list-disc pl-5 mb-3 space-y-0.5 text-sm text-slate-700">' + j.good.map(function (g) { return "<li>" + esc(g) + "</li>"; }).join("") + "</ul>";
+      if (Array.isArray(j.fix) && j.fix.length) html += '<p class="text-xs font-bold text-slate-700 mb-1">Say it this way next time</p><div class="space-y-2 mb-3">' + j.fix.map(function (f) {
+        return '<div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-sm"><span class="line-through text-slate-400">' + esc(f.said || "") + '</span> <span class="font-bold text-[#123e6b]">' + esc(f.better || "") + '</span><span class="block text-[11px] text-slate-500 mt-0.5">' + esc(f.why || "") + "</span></div>";
+      }).join("") + "</div>";
+      if (Array.isArray(j.words) && j.words.length) {
+        html += '<p class="text-xs font-bold text-slate-700 mb-1">Worth keeping</p><div class="flex flex-wrap gap-2">' + j.words.map(function (w, i) {
+          return '<button data-keep="' + i + '" class="px-3 py-1.5 rounded-xl bg-[#8cc1f5]/25 hover:bg-[#8cc1f5]/50 text-[#123e6b] text-xs font-bold transition">+ ' + esc(w.term || "") + "</button>";
+        }).join("") + "</div>";
+      }
+      box.innerHTML = html;
+      box.querySelectorAll("[data-keep]").forEach(function (b) {
+        b.onclick = function () { var w = j.words[+b.getAttribute("data-keep")]; if (w) { dictAdd(w.term, w.mean); b.disabled = true; b.textContent = "✓ " + (w.term || ""); } };
+      });
+      S.lastReport = j;
+    }
+
+    function saveSessionNote() {
+      if (!S.turns.length) { toast("Nothing to save yet.", "error"); return; }
+      var lines = S.turns.map(function (t) { return (t.role === "user" ? "Me: " : "Jennifer: ") + (t.parts && t.parts[0] ? t.parts[0].text : ""); }).join("\n");
+      var body = S.lang.label + " practice — " + S.scene.label + "\n\n" + lines + (S.lastReport ? "\n\nScore: " + S.lastReport.score + "/10 — " + (S.lastReport.headline || "") : "");
+      try {
+        if (typeof window.openNoteEditor === "function") {
+          window.openNoteEditor("notes");
+          setTimeout(function () {
+            var t = document.getElementById("note-title"), b = document.getElementById("note-body") || document.getElementById("editor-body");
+            if (t) t.value = S.lang.label + " practice with Jennifer";
+            if (b) { b.value = body; if (typeof window.handleContentInput === "function") window.handleContentInput(); }
+          }, 150);
+          return;
+        }
+      } catch (e) {}
+      navigator.clipboard && navigator.clipboard.writeText(body);
+      toast("Session copied to your clipboard.");
+    }
+
+    // ---------- personal dictionary ----------
+    function dict() { try { var a = JSON.parse(ls.get(KEY_DICT, "[]")); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+    function dictSave(a) { ls.set(KEY_DICT, JSON.stringify(a.slice(0, 500))); }
+    function dictAdd(term, mean) {
+      term = String(term || "").trim(); if (!term) return;
+      var a = dict();
+      if (a.some(function (x) { return x.term.toLowerCase() === term.toLowerCase(); })) { toast("Already in your dictionary."); return; }
+      a.unshift({ term: term, mean: String(mean || "").trim(), lang: S.lang.label, at: Date.now() });
+      dictSave(a); dictRender(); toast("Saved to your dictionary.");
+    }
+    function dictRender() {
+      var l = $("dc-list"); if (!l) return;
+      var a = dict();
+      if (!a.length) { l.innerHTML = '<li class="text-sm text-slate-400 py-6 text-center">No words yet. Add one above, or keep them from a practice session.</li>'; return; }
+      l.innerHTML = a.map(function (x, i) {
+        return '<li class="flex items-start gap-2 bg-slate-50 rounded-xl px-3 py-2.5"><div class="flex-1 min-w-0"><p class="text-sm font-bold text-slate-800">' + esc(x.term) + '</p><p class="text-xs text-slate-500">' + esc(x.mean || "—") + (x.lang ? ' <span class="opacity-60">· ' + esc(x.lang) + "</span>" : "") + '</p></div><button data-say="' + i + '" aria-label="Hear it" class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-[#123e6b]"><i class="fa-solid fa-volume-high text-xs"></i></button><button data-del="' + i + '" aria-label="Remove" class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-400 hover:text-rose-500"><i class="fa-regular fa-trash-can text-xs"></i></button></li>';
+      }).join("");
+      l.querySelectorAll("[data-say]").forEach(function (b) { b.onclick = function () { speak(dict()[+b.getAttribute("data-say")].term); }; });
+      l.querySelectorAll("[data-del]").forEach(function (b) { b.onclick = function () { var a2 = dict(); a2.splice(+b.getAttribute("data-del"), 1); dictSave(a2); dictRender(); }; });
+    }
+
+    // ---------- wiring ----------
+    function wire() {
+      if (!$("swan-live")) return;
+      LANGS.forEach(function (l, i) { var o = document.createElement("option"); o.value = i; o.textContent = l.label; $("lv-lang").appendChild(o); });
+      SCENES.forEach(function (s, i) { var o = document.createElement("option"); o.value = i; o.textContent = s.label; $("lv-scene").appendChild(o); });
+      try {
+        var p = JSON.parse(ls.get(KEY_PREF, "null"));
+        if (p) { if (p.l != null) $("lv-lang").value = p.l; if (p.s != null) $("lv-scene").value = p.s; if (p.v) $("lv-level").value = p.v; }
+      } catch (e) {}
+      if (apiKey()) $("lv-key").value = apiKey();
+
+      $("lv-settings-btn").onclick = function () { $("lv-setup").classList.toggle("hidden"); };
+      $("lv-key-save").onclick = function () { var v = $("lv-key").value.trim(); if (!v) { toast("Paste a key first.", "error"); return; } ls.set(KEY_API, v); window.SWANPAD_KEY = v; $("lv-setup").classList.add("hidden"); toast("Key saved on this device only."); };
+      $("lv-key-clear").onclick = function () { ls.del(KEY_API); window.SWANPAD_KEY = ""; $("lv-key").value = ""; toast("Key forgotten."); };
+      $("lv-start").onclick = start;
+      $("lv-mic").onclick = function () { if (S.listening) micStop(); else micStart(); };
+      $("lv-type").onclick = function () { typeMode(); };
+      $("lv-end").onclick = finish;
+      $("lv-send").onclick = function () { var v = $("lv-typed").value.trim(); if (v) { $("lv-typed").value = ""; send(v); } };
+      $("lv-typed").onkeydown = function (e) { if (e.key === "Enter") { e.preventDefault(); $("lv-send").click(); } };
+      $("lv-save-note").onclick = saveSessionNote;
+      $("dc-add").onclick = function () { dictAdd($("dc-term").value, $("dc-mean").value); $("dc-term").value = ""; $("dc-mean").value = ""; };
+      $("dc-clear").onclick = function () { if (confirm("Clear your whole dictionary?")) { dictSave([]); dictRender(); } };
+      dictRender();
+      window.SWANPAD_KEY = apiKey();
+      try { if (window.speechSynthesis) window.speechSynthesis.getVoices(); } catch (e) {}
+
+      // Live Conversation and the dictionary sit on the Language Translator screen, under the translator card.
+      function toggle(cat) {
+        var live = $("swan-live"), dc = $("swan-dict");
+        var show = cat === "translator";
+        if (live) live.classList.toggle("hidden", !show);
+        if (dc) dc.classList.toggle("hidden", !show);
+        if (!show) { micStop(); try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {} }
+      }
+      if (typeof window.switchCategory === "function") {
+        var orig = window.switchCategory;
+        window.switchCategory = function (cat) { orig(cat); toggle(cat); };
+      }
+      try { if (window.activeCategory === "translator") toggle("translator"); } catch (e) {}
+      window.swanDictAdd = dictAdd;
+    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", wire); else wire();
   })();
   </script>
 </body>
