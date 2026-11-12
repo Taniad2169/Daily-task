@@ -2683,6 +2683,7 @@
                     <div style="border:1.5px dashed #d9cff5;border-radius:10px;padding:8px;">
                         <div style="font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">📄 Their audit (PDF)</div>
                         <input id="evaAudit" type="file" accept=".pdf,application/pdf,image/*" style="font-size:0.8rem;margin-top:4px;max-width:100%;">
+                        <div id="evaAuditWas" style="display:none;margin-top:6px;font-size:0.72rem;line-height:1.35;color:#157a5e;"></div>
                     </div>
                     <div style="border:1.5px dashed #d9cff5;border-radius:10px;padding:8px;">
                         <div style="font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">🎨 Jimmy's flyer</div>
@@ -6367,6 +6368,18 @@
                 document.getElementById('evaCall').innerHTML = evaCallSummary(lead);
                 (function () { const tn = String(lead.myNotes || '').trim(), el = document.getElementById('evaTaniaNotes'); if (!el) return; if (tn) { el.style.display = 'block'; el.innerHTML = "📝 <b>Tania's instructions — edit the draft to match these:</b><br>" + tmEsc(tn).replace(/\n/g, '<br>'); } else { el.style.display = 'none'; el.textContent = ''; } })();
                 ['evaAudit', 'evaFlyer'].forEach(id => document.getElementById(id).value = '');
+                // Tania, Nov 11: the file box always starts empty, so say plainly whether an audit
+                // already went out for this lead instead of leaving her guessing.
+                (function () {
+                    const el = document.getElementById('evaAuditWas'); if (!el) return;
+                    const past = (evaDrafts()[String(lead.id)] || []).filter(d => (d.files || []).some(f => /\.pdf$/i.test(f)));
+                    if (past.length) {
+                        const last = past[past.length - 1];
+                        const names = (last.files || []).filter(f => /\.pdf$/i.test(f)).join(', ');
+                        el.style.display = 'block';
+                        el.innerHTML = '\u2705 Audit already attached on ' + tmEsc(new Date(last.at).toLocaleDateString()) + ': <b>' + tmEsc(names) + '</b><br>Only choose a file again if you are re-sending it.';
+                    } else { el.style.display = 'none'; el.textContent = ''; }
+                })();
                 document.getElementById('evaFlyerUrl').value = '';
                 document.getElementById('evaMsg').textContent = lead.email ? '' : 'No email on this lead yet. Find it with the Email Finder in Lead Prospector, then paste it here.';
                 document.getElementById('evaMsg').style.color = '#8a5a00';
