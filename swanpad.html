@@ -1862,19 +1862,51 @@ Output ONLY the translated text in the target language. Do not add conversationa
     }
 
     // ---------- speech ----------
-    function speak(text) {
+    // Browsers hand over the voice list late, and some need a tap before they will make any sound at all,
+    // so warm both up on the first click and never fail silently.
+    var VOICES = [];
+    function loadVoices() {
+      try { VOICES = window.speechSynthesis ? (window.speechSynthesis.getVoices() || []) : []; } catch (e) { VOICES = []; }
+      return VOICES;
+    }
+    function unlockVoice() {
       try {
         if (!window.speechSynthesis) return;
-        window.speechSynthesis.cancel();
-        var u = new SpeechSynthesisUtterance(text);
-        u.lang = S.lang.bcp;
-        var vs = window.speechSynthesis.getVoices() || [];
-        var pick = vs.filter(function (v) { return v.lang && v.lang.toLowerCase().indexOf(S.lang.voice) === 0; });
-        var fem = pick.filter(function (v) { return /female|woman|google|paulina|monica|luciana|amelie|aurelie|alice/i.test(v.name); });
-        if (fem.length) u.voice = fem[0]; else if (pick.length) u.voice = pick[0];
-        u.rate = S.level === "beginner" ? 0.85 : S.level === "fluent" ? 1.05 : 0.95;
-        window.speechSynthesis.speak(u);
+        loadVoices();
+        var u = new SpeechSynthesisUtterance(" ");
+        u.volume = 0; window.speechSynthesis.speak(u);
       } catch (e) {}
+    }
+    function voiceFor(lang) {
+      var vs = VOICES.length ? VOICES : loadVoices();
+      var want = (lang.bcp || "").toLowerCase(), two = (lang.voice || "").toLowerCase();
+      var exact = vs.filter(function (v) { return (v.lang || "").toLowerCase().replace("_", "-") === want; });
+      var same = vs.filter(function (v) { return (v.lang || "").toLowerCase().indexOf(two) === 0; });
+      var pool = exact.length ? exact : same;
+      var fem = pool.filter(function (v) { return /female|woman|google|paulina|monica|luciana|amelie|aurelie|alice|helena|ines|sabina/i.test(v.name || ""); });
+      return (fem[0] || pool[0] || null);
+    }
+    function speak(text) {
+      if (!window.speechSynthesis) { setState("This browser can't speak. Tap a line to read it."); return; }
+      try {
+        window.speechSynthesis.cancel();
+        var u = new SpeechSynthesisUtterance(String(text || ""));
+        u.lang = S.lang.bcp;
+        var v = voiceFor(S.lang);
+        if (v) u.voice = v;
+        u.rate = S.level === "beginner" ? 0.85 : S.level === "fluent" ? 1.05 : 0.95;
+        u.onstart = function () { setState("Jennifer is speaking\u2026"); };
+        u.onend = function () { setState(S.on ? "Your turn. Press the mic and speak." : ""); };
+        u.onerror = function () { setState("No " + S.lang.label + " voice in this browser \u2014 tap her line to read it."); };
+        window.speechSynthesis.speak(u);
+        // Chrome sometimes queues an utterance and never starts it: nudge it, then say so if it stays silent.
+        setTimeout(function () {
+          try { if (window.speechSynthesis.paused) window.speechSynthesis.resume(); } catch (e) {}
+          if (!window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
+            setState(v ? "Her voice didn't play \u2014 tap her line to try again." : "Your browser has no " + S.lang.label + " voice installed. Her words are on screen; tap a line to retry.");
+          }
+        }, 900);
+      } catch (e) { setState("Couldn't play her voice. Her words are on screen."); }
     }
 
     function recognizer() {
@@ -1930,7 +1962,15 @@ Output ONLY the translated text in the target language. Do not add conversationa
       var b = document.createElement("div");
       b.className = "max-w-[85%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed " + (mine ? "bg-[#123e6b] text-white rounded-br-md" : "bg-slate-100 text-slate-800 rounded-bl-md cursor-pointer");
       b.innerHTML = '<span class="block text-[10px] font-bold uppercase tracking-wide opacity-60 mb-0.5">' + (mine ? "You" : "Jennifer") + "</span>" + esc(text) + (extra ? '<span class="block mt-1 text-[11px] opacity-70">' + esc(extra) + "</span>" : "");
-      if (!mine) b.onclick = function () { speak(text); };
+      if (!mine) {
+        b.onclick = function () { speak(text); };
+        var sp = document.createElement("button");
+        sp.type = "button"; sp.setAttribute("aria-label", "Hear it again");
+        sp.className = "mt-1 text-[11px] font-bold text-[#123e6b] opacity-70 hover:opacity-100";
+        sp.textContent = "\u{1F50A} Play";
+        sp.onclick = function (ev) { ev.stopPropagation(); speak(text); };
+        b.appendChild(sp);
+      }
       wrap.appendChild(b);
       $("lv-thread").appendChild(wrap);
       $("lv-thread").scrollTop = $("lv-thread").scrollHeight;
@@ -1956,6 +1996,7 @@ Output ONLY the translated text in the target language. Do not add conversationa
       S.scene = SCENES[+$("lv-scene").value] || SCENES[0];
       S.level = $("lv-level").value;
       ls.set(KEY_PREF, JSON.stringify({ l: $("lv-lang").value, s: $("lv-scene").value, v: S.level }));
+      unlockVoice();
       if (!apiKey()) { $("lv-setup").classList.remove("hidden"); toast("Add your Gemini API key to start.", "error"); return; }
       S.on = true; S.turns = []; $("lv-thread").innerHTML = ""; $("lv-report").classList.add("hidden"); $("lv-report").innerHTML = "";
       $("lv-start").classList.add("hidden");
@@ -2096,7 +2137,8 @@ Output ONLY the translated text in the target language. Do not add conversationa
       $("dc-clear").onclick = function () { if (confirm("Clear your whole dictionary?")) { dictSave([]); dictRender(); } };
       dictRender();
       window.SWANPAD_KEY = apiKey();
-      try { if (window.speechSynthesis) window.speechSynthesis.getVoices(); } catch (e) {}
+      loadVoices();
+      try { if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = loadVoices; } catch (e) {}
 
       // Live Conversation and the dictionary sit on the Language Translator screen, under the translator card.
       function toggle(cat) {
