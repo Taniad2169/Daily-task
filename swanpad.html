@@ -1782,21 +1782,52 @@ Output ONLY the translated text in the target language. Do not add conversationa
     function setState(t) { var e = $("lv-state"); if (e) e.textContent = t || ""; }
 
     // ---------- Gemini ----------
-    async function ask(systemText, history, userText) {
+    // Model names change often, so ask the key which models it can actually use instead of hard-coding one.
+    var KEY_MODEL = "swanpad_ai_model_v1";
+    var WANT = ["gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash", "gemini-2.5-flash-lite", "gemini-1.5-flash"];
+    async function pickModel(force) {
+      var cached = ls.get(KEY_MODEL, "");
+      if (cached && !force) return cached;
+      var res = await fetch("https://generativelanguage.googleapis.com/v1beta/models?key=" + encodeURIComponent(apiKey()));
+      var data = await res.json();
+      if (!res.ok) throw new Error((data && data.error && data.error.message) || ("Google said " + res.status + ". Check the key."));
+      var usable = (data.models || [])
+        .filter(function (m) { return (m.supportedGenerationMethods || []).indexOf("generateContent") > -1; })
+        .map(function (m) { return String(m.name || "").replace(/^models\//, ""); });
+      if (!usable.length) throw new Error("This key has no usable Gemini models. Make a new key at aistudio.google.com/apikey.");
+      var pick = "";
+      for (var i = 0; i < WANT.length && !pick; i++) if (usable.indexOf(WANT[i]) > -1) pick = WANT[i];
+      if (!pick) pick = usable.filter(function (m) { return /flash/.test(m) && !/vision|embedding|tts|image/.test(m); })[0] || usable[0];
+      ls.set(KEY_MODEL, pick);
+      return pick;
+    }
+    async function ask(systemText, history, userText, retried) {
       var key = apiKey();
       if (!key) { $("lv-setup").classList.remove("hidden"); throw new Error("Add your Gemini API key first (the Key button above)."); }
       var contents = history.slice();
       if (userText) contents.push({ role: "user", parts: [{ text: userText }] });
-      var url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + encodeURIComponent(key);
-      var res = await fetch(url, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: contents, systemInstruction: { parts: [{ text: systemText }] } })
-      });
-      var data = await res.json();
-      if (!res.ok) throw new Error((data && data.error && data.error.message) || ("Gemini " + res.status));
-      var out = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
-      if (!out) throw new Error("Jennifer didn't answer. Try again.");
-      return out.trim();
+      var model = await pickModel(false);
+      var url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + encodeURIComponent(key);
+      var res, data;
+      try {
+        res = await fetch(url, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: contents, systemInstruction: { parts: [{ text: systemText }] } })
+        });
+        data = await res.json();
+      } catch (netErr) { throw new Error("Couldn't reach Google. Check your internet, then try again."); }
+      if (!res.ok) {
+        // A model that disappeared, or a key without access to it: find a working one and try once more.
+        if ((res.status === 404 || res.status === 403) && !retried) { ls.del(KEY_MODEL); await pickModel(true); return ask(systemText, history, userText, true); }
+        throw new Error((data && data.error && data.error.message) || ("Gemini " + res.status));
+      }
+      var cand = data && data.candidates && data.candidates[0];
+      var out = cand && cand.content && cand.content.parts && cand.content.parts.map(function (p) { return p.text || ""; }).join("").trim();
+      if (!out) {
+        var why = (cand && (cand.finishReason || "")) || (data && data.promptFeedback && data.promptFeedback.blockReason) || "";
+        throw new Error("Jennifer didn't answer" + (why ? " (" + why + ")" : "") + ". Try again.");
+      }
+      return out;
     }
 
     function sysPrompt() {
@@ -1874,6 +1905,17 @@ Output ONLY the translated text in the target language. Do not add conversationa
     }
 
     // ---------- thread ----------
+    function showErr(m) {
+      setState("");
+      toast(m, "error");
+      var box = $("lv-thread"); if (!box) return;
+      var d = document.createElement("div");
+      d.className = "p-3 rounded-xl text-sm";
+      d.style.cssText = "background:#fdecea;border:1px solid #f5c2c0;color:#b42318";
+      d.innerHTML = "<b>Jennifer couldn't start.</b><br>" + esc(m);
+      box.appendChild(d); box.scrollTop = box.scrollHeight;
+    }
+
     function bubble(who, text, extra) {
       var wrap = document.createElement("div");
       var mine = who === "me";
@@ -1898,7 +1940,7 @@ Output ONLY the translated text in the target language. Do not add conversationa
         bubble("jen", reply);
         speak(reply);
         setState("Your turn.");
-      } catch (e) { setState(""); toast(e.message, "error"); }
+      } catch (e) { S.busy = false; showErr(e.message); }
       S.busy = false;
     }
 
@@ -1917,7 +1959,7 @@ Output ONLY the translated text in the target language. Do not add conversationa
         S.turns.push({ role: "user", parts: [{ text: "Greet me and open the scene with one short line and a question." }] });
         S.turns.push({ role: "model", parts: [{ text: open }] });
         bubble("jen", open); speak(open); setState("Your turn. Press the mic and speak.");
-      } catch (e) { setState(""); toast(e.message, "error"); reset(); }
+      } catch (e) { showErr(e.message); reset(); }
       S.busy = false;
     }
 
