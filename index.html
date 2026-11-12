@@ -1566,6 +1566,7 @@
         [data-highlight="charcoal"] { background: #36454f !important; box-shadow: inset 0 0 0 2px #232d33; color: #ffffff !important; }
         [data-highlight="crimson"] { background: #911e1a !important; box-shadow: inset 0 0 0 2px #5e1411; color: #ffffff !important; }
         [data-highlight="lightgrey"] { background: #d4d9e0 !important; box-shadow: inset 0 0 0 2px #9aa2ad; color: #374151 !important; }
+        [data-highlight="lightgreen"] { background: #bfe3c4 !important; box-shadow: inset 0 0 0 2px #7cc08a; color: #15381d !important; }
         .tm-lead-done { border-left: 4px solid #1b8f3a; opacity: 0.78; }
         .tm-lead-done .item-text { text-decoration: line-through; text-decoration-color: rgba(27,143,58,0.6); }
         .tm-done-mark { margin-left: 2px; }
@@ -2702,7 +2703,7 @@
                 <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px;">
                     <button type="button" class="btn btn-outline" id="evaCopyBtn" style="border-color:#7c5cd6;color:#5b3fa8;"><i class="fas fa-copy"></i> Copy text</button>
                     <button type="button" class="btn" id="evaSaveBtn" style="background:#7c5cd6;color:#fff;border-color:#7c5cd6;"><i class="fab fa-google"></i> Save to Gmail Drafts</button>
-                    <button type="button" class="btn" id="evaReadyBtn" style="background:#5b7083;color:#fff;border-color:#5b7083;" title="Done editing: turns this lead light grey so Tania knows the draft is ready to attach and send"><i class="fas fa-check"></i> Ready for Tania</button>
+                    <button type="button" class="btn" id="evaReadyBtn" style="background:#5b7083;color:#fff;border-color:#5b7083;" title="Audit attached: hands this lead to Eva (light grey) so she can edit the email from your notes and push it to Gmail"><i class="fas fa-paperclip"></i> Audit attached — send to Eva</button>
                 </div>
                 <p style="font-size:0.72rem;color:#6b7c8f;margin:8px 0 0;">Nothing is sent. The draft waits in Gmail (account you pick in the Google window, from designs@thewebswan.com) until you press Send.</p>
             </div>
@@ -5874,7 +5875,7 @@
             }
             // Tania's own color for a telemarketing / AI-call lead. Orange = hot (email + appointment). Green = got an email, transferred to Rachel or got Rachel's number.
             // Yellow = spoke to a real person (call back later / need to speak to someone else). Blue = hang up, voicemail, phone menu ("press 1") or another AI.
-            const TM_RANK = { blue: 0, yellow: 1, green: 2, lavender: 3, orange: 4, lightgrey: 4, sky: 5 }; // Tania, Nov 7: lavender = audit sent, sky (#50b9fa) = her own appointment with the doctor/attorney; lightgrey = Eva edited the draft, ready for Tania to attach + send
+            const TM_RANK = { blue: 0, yellow: 1, green: 2, lavender: 3, orange: 4, lightgrey: 4, lightgreen: 4, sky: 5 }; // Tania, Nov 11: lavender = Tania still owes the audit; lightgrey = audit attached, Eva's queue to edit and push; lightgreen = the draft is in Gmail waiting for Tania; sky (#50b9fa) = her own appointment
             function loadTmColors() { try { const o = JSON.parse(localStorage.getItem('webswan_tm_colors') || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
             function setTmColor(id, color) {
                 const all = loadTmColors(); if (color) all[String(id)] = color; else delete all[String(id)]; // empty = back to the automatic color
@@ -5959,7 +5960,7 @@
                     { list: visibleMain.filter(isPros), title: '<i class="fas fa-magnifying-glass-location"></i> From Lead Prospector', color: '#0077be', border: '#0077be', hl: 'ocean', refresh: false }
                 ];
                 // Eva (login code) only sees the lavender leads
-                if (window.WP_ROLE === 'eva') groups.splice(0, groups.length, { list: visibleAll.filter(l => tmColorOf(l) === 'lavender').sort(byRank), title: '💜 Lavender leads: audit emails (Eva)', color: '#5b3fa8', border: '#9b7ae0', hl: 'lavender', refresh: true });
+                if (window.WP_ROLE === 'eva') groups.splice(0, groups.length, { list: visibleAll.filter(l => tmColorOf(l) === 'lightgrey').sort(byRank), title: '🩶 Light grey: your queue — edit from Tania’s notes, then push to Gmail', color: '#5b3fa8', border: '#9b7ae0', hl: 'lavender', refresh: true });
                 let html = '';
                 groups.forEach((g, gi) => {
                     if (!g.list.length && !(g.refresh)) return;
@@ -5987,7 +5988,7 @@
                     return `
                         <div class="completed-item tm-lead-row${done ? ' tm-lead-done' : ''}" data-tm-id="${lead.id}">
                             <span style="font-size:1.1rem;">${lead.source === 'prospector' ? '🔎' : lead.source === 'voice-studio' ? '🤖' : emoji}</span>
-                            <span class="item-text" data-highlight="${({ blue: 'aiblue', yellow: isAI(lead) ? 'aiyellow' : 'yellow', green: 'green', orange: 'orange', lavender: 'lavender', lightgrey: 'lightgrey', sky: 'sky' })[tmColorOf(lead)] || hl}">${safeName}${safeCompany}</span>
+                            <span class="item-text" data-highlight="${({ blue: 'aiblue', yellow: isAI(lead) ? 'aiyellow' : 'yellow', green: 'green', orange: 'orange', lavender: 'lavender', lightgrey: 'lightgrey', lightgreen: 'lightgreen', sky: 'sky' })[tmColorOf(lead)] || hl}">${safeName}${safeCompany}</span>
                             ${done ? '<span class="tm-done-mark" title="You already handled this one' + (loadTmDone()[String(lead.id)] ? ' · ' + new Date(loadTmDone()[String(lead.id)]).toLocaleString() : '') + '" style="color:#1b8f3a;font-weight:800;font-size:0.9rem;white-space:nowrap;">✓ done</span>' : ''}
                             <span class="item-type">${(lead.category || 'Lead').replace(/</g, '&lt;')}${lead.source === 'voice-studio' && lead.telemarketerId ? ' · ' + String(lead.telemarketerId).replace(/</g, '&lt;') : ''}</span>
                             <span style="font-size:0.7rem;color:#8a4a63;">${when}</span>
@@ -5995,7 +5996,7 @@
                             ${String(lead.myNotes || '').trim() ? '<span title="You have notes on this lead" style="font-size:0.7rem;font-weight:700;background:#fff8d6;color:#c2185b;border:1px solid #f48fb1;border-radius:8px;padding:1px 6px;">📝 My notes</span>' : ''}
                             ${tmSiteBtn(lead)}
                             ${tmCallId(lead) ? `<button class="tm-push-btn tm-listen-btn" data-call-id="${tmCallId(lead)}" title="Listen to the call recording right here" style="color:#1d4ed8;"><i class="fas fa-headphones"></i></button>` : ''}
-                            <span class="tm-color-dots" style="display:inline-flex;gap:4px;align-items:center;">${[['blue', '#1d4ed8', 'Blue: hang up, voicemail, phone menu, another AI'], ['yellow', '#ffd600', 'Yellow: spoke to a person (call back later)'], ['green', '#2e7d32', "Green: got an email, transferred to Rachel or got Rachel's number"], ['lavender', '#c4a8f5', 'Lavender: audit sent'], ['orange', '#f57c00', 'Orange: hot lead, email + appointment'], ['sky', '#50b9fa', 'Sky blue: I have an appointment to talk to the doctor/attorney'], ['lightgrey', '#cbd0d8', 'Light grey: draft saved in Gmail with the audit attached — ready for you to review and send']].map(([c, bg, t]) => `<button class="tm-color-btn" data-tm-id="${lead.id}" data-color="${c}" title="${t}" aria-label="${t}" style="width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 ${tmColorOf(lead) === c ? '3px #111' : '1px #9aa'};background:${bg};cursor:pointer;padding:0;"></button>`).join('')}${tmColors[String(lead.id)] ? `<button class="tm-color-btn" data-tm-id="${lead.id}" data-color="" title="Undo: go back to the automatic color" aria-label="Undo color" style="border:1px solid #9aa;background:#fff;border-radius:10px;font-size:11px;padding:0 6px;height:18px;cursor:pointer;">↺ undo</button>` : ''}</span>
+                            <span class="tm-color-dots" style="display:inline-flex;gap:4px;align-items:center;">${[['blue', '#1d4ed8', 'Blue: hang up, voicemail, phone menu, another AI'], ['yellow', '#ffd600', 'Yellow: spoke to a person (call back later)'], ['green', '#2e7d32', "Green: got an email, transferred to Rachel or got Rachel's number"], ['lavender', '#c4a8f5', 'Lavender: this prospect has an email — I still owe them the audit'], ['orange', '#f57c00', 'Orange: hot lead, email + appointment'], ['sky', '#50b9fa', 'Sky blue: I have an appointment to talk to the doctor/attorney'], ['lightgrey', '#cbd0d8', "Light grey: audit attached — Eva's queue to edit from your notes and push to Gmail"], ['lightgreen', '#bfe3c4', 'Light green: the draft is in Gmail with the audit, ready for you to review and send']].map(([c, bg, t]) => `<button class="tm-color-btn" data-tm-id="${lead.id}" data-color="${c}" title="${t}" aria-label="${t}" style="width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 ${tmColorOf(lead) === c ? '3px #111' : '1px #9aa'};background:${bg};cursor:pointer;padding:0;"></button>`).join('')}${tmColors[String(lead.id)] ? `<button class="tm-color-btn" data-tm-id="${lead.id}" data-color="" title="Undo: go back to the automatic color" aria-label="Undo color" style="border:1px solid #9aa;background:#fff;border-radius:10px;font-size:11px;padding:0 6px;height:18px;cursor:pointer;">↺ undo</button>` : ''}</span>
                             <button class="tm-done-btn tm-done-pill${done ? ' is-done' : ''}" data-tm-id="${lead.id}" title="${done ? 'Clear the check — mark not done' : 'Click after you call or make an audit for this lead, so you know you already did it'}" aria-label="Mark done">${done ? '✓ Done' : '☐ Done'}</button>
                             <button class="tm-voice-btn tm-push-btn" data-tm-id="${lead.id}" title="Send or move this lead to a Voice Studio agent (Monica, George, Rebecca or Alek)" aria-label="Send to a Voice Studio agent" style="color:#1d4ed8;"><i class="fas fa-phone-volume"></i></button>
                             <button class="tm-push-btn tm-edit-btn" data-tm-id="${lead.id}" title="Edit (name, email, comments), then push to the Lead Form" style="color:#ad1457;"><i class="fas fa-pen"></i></button>
@@ -6344,14 +6345,17 @@
                 document.getElementById('evaSubject').value = t.s;
                 if (!keepBody) document.getElementById('evaBody').value = t.b;
             }
-            // Eva presses this when she has finished editing the draft: the lead turns light grey so Tania
-            // knows the draft is ready to attach the audit and send. It leaves Eva's lavender queue.
+            // Tania, Nov 11: Tania presses this once she has attached the audit. The lead turns light grey,
+            // which is Eva's queue: Eva edits the email from Tania's notes, then pushes it to Gmail Drafts.
             function evaReady() {
                 const l = evaLead; if (!l) return;
+                const hasNow = !!document.getElementById('evaAudit').files[0];
+                const hadBefore = (evaDrafts()[String(l.id)] || []).some(d => (d.files || []).some(f => /\.pdf$/i.test(f)));
+                if (!hasNow && !hadBefore && !confirm('No audit file is attached yet. Hand it to Eva anyway?')) return;
                 setTmColor(l.id, 'lightgrey');
                 document.getElementById('evaDraftOverlay').style.display = 'none';
                 try { renderTelemarketingLeads(); } catch (e) {}
-                try { showToast('🩶 Draft marked ready — Tania will attach the audit and send.', 'success'); } catch (e) {}
+                try { showToast('🩶 Sent to Eva — she edits it from your notes, then pushes it to Gmail.', 'success'); } catch (e) {}
             }
             function openEvaDraft(lead) {
                 if (!lead) return;
@@ -6480,9 +6484,9 @@
                     msg.style.color = '#157a5e'; msg.innerHTML = '✅ Draft saved in Gmail' + (window.wpGmail.account() ? ' (' + tmEsc(window.wpGmail.account()) + ')' : '') + '. <a href="https://mail.google.com/mail/u/0/#drafts" target="_blank" rel="noopener">Open Drafts</a>';
                     if (document.getElementById('evaHandoff').checked) msg.innerHTML += '<br>' + await evaHandoff(to, subject, files.map(f => f.name));
                     showToast('💜 Draft saved for ' + (evaLead.companyName || evaLead.name || 'lead'), 'success');
-                    // Tania, Nov 11: saving the draft IS Eva finishing the email content, so the lead turns
-                    // light grey by itself. No second click needed, and the colour can never lie.
-                    try { setTmColor(evaLead.id, 'lightgrey'); renderTelemarketingLeads(); } catch (e) {}
+                    // Tania, Nov 11: the draft is now in Gmail with the audit, so the lead leaves Eva's
+                    // light-grey queue and turns light green: waiting on Tania to review and send.
+                    try { setTmColor(evaLead.id, 'lightgreen'); renderTelemarketingLeads(); } catch (e) {}
                 } catch (e) {
                     msg.style.color = '#b42318';
                     msg.textContent = /popup|cancel/i.test(e.message || e.code || '') ? 'The Google window was closed. Try again.' : /has not been used|disabled|accessNotConfigured/i.test(e.message || '') ? 'Gmail API is not turned on yet for this app (one-time setup in Google Cloud).' : ('Could not save: ' + (e.message || e));
