@@ -387,14 +387,14 @@
           <p class="text-xs text-slate-500 font-medium">Speak out loud. She answers in the language you're learning, then scores you.</p>
         </div>
       </div>
-      <button id="lv-settings-btn" class="text-xs font-bold flex items-center gap-1.5 transition px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600"><i class="fa-solid fa-key"></i> <span id="lv-key-label">Gemini key</span></button>
+      <button id="lv-settings-btn" class="text-xs font-bold flex items-center gap-1.5 transition px-3 py-1.5 rounded-xl border border-slate-200 text-slate-600"><i class="fa-solid fa-key"></i> <span id="lv-key-label">SwanPad key</span></button>
     </div>
 
     <div id="lv-setup" class="hidden mb-4 p-4 rounded-2xl bg-slate-50 border border-slate-200">
-      <label for="lv-key" class="block text-xs font-bold text-slate-700 mb-1">Your Gemini API key</label>
-      <p class="text-[11px] text-slate-500 mb-2">Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="underline font-bold text-[#123e6b]">aistudio.google.com/apikey</a>. Saved only in this browser, on this device. Never sent anywhere except Google, and never stored in the repository.</p>
+      <label for="lv-key" class="block text-xs font-bold text-slate-700 mb-1">Your SwanPad passphrase</label>
+      <p class="text-[11px] text-slate-500 mb-2">This is the passphrase set as <b>SWANPAD_PASS</b> on webswan-billing in Netlify &mdash; not an API key. The AI key itself lives on the server and never reaches this page. Saved only in this browser, on this device.</p>
       <div class="flex gap-2">
-        <input id="lv-key" type="password" autocomplete="off" placeholder="Paste your key" class="flex-1 min-w-0 px-3 py-2 rounded-xl border border-slate-300 text-sm">
+        <input id="lv-key" type="password" autocomplete="off" placeholder="Paste your passphrase" class="flex-1 min-w-0 px-3 py-2 rounded-xl border border-slate-300 text-sm">
         <button id="lv-key-save" class="px-4 py-2 rounded-xl bg-[#8cc1f5] text-[#123e6b] text-xs font-bold">Save</button>
         <button id="lv-key-clear" class="px-3 py-2 rounded-xl bg-white border border-slate-300 text-slate-600 text-xs font-bold">Forget</button>
       </div>
@@ -1502,23 +1502,18 @@ Adhere strictly to native speech conventions:
 
 Output ONLY the translated text in the target language. Do not add conversational intro or meta explanation.`;
 
-      const apiKey = window.SWANPAD_KEY || "";
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+      // Same bridge as Live Conversation: the provider key stays in Netlify, this page sends only the passphrase.
+      const pass = window.SWANPAD_KEY || "";
 
       try {
-        const payload = {
-          contents: [{ parts: [{ text: text }] }],
-          systemInstruction: { parts: [{ text: systemPrompt }] }
-        };
-
-        const res = await fetch(apiUrl, {
+        const res = await fetch("https://webswan-billing.netlify.app/.netlify/functions/swan-ai", {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          headers: { 'Content-Type': 'application/json', 'x-swan-pass': pass },
+          body: JSON.stringify({ system: systemPrompt, messages: [{ role: 'user', content: text }], maxTokens: 800 })
         });
 
         const data = await res.json();
-        const translatedText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+        const translatedText = res.ok ? data?.text : "";
 
         if (translatedText) {
           outputElem.value = translatedText.trim();
@@ -1788,52 +1783,35 @@ Output ONLY the translated text in the target language. Do not add conversationa
     var WANT = ["gemini-3.8-flash", "gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-flash-lite", "gemini-1.5-flash"];
     function badModels() { try { var a = JSON.parse(ls.get(KEY_BAD, "[]")); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
     function markBad(m) { if (!m) return; var a = badModels(); if (a.indexOf(m) < 0) a.push(m); ls.set(KEY_BAD, JSON.stringify(a.slice(-20))); }
-    async function pickModel(force) {
-      var cached = ls.get(KEY_MODEL, "");
-      if (cached && !force && badModels().indexOf(cached) < 0) return cached;
-      var res = await fetch("https://generativelanguage.googleapis.com/v1beta/models?key=" + encodeURIComponent(apiKey()));
-      var data = await res.json();
-      if (!res.ok) throw new Error((data && data.error && data.error.message) || ("Google said " + res.status + ". Check the key."));
-      var usable = (data.models || [])
-        .filter(function (m) { return (m.supportedGenerationMethods || []).indexOf("generateContent") > -1; })
-        .map(function (m) { return String(m.name || "").replace(/^models\//, ""); });
-      var bad = badModels();
-      usable = usable.filter(function (m) { return bad.indexOf(m) < 0; });
-      if (!usable.length) throw new Error("None of the Gemini models on this key worked. Make a new key at aistudio.google.com/apikey, then press Forget and save it again.");
-      var pick = "";
-      for (var i = 0; i < WANT.length && !pick; i++) if (usable.indexOf(WANT[i]) > -1) pick = WANT[i];
-      if (!pick) pick = usable.filter(function (m) { return /flash/.test(m) && !/vision|embedding|tts|image|live|native-audio/.test(m); })[0] || usable[0];
-      ls.set(KEY_MODEL, pick);
-      return pick;
-    }
-    async function ask(systemText, history, userText, retried) {
-      var key = apiKey();
-      if (!key) { $("lv-setup").classList.remove("hidden"); throw new Error("Add your Gemini API key first (the Key button above)."); }
-      var contents = history.slice();
-      if (userText) contents.push({ role: "user", parts: [{ text: userText }] });
-      var model = await pickModel(false);
-      var url = "https://generativelanguage.googleapis.com/v1beta/models/" + model + ":generateContent?key=" + encodeURIComponent(key);
+    // pickModel lived here. It asked Google which models a key could use. The key is on the server now, so it
+    // is gone: dead code that would have sent the passphrase to Google is worse than no code at all.
+    // Tania, Nov 12: SwanPad does not call Google directly any more. It sends only the passphrase to WebSwan's
+    // own swan-ai function, which keeps the provider key in Netlify. Google counts its limits per PROJECT, not
+    // per key, so a key pasted in here was sharing Jimmy's daily allowance and reporting "quota exceeded" on
+    // days nothing had been used. The provider can now be swapped on the server without touching this page.
+    var SWAN_AI = "https://webswan-billing.netlify.app/.netlify/functions/swan-ai";
+    async function ask(systemText, history, userText) {
+      var pass = apiKey();
+      if (!pass) { $("lv-setup").classList.remove("hidden"); throw new Error("Add your SwanPad passphrase first (the Key button above)."); }
+      var msgs = history.map(function (m) {
+        return { role: m.role === "model" ? "assistant" : "user", content: (m.parts || []).map(function (p) { return p.text || ""; }).join("") };
+      });
+      if (userText) msgs.push({ role: "user", content: userText });
       var res, data;
       try {
-        res = await fetch(url, {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ contents: contents, systemInstruction: { parts: [{ text: systemText }] } })
+        res = await fetch(SWAN_AI, {
+          method: "POST", headers: { "Content-Type": "application/json", "x-swan-pass": pass },
+          body: JSON.stringify({ system: systemText, messages: msgs, maxTokens: 500 })
         });
         data = await res.json();
-      } catch (netErr) { throw new Error("Couldn't reach Google. Check your internet, then try again."); }
+      } catch (netErr) { throw new Error("Couldn't reach WebSwan. Check your internet, then try again."); }
       if (!res.ok) {
-        var msg = (data && data.error && data.error.message) || ("Gemini " + res.status);
-        // A model that is retired, gone, or not on this key: never try it again, step to the next one.
-        var modelProblem = res.status === 404 || res.status === 403 || /no longer available|not found|not supported|update your code|deprecat/i.test(msg);
-        if (modelProblem && (retried || 0) < 3) { markBad(model); ls.del(KEY_MODEL); await pickModel(true); return ask(systemText, history, userText, (retried || 0) + 1); }
-        throw new Error(msg);
+        // 401 means the passphrase is wrong or was rotated in Netlify: open the box so she can retype it.
+        if (res.status === 401) $("lv-setup").classList.remove("hidden");
+        throw new Error((data && data.error) || ("WebSwan said " + res.status + "."));
       }
-      var cand = data && data.candidates && data.candidates[0];
-      var out = cand && cand.content && cand.content.parts && cand.content.parts.map(function (p) { return p.text || ""; }).join("").trim();
-      if (!out) {
-        var why = (cand && (cand.finishReason || "")) || (data && data.promptFeedback && data.promptFeedback.blockReason) || "";
-        throw new Error("Jennifer didn't answer" + (why ? " (" + why + ")" : "") + ". Try again.");
-      }
+      var out = String((data && data.text) || "").trim();
+      if (!out) throw new Error("Jennifer didn't answer. Try again.");
       return out;
     }
 
@@ -2118,8 +2096,8 @@ Output ONLY the translated text in the target language. Do not add conversationa
         var b = $("lv-settings-btn"), lab = $("lv-key-label");
         if (!b) return;
         var base = "text-xs font-bold flex items-center gap-1.5 transition px-3 py-1.5 rounded-xl border ";
-        if (apiKey()) { b.className = base + "border-emerald-200 bg-emerald-50 text-emerald-700"; if (lab) lab.textContent = "Gemini key saved"; }
-        else { b.className = base + "border-amber-300 bg-amber-50 text-amber-800"; if (lab) lab.textContent = "Add your Gemini key"; var st = $("lv-setup"); if (st) st.classList.remove("hidden"); }
+        if (apiKey()) { b.className = base + "border-emerald-200 bg-emerald-50 text-emerald-700"; if (lab) lab.textContent = "SwanPad key saved"; }
+        else { b.className = base + "border-amber-300 bg-amber-50 text-amber-800"; if (lab) lab.textContent = "Add your passphrase"; var st = $("lv-setup"); if (st) st.classList.remove("hidden"); }
       }
       keyUi();
 
