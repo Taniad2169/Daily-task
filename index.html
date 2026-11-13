@@ -6120,6 +6120,7 @@
             }
 
             function renderTelemarketingLeads() {
+                try { evaQueueSync(); } catch (e) {}
                 const el = document.getElementById('telemarketingLeadsContainer');
                 if (!el) return;
                 const tmHasInfo = (l) => ['decisionMakerName', 'name', 'companyName', 'phone', 'email', 'website', 'comment', 'serviceInterested', 'industry'].some(k => l[k] && String(l[k]).trim());
@@ -6577,15 +6578,52 @@
             }
             // Tania, Nov 11: Tania presses this once she has attached the audit. The lead turns light grey,
             // which is Eva's queue: Eva edits the email from Tania's notes, then pushes it to Gmail Drafts.
-            function evaReady() {
+            async function evaReady() {
                 const l = evaLead; if (!l) return;
-                const hasNow = !!document.getElementById('evaAudit').files[0];
+                const auditFile = document.getElementById('evaAudit').files[0];
                 const hadBefore = (evaDrafts()[String(l.id)] || []).some(d => (d.files || []).some(f => /\.pdf$/i.test(f)));
-                if (!hasNow && !hadBefore && !confirm('No audit file is attached yet. Hand it to Eva anyway?')) return;
+                if (!auditFile && !hadBefore && !confirm('No audit file is attached yet. Hand it to Eva anyway?')) return;
+                const to = (document.getElementById('evaTo').value || l.email || '').trim();
+                if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) { alert('Add the practice\'s email address first, so Eva can save the draft to Gmail.'); return; }
+                if ((evaDrafts()[String(l.id)] || []).some(d => d.unsubscribed)) { alert('⛔ This practice asked to unsubscribe. Eva must not email them.'); return; }
                 setTmColor(l.id, 'lightgrey');
                 document.getElementById('evaDraftOverlay').style.display = 'none';
                 try { renderTelemarketingLeads(); } catch (e) {}
-                try { showToast('🩶 Sent to Eva — she edits it from your notes, then pushes it to Gmail.', 'success'); } catch (e) {}
+                // Tania, Nov 13: hand everything to Eva herself (she can't log in to WorkPilot): the lead, Tania's notes,
+                // the draft as it stands and the audit PDF. Eva edits it and saves it to Gmail Drafts with the PDF attached.
+                try {
+                    const tok = await window.wpGmail.idToken();
+                    if (!tok) throw new Error('sign in with Google first');
+                    let pdfBase64 = '', filename = '';
+                    if (auditFile) {
+                        if (auditFile.size > 4 * 1024 * 1024) throw new Error('the audit PDF is over 4 MB');
+                        const buf = new Uint8Array(await auditFile.arrayBuffer()); let bin = ''; for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+                        pdfBase64 = btoa(bin); filename = auditFile.name;
+                    }
+                    const lead = { id: String(l.id), to, practice: l.companyName || l.name || '', contact: l.decisionMakerName || '', phone: l.phone || '', state: document.getElementById('evaState').value || evaGuessState(l) || '',
+                        website: l.website || (typeof tmFindSite === 'function' ? tmFindSite(l) : '') || '', findings: (evaIssues || []).filter(i => i.on).map(i => i.label).join('; '),
+                        notes: String(l.myNotes || '').trim(), subject: document.getElementById('evaSubject').value || '', body: document.getElementById('evaBody').value || '' };
+                    const r = await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'eva_queue_add', lead, pdfBase64, filename }) });
+                    const d = await r.json().catch(() => ({}));
+                    if (!r.ok) throw new Error(d.error || ('AI Office error ' + r.status));
+                    showToast('🩶 Sent to Eva' + (pdfBase64 ? ' with the audit PDF' : ' (no PDF attached this time)') + ': she edits it from your notes and saves it to Gmail Drafts. The lead turns light green when it\'s there.', 'success');
+                } catch (e) {
+                    showToast('🩶 Light grey, but Eva could NOT receive it (' + (e && e.message || e) + '). Try Ready for Eva again.', 'error');
+                }
+            }
+            // Leads whose draft Eva saved in Gmail turn light green (checked when the lead list renders, at most every 90 seconds).
+            let evaQSyncAt = 0;
+            async function evaQueueSync() {
+                if (Date.now() - evaQSyncAt < 90000) return; evaQSyncAt = Date.now();
+                try {
+                    const tok = await window.wpGmail.idToken(); if (!tok) return;
+                    const r = await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'eva_queue_status' }) });
+                    if (!r.ok) return; const d = await r.json();
+                    const colors = loadTmColors(); let n = 0;
+                    (d.items || []).forEach(it => { if (it.status === 'done' && colors[String(it.id)] === 'lightgrey') { setTmColor(it.id, 'lightgreen'); n++;
+                        const all = evaDrafts(), k = String(it.id); all[k] = (all[k] || []).concat([{ at: it.doneAt || new Date().toISOString(), subject: it.subject, to: it.to, files: [], by: 'eva', kind: 'audit' }]).slice(-20); localStorage.setItem('webswan_eva_drafts', JSON.stringify(all)); } });
+                    if (n) { try { renderTelemarketingLeads(); } catch (e) {} showToast('💚 Eva saved ' + n + ' draft' + (n > 1 ? 's' : '') + ' in Gmail: light green now.', 'success'); }
+                } catch (e) { /* quiet: tries again on the next render */ }
             }
             function openEvaDraft(lead) {
                 if (!lead) return;
