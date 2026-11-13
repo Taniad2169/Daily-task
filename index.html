@@ -6173,6 +6173,11 @@
                         website: (typeof tmFindSite === 'function' ? tmFindSite(l) : l.website) || '', state: l.state || '', industry: l.industry || l.serviceInterested || '',
                         color: tmColorOf(l0) || '', lavenderAt: l.lavenderAt || '', notes: [l.comment, l.myNotes].filter(Boolean).join(' | ').slice(0, 1200) }; });
                     localStorage.setItem('webswan_wp_snapshot', JSON.stringify({ at: Date.now(), leads: snap }));
+                    // Tania, Nov 13: also send it to the AI Office server, so Eva has it on any device (at most every 5 minutes).
+                    if (!window.__wpSnapAt || Date.now() - window.__wpSnapAt > 300000) { window.__wpSnapAt = Date.now();
+                        (async () => { try { const tok = await window.wpGmail.idToken(); if (!tok) return;
+                            await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'wp_snapshot_put', leads: snap }) });
+                        } catch (e) { window.__wpSnapAt = 0; } })(); }
                 } catch (e) { /* storage full: Eva falls back to the live database */ }
                 const tmRank = (l) => TM_RANK[tmColorOf(l)] || 0;
                 const byRank = (a, b) => (tmRank(b) - tmRank(a)) || String(b.timestamp || '').localeCompare(String(a.timestamp || ''));
