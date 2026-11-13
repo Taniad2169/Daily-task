@@ -2187,9 +2187,27 @@
                 <button class="btn btn-purple page-btn" data-page="lessons"><i class="fas fa-graduation-cap"></i> Lessons</button>
                 <button class="btn btn-notes page-btn" data-page="notes"><i class="fas fa-sticky-note"></i> Notes</button>
                 <button class="btn btn-outline" id="fcOpenBtn" type="button" style="border-color:#c2185b;color:#c2185b;font-weight:700;"><i class="fas fa-calendar-alt"></i> Future Calls <span id="fcBadge" style="background:#c2185b;color:#fff;border-radius:10px;padding:1px 8px;font-size:12px;margin-left:4px;"></span></button>
+                <button class="btn btn-outline" id="tcOpenBtn" type="button" style="border-color:#b45309;color:#b45309;font-weight:700;">📒 Tania's Calls <span id="tcBadge" style="background:#b45309;color:#fff;border-radius:10px;padding:1px 8px;font-size:12px;margin-left:4px;display:none;"></span></button>
             </div>
 
             <!-- ===== FUTURE CALLS (prospects who asked for a call back 1 month or more out) ===== -->
+            <div id="tcModal" hidden style="position:fixed;inset:0;background:rgba(10,25,45,.55);z-index:9999;overflow:auto;padding:16px;">
+                <div style="background:#fff;max-width:980px;margin:24px auto;border-radius:16px;padding:18px;box-shadow:0 18px 50px rgba(0,0,0,.3);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <h3 style="margin:0;color:#b45309;">📒 Tania's Calls</h3>
+                        <button class="btn btn-outline" id="tcCloseBtn" type="button"><i class="fas fa-times"></i> Close</button>
+                    </div>
+                    <p style="margin:6px 0 12px;color:#555;font-size:14px;">My own call list. Click a lead to open it, write my comment in the yellow box, color it, mark it done, or send it to Alek with my notes. Light grey sends it to Eva's queue. Colors, Done and notes stay the same on the lead's own list.</p>
+                    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
+                        <input id="tcSearch" placeholder="Search my calls…" style="flex:1;min-width:200px;padding:9px;border:1px solid #ccd;border-radius:8px;">
+                        <label style="font-size:13px;color:#555;"><input type="checkbox" id="tcShowDone"> Show done</label>
+                        <label class="btn btn-outline" style="cursor:pointer;margin:0;">📥 Import leads (CSV)<input type="file" id="tcCsv" accept=".csv,text/csv" hidden></label>
+                        <label style="font-size:13px;color:#555;"><input type="checkbox" id="tcCsvAlso"> also put them in Tania's Calls</label>
+                    </div>
+                    <div id="tcList"></div>
+                </div>
+            </div>
+
             <div id="fcModal" hidden style="position:fixed;inset:0;background:rgba(10,25,45,.55);z-index:9999;overflow:auto;padding:24px 12px;">
                 <div style="max-width:860px;margin:0 auto;background:#fff;border-radius:16px;padding:18px 20px;box-shadow:0 20px 50px rgba(0,0,0,.3);">
                     <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
@@ -4313,6 +4331,206 @@
             }
             setupFutureCalls();
 
+            // ----- TANIA'S CALLS (Tania, Nov 12): her own call list. Any lead (her own, or an agent's AI-call lead) can be moved here. -----
+            // Saved in 'webswan_tania_calls' (synced like Future Calls). Colors, Done and notes are SHARED with the lead's own row:
+            // change them here and they change on the Completed / telemarketing list too. Removing sets removedAt so it syncs.
+            const TC_COLORS = [['yellow', '#ffd600', 'Yellow: spoke to a person, call back'], ['green', '#2e7d32', 'Green: they asked for an email / email not sent yet'], ['orange', '#f57c00', 'Orange: hot lead'], ['lightgrey', '#cbd0d8', "Light grey: send to Eva's queue to edit from my notes and push to Gmail drafts"], ['lightgreen', '#bfe3c4', 'Light green: the draft is in Gmail'], ['blue', '#1565c0', 'Blue: no answer / voicemail'], ['lavender', '#c4a8f5', 'Lavender: I owe them the audit'], ['sky', '#50b9fa', 'Sky: I have an appointment']];
+            const TC_RANK = { orange: 6, sky: 5, green: 4, yellow: 3, lavender: 2, lightgrey: 1, lightgreen: 1, blue: 0 };
+            const tcOpenRows = new Set();
+            const tcClean = (v) => { v = String(v == null ? '' : v).trim(); return /^no (name|phone|email|url|comment)$/i.test(v) ? '' : v; };
+            function tcLoad() { try { const a = JSON.parse(localStorage.getItem('webswan_tania_calls') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+            function tcSave(list) { localStorage.setItem('webswan_tania_calls', JSON.stringify(list)); scheduleFirebaseAutoSave(); renderTaniaCalls(); }
+            function tcLive(x) {
+                if (x.src === 'lead') { return (leads || []).find(k => String(k.id) === String(x.refId)) || null; }
+                const base = (telemarketingLeads || []).find(k => String(k.id) === String(x.refId));
+                return base ? applyTmEdits(base) : null;
+            }
+            // One view of the lead, whichever list it came from.
+            function tcView(x) {
+                const l = tcLive(x), s = x.snap || {};
+                if (x.src === 'lead') {
+                    const o = l || s;
+                    return { live: l, name: tcClean(o.name), contact: tcClean(o.contact), phone: tcClean(o.phone), email: tcClean(o.email), url: tcClean(o.url), theirs: tcClean(o.comment), my: String((l ? l.myNotes : s.myNotes) || ''), outcome: '', agent: '',
+                        color: highlights['lead-' + x.refId + '-name'] || '', done: isTmDone(x.refId) };
+                }
+                const o = l || s;
+                let site = tcClean(o.website); try { if (!site && l && typeof tmFindSite === 'function') site = tmFindSite(l) || ''; } catch (e) {}
+                const ed = loadTmEdits()[String(x.refId)] || {};
+                return { live: l, name: tcClean(o.companyName || o.name), contact: tcClean(o.decisionMakerName), phone: tcClean(o.phone), email: tcClean(o.email), url: site, theirs: tcClean(o.comment), my: String((ed.myNotes != null ? ed.myNotes : o.myNotes) || ''),
+                    outcome: tcClean(o.category || o.status), agent: tcClean(o.telemarketerId), color: loadTmColors()[String(x.refId)] || '', done: isTmDone(x.refId) };
+            }
+            function tcAdd(src, obj) {
+                if (!obj || obj.id == null) { showToast('Could not find this lead.', 'error'); return; }
+                const id = src + ':' + obj.id, list = tcLoad(), had = list.find(x => x.id === id);
+                const snap = src === 'lead'
+                    ? { name: obj.name, contact: obj.contact, phone: obj.phone, email: obj.email, url: obj.url, comment: obj.comment, myNotes: obj.myNotes || '' }
+                    : { name: obj.name, companyName: obj.companyName, decisionMakerName: obj.decisionMakerName, phone: obj.phone, email: obj.email, website: obj.website, comment: obj.comment, category: obj.category, status: obj.status, telemarketerId: obj.telemarketerId, source: obj.source };
+                if (had && !had.removedAt) { showToast("📒 Already in Tania's Calls.", 'success'); return; }
+                if (had) { delete had.removedAt; had.snap = snap; had.addedAt = new Date().toISOString(); } else list.push({ id, src, refId: String(obj.id), snap, addedAt: new Date().toISOString() });
+                tcSave(list);
+                showToast("📒 " + (tcClean(obj.companyName || obj.name) || 'Lead') + " moved to Tania's Calls. It stays on its own list too.", 'success');
+            }
+            async function tcSetColor(x, color) {
+                const v = tcView(x);
+                if (x.src === 'lead') {
+                    const key = 'lead-' + x.refId + '-name';
+                    if (color) highlights[key] = color; else delete highlights[key];
+                    saveHighlightsToStorage(); scheduleFirebaseAutoSave();
+                    try { const el = document.querySelector('[data-hlkey="' + key + '"]'); if (el) applyHighlightToElement(el, color || null); } catch (e) {}
+                    try { renderCompleted(); } catch (e) {}
+                } else {
+                    setTmColor(x.refId, color || '');
+                    try { renderTelemarketingLeads(); } catch (e) {}
+                }
+                if (color === 'lightgrey') {
+                    // Light grey = Eva's queue. Her own leads are copied into the telemarketing list Eva works from, with my notes first.
+                    let ok = true;
+                    if (x.src === 'lead' && v.live) {
+                        const copy = Object.assign({}, v.live, { comment: [v.my ? "Tania's notes: " + v.my : '', v.live.comment || ''].filter(Boolean).join('\n') });
+                        ok = !!(await pushCompletedLeadToTm(copy, 'lightgrey'));
+                    }
+                    try { const n = JSON.parse(localStorage.getItem('webswan_eva_notices') || '[]'); n.push({ at: new Date().toISOString(), lead: v.name || v.contact || '', email: v.email || '', hasNotes: !!v.my.trim(), todo: v.my.trim() ? 'Edit the email from my notes, then push to Gmail drafts.' : 'No notes: push the email to Gmail drafts as is.' }); localStorage.setItem('webswan_eva_notices', JSON.stringify(n.slice(-100))); } catch (e) {}
+                    showToast(ok ? "✉️ Light grey: " + (v.name || 'this lead') + " is in Eva's queue" + (v.my.trim() ? ' with your notes.' : ' (no notes: she pushes the draft as is).') : 'Colored light grey, but Eva could not be reached. Try again.', ok ? 'success' : 'error');
+                }
+                renderTaniaCalls();
+            }
+            function tcSaveNotes(x, text) {
+                if (x.src === 'lead') {
+                    const l = tcLive(x); if (!l) { showToast('That lead is no longer in the list.', 'error'); return; }
+                    l.myNotes = text; saveToStorage();
+                } else {
+                    const all = loadTmEdits(); all[String(x.refId)] = Object.assign(all[String(x.refId)] || {}, { myNotes: text });
+                    try { localStorage.setItem('webswan_tm_edits', JSON.stringify(all)); scheduleFirebaseAutoSave(); } catch (e) {}
+                    try { renderTelemarketingLeads(); } catch (e) {}
+                }
+                showToast('💾 Your comment is saved on this lead.', 'success'); renderTaniaCalls();
+            }
+            function tcToVoice(x) {
+                const v = tcView(x);
+                if (!v.live) { showToast('That lead is no longer in its list.', 'error'); return; }
+                openVoiceAgentPicker(x.src === 'lead' ? Object.assign({}, v.live, { myNotes: v.my }) : Object.assign({}, v.live, { myNotes: v.my }));
+            }
+            function renderTaniaCalls() {
+                const all = tcLoad().filter(x => !x.removedAt);
+                const views = all.map(x => ({ x, v: tcView(x) }));
+                const open = views.filter(r => !r.v.done);
+                const badge = document.getElementById('tcBadge');
+                if (badge) { badge.textContent = open.length || ''; badge.style.display = open.length ? '' : 'none'; }
+                const box = document.getElementById('tcList'); if (!box) return;
+                const q = String((document.getElementById('tcSearch') || {}).value || '').trim().toLowerCase();
+                const showDone = !!(document.getElementById('tcShowDone') || {}).checked;
+                let rows = (showDone ? views : open).filter(r => !q || [r.v.name, r.v.contact, r.v.phone, r.v.email, r.v.my, r.v.theirs, r.v.color].join(' ').toLowerCase().includes(q));
+                rows.sort((a, b) => (a.v.done - b.v.done) || ((TC_RANK[b.v.color] || 0) - (TC_RANK[a.v.color] || 0)) || String(b.x.addedAt).localeCompare(String(a.x.addedAt)));
+                if (!rows.length) { box.innerHTML = '<p style="color:#777;">' + (all.length ? 'Nothing matches.' : "No leads here yet. On any lead, open the ✈️ send menu and choose “Move to Tania's Calls”, or click 📒 on an AI-call lead.") + '</p>'; return; }
+                box.innerHTML = rows.map(({ x, v }) => {
+                    const isOpen = tcOpenRows.has(x.id), tel = v.phone.replace(/[^\d+]/g, '');
+                    const href = v.url ? (/^https?:/i.test(v.url) ? v.url : 'https://' + v.url) : '';
+                    const swatches = TC_COLORS.map(([c, bg, t]) => `<button type="button" class="tcAct" data-act="color" data-color="${c}" data-id="${fcEsc(x.id)}" title="${fcEsc(t)}" aria-label="${fcEsc(t)}" style="width:20px;height:20px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 ${v.color === c ? '3px #111' : '1px #9aa'};background:${bg};cursor:pointer;padding:0;"></button>`).join('')
+                        + (v.color ? `<button type="button" class="tcAct" data-act="color" data-color="" data-id="${fcEsc(x.id)}" style="border:1px solid #9aa;background:#fff;border-radius:10px;font-size:11px;padding:0 6px;height:20px;cursor:pointer;">↺ clear</button>` : '');
+                    return `<div style="border:1px solid #e3e8ef;border-radius:12px;margin:8px 0;${v.done ? 'opacity:.6;' : ''}">
+                        <div class="tcAct" data-act="toggle" data-id="${fcEsc(x.id)}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 12px;cursor:pointer;">
+                            <span>${isOpen ? '▾' : '▸'}</span>
+                            <span class="item-text" ${v.color ? `data-highlight="${fcEsc(v.color)}"` : ''} style="font-weight:700;">${fcEsc(v.name || v.contact || v.phone || 'No name')}${v.contact && v.name && v.contact !== v.name ? ' — ' + fcEsc(v.contact) : ''}</span>
+                            ${v.phone ? `<span style="font-size:13px;color:#334;">📞 ${fcEsc(v.phone)}</span>` : ''}
+                            ${v.done ? '<span style="color:#1b8f3a;font-weight:800;font-size:13px;">✓ done</span>' : ''}
+                            ${v.my.trim() ? '<span style="font-size:11px;font-weight:700;background:#fff8d6;color:#c2185b;border:1px solid #f48fb1;border-radius:8px;padding:1px 6px;">📝 My notes</span>' : ''}
+                            <span style="margin-left:auto;font-size:11px;color:#667;">${x.src === 'tm' ? '🤖 ' + fcEsc(v.agent || 'AI call') + (v.outcome ? ' · ' + fcEsc(v.outcome) : '') : '📋 My lead'}</span>
+                        </div>
+                        ${isOpen ? `<div style="padding:0 12px 12px;">
+                            <div style="font-size:14px;line-height:1.7;">
+                                ${v.contact ? `<div><b>Doctor / lawyer:</b> ${fcEsc(v.contact)}</div>` : ''}
+                                ${v.phone ? `<div><b>Phone:</b> <a href="tel:${fcEsc(tel)}">${fcEsc(v.phone)}</a></div>` : ''}
+                                ${v.email ? `<div><b>Email:</b> <a href="mailto:${fcEsc(v.email)}">${fcEsc(v.email)}</a></div>` : ''}
+                                ${href ? `<div><b>Website:</b> <a href="${fcEsc(href)}" target="_blank" rel="noopener noreferrer">${fcEsc(v.url)}</a></div>` : ''}
+                                ${v.outcome ? `<div><b>AI call outcome:</b> ${fcEsc(v.outcome)}${v.agent ? ' (' + fcEsc(v.agent) + ')' : ''}</div>` : ''}
+                                ${v.theirs ? `<div style="margin-top:6px;"><b>${x.src === 'tm' ? 'Call notes' : 'Lead comments'}:</b><div style="white-space:pre-wrap;background:#f6f8fb;border-radius:8px;padding:8px;margin-top:2px;max-height:180px;overflow:auto;">${fcEsc(v.theirs)}</div></div>` : ''}
+                            </div>
+                            <label style="display:block;font-weight:700;color:#8a6d00;margin:10px 0 4px;">Tania's comment</label>
+                            <textarea class="tcNotes" data-id="${fcEsc(x.id)}" maxlength="2500" placeholder="What happened on my call, what to send, what Alek or Eva should do…" style="width:100%;min-height:80px;padding:9px;border:2px solid #f2d24b;background:#fffbe0;border-radius:8px;box-sizing:border-box;">${fcEsc(v.my)}</textarea>
+                            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;">
+                                <button type="button" class="btn btn-primary tcAct" data-act="save" data-id="${fcEsc(x.id)}">💾 Save comment</button>
+                                <span style="display:inline-flex;gap:5px;align-items:center;">${swatches}</span>
+                                <button type="button" class="btn btn-outline tcAct" data-act="done" data-id="${fcEsc(x.id)}">${v.done ? '↩️ Not done' : '☐ Done'}</button>
+                                <button type="button" class="btn btn-outline tcAct" data-act="voice" data-id="${fcEsc(x.id)}" style="color:#1d4ed8;border-color:#1d4ed8;">📞 Send to Voice Studio (Alek, Monica, George, Rebecca)</button>
+                                <button type="button" class="btn btn-outline tcAct" data-act="remove" data-id="${fcEsc(x.id)}" style="color:#b42318;border-color:#b42318;">Remove from my calls</button>
+                            </div>
+                        </div>` : ''}
+                    </div>`;
+                }).join('');
+            }
+            // Minimal CSV reader (handles quoted fields, commas and line breaks inside quotes).
+            function tcParseCsv(text) {
+                const rows = []; let row = [], cur = '', inQ = false;
+                for (let i = 0; i < text.length; i++) {
+                    const c = text[i];
+                    if (inQ) { if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else inQ = false; } else cur += c; }
+                    else if (c === '"') inQ = true;
+                    else if (c === ',') { row.push(cur); cur = ''; }
+                    else if (c === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; }
+                    else if (c !== '\r') cur += c;
+                }
+                if (cur || row.length) { row.push(cur); rows.push(row); }
+                return rows.filter(r => r.some(v => String(v).trim()));
+            }
+            // Import a lead CSV into the normal lead list (they show under Completed as 📋 Lead rows, like any lead I typed in).
+            function tcImportCsv(text, alsoMine) {
+                const rows = tcParseCsv(String(text || '').replace(/^﻿/, '')); if (rows.length < 2) { showToast('That file has no leads in it.', 'error'); return; }
+                const head = rows[0].map(h => String(h).trim().toLowerCase()), col = (...n) => { for (const k of n) { const i = head.indexOf(k); if (i >= 0) return i; } return -1; };
+                const iCo = col('companyname', 'company', 'business', 'practice'), iNm = col('name'), iDm = col('decisionmakername', 'contact', 'doctor'), iPh = col('phone'), iEm = col('email'), iUrl = col('website', 'url'), iCi = col('city'), iSt = col('state'), iInd = col('industry'), iCm = col('comment', 'comments', 'notes');
+                if (iPh < 0 || (iCo < 0 && iNm < 0)) { showToast('The CSV needs at least a name (or companyName) column and a phone column.', 'error'); return; }
+                const g = (r, i) => i >= 0 ? String(r[i] || '').trim() : '';
+                const digits = (p) => String(p || '').replace(/\D/g, '').slice(-10);
+                const have = new Set((leads || []).map(l => digits(l.phone) + '|' + String(l.name || '').trim().toLowerCase()));
+                let added = 0, skipped = 0; const mine = tcLoad(), stamp = Date.now();
+                rows.slice(1).forEach((r, n) => {
+                    const company = g(r, iCo) || g(r, iNm), contact = g(r, iDm) || (g(r, iCo) ? g(r, iNm) : ''), phone = g(r, iPh);
+                    if (!company && !contact) { skipped++; return; }
+                    const where = [g(r, iCi), g(r, iSt)].filter(Boolean).join(', ');
+                    const key = digits(phone) + '|' + ((company || contact) + (where ? ' ' + where : '')).trim().toLowerCase();
+                    if (have.has(key)) { skipped++; return; }
+                    have.add(key);
+                    const lead = { id: newLeadId(), name: (company || contact) + (where ? ' ' + where : ''), contact: contact && contact !== company ? contact : '', phone: phone || 'No phone', email: g(r, iEm) || 'No email', url: g(r, iUrl) || 'No URL',
+                        comment: [g(r, iInd), g(r, iCm)].filter(Boolean).join(' · '), origin: '', agent: '', refName: '', refPhone: '', dropdown: 'call back', customDropdown: '', completed: true };
+                    leads.push(lead);
+                    completedItems.push({ id: stamp + n, type: 'lead', text: `${lead.name}${lead.contact ? ' (' + lead.contact + ')' : ''} - ${lead.phone} (${lead.email})`, leadId: lead.id, timestamp: new Date().toLocaleString() });
+                    if (alsoMine) mine.push({ id: 'lead:' + lead.id, src: 'lead', refId: String(lead.id), snap: { name: lead.name, contact: lead.contact, phone: lead.phone, email: lead.email, url: lead.url, comment: lead.comment, myNotes: '' }, addedAt: new Date().toISOString() });
+                    added++;
+                });
+                if (!added) { showToast('Nothing new: all ' + skipped + ' were already in your leads.', 'success'); return; }
+                saveToStorage(); renderLeads(); renderCompleted();
+                if (alsoMine) tcSave(mine); else renderTaniaCalls();
+                showToast('📥 ' + added + ' leads added to your list' + (skipped ? ' (' + skipped + ' already there, skipped)' : '') + '.', 'success');
+            }
+            function setupTaniaCalls() {
+                const modal = document.getElementById('tcModal'); if (!modal) return;
+                document.body.appendChild(modal);
+                const $t = id => document.getElementById(id);
+                $t('tcOpenBtn').addEventListener('click', () => { modal.hidden = false; renderTaniaCalls(); });
+                $t('tcCloseBtn').addEventListener('click', () => { modal.hidden = true; });
+                modal.addEventListener('click', e => { if (e.target === modal) modal.hidden = true; });
+                $t('tcSearch').addEventListener('input', renderTaniaCalls);
+                $t('tcShowDone').addEventListener('change', renderTaniaCalls);
+                $t('tcCsv').addEventListener('change', (e) => {
+                    const f = e.target.files && e.target.files[0]; if (!f) return;
+                    const rd = new FileReader();
+                    rd.onload = () => { try { tcImportCsv(rd.result, $t('tcCsvAlso').checked); } catch (err) { console.error('CSV import failed', err); showToast('❌ Could not read that CSV: ' + (err && err.message || err), 'error'); } e.target.value = ''; };
+                    rd.readAsText(f);
+                });
+                $t('tcList').addEventListener('click', (e) => {
+                    const el = e.target.closest('.tcAct'); if (!el) return;
+                    const list = tcLoad(), x = list.find(k => k.id === el.dataset.id); if (!x) return;
+                    const act = el.dataset.act;
+                    if (act === 'toggle') { if (tcOpenRows.has(x.id)) tcOpenRows.delete(x.id); else tcOpenRows.add(x.id); renderTaniaCalls(); }
+                    else if (act === 'save') { const ta = [...document.querySelectorAll('#tcList .tcNotes')].find(t => t.dataset.id === x.id); tcSaveNotes(x, ta ? ta.value.trim() : ''); }
+                    else if (act === 'color') { tcSetColor(x, el.dataset.color || ''); }
+                    else if (act === 'done') { toggleTmDone(x.refId); try { renderCompleted(); } catch (err) {} try { renderTelemarketingLeads(); } catch (err) {} renderTaniaCalls(); }
+                    else if (act === 'voice') { const ta = [...document.querySelectorAll('#tcList .tcNotes')].find(t => t.dataset.id === x.id); if (ta && ta.value.trim() !== tcView(x).my.trim()) tcSaveNotes(x, ta.value.trim()); tcToVoice(x); }
+                    else if (act === 'remove') { x.removedAt = new Date().toISOString(); tcOpenRows.delete(x.id); tcSave(list); showToast("Removed from Tania's Calls. The lead itself is still on its list.", 'success'); }
+                });
+                renderTaniaCalls();
+            }
+            setupTaniaCalls();
+
             // ----- COMPLETE DATA BACKUP / RESTORE -----
             const DAILY_TASK_STORAGE_KEYS = [
                 'webswan_page',
@@ -4330,6 +4548,7 @@
                 'webswan_translator_script',
                 'webswan_deleted_leads',
                 'webswan_future_calls',
+                'webswan_tania_calls',
                 'webswan_tm_dismissed',
                 'webswan_tm_colors',
                 'webswan_tm_done',
@@ -4408,7 +4627,7 @@
             }
 
             const ARRAY_STORAGE_KEYS = new Set([
-                'webswan_leads', 'webswan_todos', 'webswan_completed', 'webswan_saved_notes', 'webswan_deleted_leads', 'webswan_future_calls'
+                'webswan_leads', 'webswan_todos', 'webswan_completed', 'webswan_saved_notes', 'webswan_deleted_leads', 'webswan_future_calls', 'webswan_tania_calls'
             ]);
 
             function mergeDailyTaskData(localData, remoteData) {
@@ -5662,6 +5881,7 @@
                                 ${pushMenuItemsHtml(`data-index="${index}"`)}
                                 <button class="send-option" data-action="eva" data-index="${index}" style="color:#5b3fa8;font-weight:700;"><i class="fas fa-envelope"></i> 💜 Email draft (Eva)</button>
                                 <button class="send-option" data-action="voice" data-index="${index}" style="color:#1d4ed8;font-weight:700;"><i class="fas fa-phone-volume"></i> 📞 Send to Voice Studio</button>
+                                <button class="send-option" data-action="tania" data-index="${index}" style="color:#b45309;font-weight:700;">📒 Move to Tania's Calls</button>
                                 <button class="color-code-btn" data-index="${index}"><i class="fas fa-palette"></i> Color Code</button>
                                 <div class="completed-color-swatches" data-index="${index}">
                                     <button class="completed-color-swatch" data-color="yellow" data-index="${index}" style="background:#ffd600;" title="Yellow"></button>
@@ -5776,6 +5996,8 @@
                         } else if (action === 'eva') {
                             const id = await pushCompletedLeadToTm(lead, 'lavender');
                             if (id) showToast('💜 ' + (lead.name || 'Lead') + ' sent to Eva (lavender) to draft the audit email. Your notes came along.', 'success');
+                        } else if (action === 'tania') {
+                            tcAdd('lead', lead);
                         } else if (action === 'voice') {
                             openVoiceAgentPicker(lead);
                         }
@@ -5998,6 +6220,7 @@
                             ${tmCallId(lead) ? `<button class="tm-push-btn tm-listen-btn" data-call-id="${tmCallId(lead)}" title="Listen to the call recording right here" style="color:#1d4ed8;"><i class="fas fa-headphones"></i></button>` : ''}
                             <span class="tm-color-dots" style="display:inline-flex;gap:4px;align-items:center;">${[['blue', '#1d4ed8', 'Blue: hang up, voicemail, phone menu, another AI'], ['yellow', '#ffd600', 'Yellow: spoke to a person (call back later)'], ['green', '#2e7d32', "Green: got an email, transferred to Rachel or got Rachel's number"], ['lavender', '#c4a8f5', 'Lavender: this prospect has an email — I still owe them the audit'], ['orange', '#f57c00', 'Orange: hot lead, email + appointment'], ['sky', '#50b9fa', 'Sky blue: I have an appointment to talk to the doctor/attorney'], ['lightgrey', '#cbd0d8', "Light grey: audit attached — Eva's queue to edit from your notes and push to Gmail"], ['lightgreen', '#bfe3c4', 'Light green: the draft is in Gmail with the audit, ready for you to review and send']].map(([c, bg, t]) => `<button class="tm-color-btn" data-tm-id="${lead.id}" data-color="${c}" title="${t}" aria-label="${t}" style="width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 ${tmColorOf(lead) === c ? '3px #111' : '1px #9aa'};background:${bg};cursor:pointer;padding:0;"></button>`).join('')}${tmColors[String(lead.id)] ? `<button class="tm-color-btn" data-tm-id="${lead.id}" data-color="" title="Undo: go back to the automatic color" aria-label="Undo color" style="border:1px solid #9aa;background:#fff;border-radius:10px;font-size:11px;padding:0 6px;height:18px;cursor:pointer;">↺ undo</button>` : ''}</span>
                             <button class="tm-done-btn tm-done-pill${done ? ' is-done' : ''}" data-tm-id="${lead.id}" title="${done ? 'Clear the check — mark not done' : 'Click after you call or make an audit for this lead, so you know you already did it'}" aria-label="Mark done">${done ? '✓ Done' : '☐ Done'}</button>
+                            <button class="tm-tania-btn" data-tm-id="${lead.id}" title="Move to Tania's Calls (it stays here too)" aria-label="Move to Tania's Calls" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 4px;">📒</button>
                             <button class="tm-voice-btn tm-push-btn" data-tm-id="${lead.id}" title="Send or move this lead to a Voice Studio agent (Monica, George, Rebecca or Alek)" aria-label="Send to a Voice Studio agent" style="color:#1d4ed8;"><i class="fas fa-phone-volume"></i></button>
                             <button class="tm-push-btn tm-edit-btn" data-tm-id="${lead.id}" title="Edit (name, email, comments), then push to the Lead Form" style="color:#ad1457;"><i class="fas fa-pen"></i></button>
                             <button class="tm-push-btn" data-tm-id="${lead.id}" title="Push to Lead Form"><i class="fas fa-share-square"></i></button>
@@ -6075,6 +6298,13 @@
                         e.stopPropagation();
                         const lead = telemarketingLeads.find(l => String(l.id) === String(btn.dataset.tmId));
                         if (lead) pushTmLeadToForm(lead);
+                    });
+                });
+                tmQA('.tm-tania-btn').forEach((btn) => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const lead = telemarketingLeads.find(l => String(l.id) === String(btn.dataset.tmId));
+                        if (lead) tcAdd('tm', lead);
                     });
                 });
                 tmQA('.tm-voice-btn').forEach((btn) => {
