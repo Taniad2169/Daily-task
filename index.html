@@ -2092,7 +2092,7 @@
     <div id="appContent">
         <div class="app-container">
             <!-- Header -->
-            <div class="header">
+            <div class="header" id="wpHeader">
                 <h1><i class="fas fa-feather-alt"></i> WebSwan <span style="font-weight:300;color:#0077b6;">·</span> WorkPilot</h1>
                 <div class="header-actions">
                     <div class="wp-find" role="search"><i class="fas fa-search" aria-hidden="true"></i><input type="search" id="wpBtnSearch" placeholder="Find a button: residual, audit, language…" aria-label="Find a button" autocomplete="off"><span id="wpBtnCount" class="wp-find-count"></span></div>
@@ -8623,6 +8623,28 @@ body { min-height: 100dvh; }
     if(e.key==='Enter'){ var f=items().filter(function(el){return el.style.display!=='none';})[0]; if(f && box.value.trim()){ e.preventDefault(); f.click(); } }
   });
   document.addEventListener('keydown',function(e){ if(e.key==='/' && document.activeElement && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && !document.activeElement.isContentEditable){ e.preventDefault(); box.focus(); } });
+})();
+</script>
+
+<!-- Tania, Nov 14: floating "back to top" button -- stays on screen while scrolling, smooth-scrolls up to the button header. -->
+<button type="button" id="wpToTopBtn" title="Back to top" aria-label="Back to top"><i class="fas fa-arrow-up"></i></button>
+<style>
+#wpToTopBtn{position:fixed;right:20px;bottom:26px;z-index:9998;width:48px;height:48px;border-radius:50%;border:0;background:#0077b6;color:#fff;font-size:18px;box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer;display:none;align-items:center;justify-content:center;opacity:0;transform:translateY(12px);transition:opacity .25s ease,transform .25s ease,background .2s ease}
+#wpToTopBtn.show{display:flex;opacity:1;transform:translateY(0)}
+#wpToTopBtn:hover{background:#005f8f}
+</style>
+<script>
+(function(){
+  var btn=document.getElementById('wpToTopBtn'), header=document.getElementById('wpHeader');
+  if(!btn) return;
+  function onScroll(){
+    if(window.scrollY>280){ btn.classList.add('show'); } else { btn.classList.remove('show'); }
+  }
+  window.addEventListener('scroll',onScroll,{passive:true});
+  onScroll();
+  btn.addEventListener('click',function(){
+    (header||document.body).scrollIntoView({behavior:'smooth',block:'start'});
+  });
 })();
 </script>
 </body>
