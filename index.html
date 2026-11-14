@@ -6176,7 +6176,8 @@
                     if (/\bemail/i.test(c) && aiGood(l)) return 'green';                               // got an email
                     return aiGood(l) ? 'yellow' : 'blue';                                              // spoke to a person (call back, talked, interested)
                 };
-                const tmColorOf = (l) => tmColors[String(l.id)] || (isAI(l) ? aiAuto(l) : '');
+                // Tania, Nov 13: Lead Spotter marks a saved lead orange when it catches that same lead (matched by their own social profile link) posting a fresh buyer-intent request.
+                const tmColorOf = (l) => tmColors[String(l.id)] || (isAI(l) ? aiAuto(l) : (l.flagged ? 'orange' : ''));
                 // Tania, Nov 8: save WorkPilot's lead list (colors, notes, websites) in this browser so Eva in the AI Office
                 // (same site) always has it, even when she can't sign in to WorkPilot's database herself.
                 try {
@@ -6233,6 +6234,7 @@
                             <span class="item-type">${(lead.category || 'Lead').replace(/</g, '&lt;')}${lead.source === 'voice-studio' && lead.telemarketerId ? ' · ' + String(lead.telemarketerId).replace(/</g, '&lt;') : ''}</span>
                             <span style="font-size:0.7rem;color:#8a4a63;">${when}</span>
                             ${tmPushed.includes(String(lead.id)) ? '<span class="tm-pushed-badge"><i class="fas fa-check"></i> Pushed</span>' : ''}
+                            ${lead.flagged ? '<span title="Lead Spotter: ' + String(lead.flagService || '').replace(/"/g, '&quot;') + (lead.flagDate ? ' · ' + new Date(lead.flagDate).toLocaleDateString() : '') + '" style="font-size:0.7rem;font-weight:700;background:#fed7aa;color:#9a3412;border:1px solid #fb923c;border-radius:8px;padding:1px 6px;">🟠 Spotted: ' + String(lead.flagService || 'service need').replace(/</g, '&lt;') + '</span>' : ''}
                             ${String(lead.myNotes || '').trim() ? '<span title="You have notes on this lead" style="font-size:0.7rem;font-weight:700;background:#fff8d6;color:#c2185b;border:1px solid #f48fb1;border-radius:8px;padding:1px 6px;">📝 My notes</span>' : ''}
                             ${tmSiteBtn(lead)}
                             ${tmCallId(lead) ? `<button class="tm-push-btn tm-listen-btn" data-call-id="${tmCallId(lead)}" title="Listen to the call recording right here" style="color:#1d4ed8;"><i class="fas fa-headphones"></i></button>` : ''}
