@@ -5376,6 +5376,7 @@
                 return `<button class="send-option" data-action="task" ${extraAttr}><i class="fas fa-list-check"></i> Google Task</button>
                     <button class="send-option" data-action="calendar" ${extraAttr}><i class="fas fa-calendar-plus"></i> Google Calendar</button>
                     ${sheets}
+                    <button class="send-option" data-action="eva" ${extraAttr}><i class="fas fa-paper-plane"></i> Send to Eva</button>
                     <button class="send-option" data-action="alek" ${extraAttr}><i class="fas fa-headset"></i> Alek Call Queue</button>
                     <button class="send-option" data-action="crm" ${extraAttr}><i class="fas fa-database"></i> Open in CRM</button>
                     <button class="send-option" data-action="studio" ${extraAttr}><i class="fas fa-swatchbook"></i> WebSwan Studio (hot lead)</button>`;
@@ -5484,6 +5485,17 @@
                     card.className = 'lead-card';
                     if (lead.completed) card.classList.add('completed');
                     card.dataset.leadId = lead.id;
+                    // Tania, Nov 13: same color bar as the Voice/Telemarketing leads — her own pick wins,
+                    // otherwise a Lead Spotter match turns the card orange, same [data-highlight] CSS as those rows.
+                    const leadHl = leadColorOf(lead);
+                    if (leadHl) card.dataset.highlight = leadHl; else delete card.dataset.highlight;
+                    if (lead.flagged) {
+                        const spot = document.createElement('div');
+                        spot.style.cssText = 'font-size:0.7rem;font-weight:700;background:#fff3e0;color:#e65100;border:1px solid #ffb74d;border-radius:8px;padding:2px 8px;display:inline-block;margin-bottom:6px;';
+                        spot.title = 'Lead Spotter: ' + (lead.flagService || '') + (lead.flagDate ? ' · ' + new Date(lead.flagDate).toLocaleDateString() : '');
+                        spot.innerHTML = '🟠 Spotted: ' + String(lead.flagService || '').replace(/</g, '&lt;');
+                        card.appendChild(spot);
+                    }
 
                     const grid = document.createElement('div');
                     grid.className = 'lead-grid';
@@ -5688,6 +5700,14 @@
                                 openLeadInStudio(lead);
                             } else if (action === 'alek') {
                                 await pushLeadToAlekQueue(lead);
+                            } else if (action === 'eva') {
+                                // Tania, Nov 13: her own manually-entered leads use her own field names
+                                // (name/contact/url/comment) — alias them to what Eva's draft overlay expects.
+                                lead.companyName = lead.companyName || lead.name || '';
+                                lead.decisionMakerName = lead.decisionMakerName || lead.contact || '';
+                                lead.website = lead.website || lead.url || '';
+                                lead.myNotes = lead.myNotes || lead.comment || '';
+                                openEvaDraft(lead);
                             }
                         });
                     });
@@ -5695,6 +5715,13 @@
                     sendContainer.appendChild(sendContent);
 
                     actions.appendChild(completeBtn);
+                    if (lead.url && lead.url !== 'No URL') {
+                        const siteBtn = document.createElement('button');
+                        siteBtn.className = 'btn btn-outline';
+                        siteBtn.innerHTML = '<i class="fas fa-globe"></i> View website';
+                        siteBtn.addEventListener('click', (e) => { e.stopPropagation(); window.open(/^https?:\/\//i.test(lead.url) ? lead.url : 'https://' + lead.url, '_blank', 'noopener,noreferrer'); });
+                        actions.appendChild(siteBtn);
+                    }
                     actions.appendChild(sendContainer);
                     actions.appendChild(dropdownContainer);
                     card.appendChild(actions);
@@ -6111,6 +6138,9 @@
             // Yellow = spoke to a real person (call back later / need to speak to someone else). Blue = hang up, voicemail, phone menu ("press 1") or another AI.
             const TM_RANK = { blue: 0, yellow: 1, green: 2, lavender: 3, orange: 4, lightgrey: 4, lightgreen: 4, sky: 5 }; // Tania, Nov 11: lavender = Tania still owes the audit; lightgrey = audit attached, Eva's queue to edit and push; lightgreen = the draft is in Gmail waiting for Tania; sky (#50b9fa) = her own appointment
             function loadTmColors() { try { const o = JSON.parse(localStorage.getItem('webswan_tm_colors') || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
+            // Tania, Nov 13: same color system as the Voice/Telemarketing rows (tmColorOf), but for her own
+            // manually-entered leads — no AI-call auto-coloring, just her own pick or a Lead Spotter orange flag.
+            function leadColorOf(l) { const c = loadTmColors(); return c[String(l.id)] || (l.flagged ? 'orange' : ''); }
             function setTmColor(id, color) {
                 const all = loadTmColors(); if (color) all[String(id)] = color; else delete all[String(id)]; // empty = back to the automatic color
                 localStorage.setItem('webswan_tm_colors', JSON.stringify(all));
@@ -6657,6 +6687,7 @@
                 setTmColor(l.id, 'lightgrey');
                 document.getElementById('evaDraftOverlay').style.display = 'none';
                 try { renderTelemarketingLeads(); } catch (e) {}
+                try { renderLeads(); } catch (e) {} // Tania, Nov 13: so a manually-entered lead also turns light grey right away
                 // Tania, Nov 13: hand everything to Eva herself (she can't log in to WorkPilot): the lead, Tania's notes,
                 // the draft as it stands and the audit PDF. Eva edits it and saves it to Gmail Drafts with the PDF attached.
                 try {
@@ -6690,7 +6721,7 @@
                     const colors = loadTmColors(); let n = 0;
                     (d.items || []).forEach(it => { if (it.status === 'done' && colors[String(it.id)] === 'lightgrey') { setTmColor(it.id, 'lightgreen'); n++;
                         const all = evaDrafts(), k = String(it.id); all[k] = (all[k] || []).concat([{ at: it.doneAt || new Date().toISOString(), subject: it.subject, to: it.to, files: [], by: 'eva', kind: 'audit' }]).slice(-20); localStorage.setItem('webswan_eva_drafts', JSON.stringify(all)); } });
-                    if (n) { try { renderTelemarketingLeads(); } catch (e) {} showToast('💚 Eva saved ' + n + ' draft' + (n > 1 ? 's' : '') + ' in Gmail: light green now.', 'success'); }
+                    if (n) { try { renderTelemarketingLeads(); } catch (e) {} try { renderLeads(); } catch (e) {} showToast('💚 Eva saved ' + n + ' draft' + (n > 1 ? 's' : '') + ' in Gmail: light green now.', 'success'); }
                 } catch (e) { /* quiet: tries again on the next render */ }
             }
             function openEvaDraft(lead) {
