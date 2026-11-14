@@ -3090,6 +3090,7 @@
             let tmDismissed = [];
             let tmPushed = [];
             let tmCurrentLead = null;
+            let tmCurrentLeadIsMine = false; // Tania, Nov 14: true when the open modal is one of her own leads (not a telemarketing/voice-studio lead), so Save/close also go through her own lead storage.
                     // Solid hex for each highlight color, used for small dots/borders
             // (like the Highlight Key dots and the Completed Tasks color match)
             // where the field-level [data-highlight] background rules don't apply.
@@ -5779,6 +5780,14 @@
                             actions.appendChild(sentBtn);
                         }
                     })();
+                    // Tania, Nov 14: the same yellow "My notes" popup the Voice Studio/telemarketing leads open on click.
+                    const notesBtn = document.createElement('button');
+                    notesBtn.className = 'btn btn-outline';
+                    notesBtn.style.borderColor = '#c2185b'; notesBtn.style.color = '#c2185b';
+                    notesBtn.innerHTML = '<i class="fas fa-note-sticky"></i> Notes';
+                    notesBtn.title = "Open the same notes popup Voice Studio and telemarketing leads use";
+                    notesBtn.addEventListener('click', (e) => { e.stopPropagation(); openMyLeadModal(lead); });
+                    actions.appendChild(notesBtn);
                     actions.appendChild(sendContainer);
                     actions.appendChild(dropdownContainer);
                     card.appendChild(actions);
@@ -6512,6 +6521,13 @@
                 const editEls = document.querySelectorAll('#tmLeadModalBody [data-tm-edit]'); if (!editEls.length) return;
                 const ch = {}; editEls.forEach(el => { ch[el.dataset.tmEdit] = el.value.trim(); });
                 Object.assign(lead, ch);
+                if (tmCurrentLeadIsMine) {
+                    // Tania, Nov 14: her own lead -- save through her own lead storage, not the telemarketing-edits store.
+                    saveToStorage();
+                    renderLeads();
+                    showToast('💾 Edits saved.', 'success');
+                    return;
+                }
                 const all = loadTmEdits(); all[String(lead.id)] = Object.assign(all[String(lead.id)] || {}, ch);
                 try { localStorage.setItem('webswan_tm_edits', JSON.stringify(all)); scheduleFirebaseAutoSave(); } catch (e) {}
                 renderTelemarketingLeads();
@@ -6571,7 +6587,7 @@
                 const fromText = (t) => { t = String(t || ''); const m = t.match(/Website:\s*([^\s|;,]+)/i) || t.match(/https?:\/\/[^\s|;,"'<>]+/i) || t.match(/\bwww\.[a-z0-9-]+(\.[a-z0-9-]+)+/i); return m ? norm(m[1] && /Website/i.test(m[0]) ? m[1] : m[0]) : ''; };
                 const free = /@(gmail|yahoo|hotmail|outlook|aol|icloud|live|msn|me|ymail|comcast|att)\./i;
                 const fromEmail = (e) => { e = String(e || '').trim(); return e.includes('@') && !free.test(e) ? norm(e.split('@')[1]) : ''; };
-                let site = norm(lead.website) || fromText(lead.comment) || fromText(lead.myNotes);
+                let site = norm(lead.website || lead.url) || fromText(lead.comment) || fromText(lead.myNotes);
                 let vs = null;
                 if (!site) {
                     try {
@@ -6585,7 +6601,7 @@
             }
             window.wpOpenLeadSite = function () { tmOpenSite(tmCurrentLead); };
             function tmOpenSite(lead) {
-                const typed = document.querySelector('#tmLeadModalBody [data-tm-edit="website"]');
+                const typed = document.querySelector('#tmLeadModalBody [data-tm-edit="website"]') || document.querySelector('#tmLeadModalBody [data-tm-edit="url"]');
                 let site = String(typed ? typed.value : '').trim(); if (site && !/^https?:\/\//i.test(site)) site = 'https://' + site;
                 if (!/^https?:\/\/[^\s]+\.[^\s]+/.test(site)) site = tmFindSite(lead || {});
                 if (site) { window.open(site, '_blank', 'noopener'); return; }
@@ -6635,6 +6651,42 @@
                     +   '<textarea data-tm-edit="comment" rows="6" style="background:#f1f5f9;color:#334155;">' + tmEsc(lead.comment) + '</textarea></div>'
                     + '<p style="font-size:0.75rem;color:#6b7c8f;margin:4px 0 0;">🖍️ Highlight: select words in any box, press <b>✍️ Text highlight</b> (bottom left) and pick a color. ✍️ Everything you type is saved by itself.</p>';
                 setTimeout(() => window.dispatchEvent(new Event('resize')), 30); // repaint saved highlights in these boxes
+                document.getElementById('tmLeadModalOverlay').classList.add('show');
+            }
+
+            // Tania, Nov 14: same popup (yellow "My notes" box and all) for her OWN leads -- opened from the
+            // "📝 Notes" button on a lead card. Uses her lead's real field names (name/contact/url/comment/myNotes)
+            // so typing here saves straight back onto that same lead, not into the telemarketing edits store.
+            function openMyLeadModal(lead) {
+                const body = document.getElementById('tmLeadModalBody');
+                if (!body) return;
+                tmCurrentLead = lead;
+                tmCurrentLeadIsMine = true;
+                const tmListenEl = document.getElementById('tmListenBtn'); if (tmListenEl) tmListenEl.style.display = 'none';
+                const tmPushBtnEl = document.getElementById('tmPushToFormBtn'), tmEditBtnEl = document.getElementById('tmEditBtn');
+                if (tmPushBtnEl) tmPushBtnEl.style.display = 'none'; // already in her own Lead Form -- nothing to push
+                if (tmEditBtnEl) tmEditBtnEl.style.display = 'none';
+                const tmSaveEl = document.getElementById('tmSaveEditBtn'); if (tmSaveEl) tmSaveEl.style.display = '';
+                const tmMarkSentEl = document.getElementById('tmMarkSentBtn'); if (tmMarkSentEl) tmMarkSentEl.style.display = 'none';
+                const tmSiteF = document.getElementById('tmSiteFooterBtn'); if (tmSiteF) tmSiteF.innerHTML = (lead.url && lead.url !== 'No URL') ? '<i class="fas fa-globe"></i> Open website' : '<i class="fas fa-magnifying-glass"></i> Find website';
+                const fldMine = (k, label, v, area) => '<div class="field-group" data-hlkey="lead-' + lead.id + '-' + (k === 'url' ? 'url' : k === 'contact' ? 'contact' : k) + '" style="margin-bottom:9px;"><label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ad1457;display:block;">' + label + '</label>'
+                    + '<textarea data-tm-edit="' + k + '" rows="' + (area ? 6 : 1) + '"' + (area ? '' : ' style="min-height:0;resize:none;"') + '>' + tmEsc(v) + '</textarea></div>';
+                body.innerHTML = fldMine('name', 'Company / practice', lead.name)
+                    + fldMine('contact', 'Doctor / lawyer', lead.contact)
+                    + fldMine('phone', 'Phone', lead.phone)
+                    + fldMine('email', 'Email', lead.email)
+                    + '<div class="field-group" data-hlkey="lead-' + lead.id + '-url" style="margin-bottom:9px;"><label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ad1457;display:block;">Website</label>'
+                    +   '<div style="position:relative;"><textarea data-tm-edit="url" rows="1" style="min-height:0;resize:none;padding-right:96px;">' + tmEsc(lead.url) + '</textarea>'
+                    +   '<button type="button" onclick="window.wpOpenLeadSite()" title="Open their website" aria-label="Open website" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;border-radius:8px;padding:5px 10px;font-weight:800;font-size:0.78rem;cursor:pointer;background:linear-gradient(90deg,#77c6e0,#0be0c0);color:#062743;">🌐 Open</button></div></div>'
+                    + fldMine('social', 'Social media', lead.social)
+                    + '<div class="field-group my-notes-group" data-hlkey="lead-' + lead.id + '-myNotes" style="margin-bottom:9px;">'
+                    +   '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><label style="font-size:0.75rem;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:#c2185b;">📝 My notes (Tania)</label>'
+                    +   '<button type="button" onclick="stampNote()" style="border:1px solid #f48fb1;background:#fff;color:#c2185b;border-radius:8px;padding:2px 9px;font-size:0.72rem;font-weight:700;cursor:pointer;">+ New dated note</button></div>'
+                    +   '<textarea data-tm-edit="myNotes" rows="4" placeholder="Your notes go here: what you learned, next step, when to call back…" style="background:#fff8d6;border:2px solid #f48fb1;border-left:6px solid #e91e63;color:#4a0d2a;font-weight:600;">' + tmEsc(lead.myNotes || '') + '</textarea></div>'
+                    + '<div class="field-group" data-hlkey="lead-' + lead.id + '-comment" style="margin-bottom:9px;"><label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#475569;display:block;">💬 Lead comment</label>'
+                    +   '<textarea data-tm-edit="comment" rows="6" style="background:#f1f5f9;color:#334155;">' + tmEsc(lead.comment || '') + '</textarea></div>'
+                    + '<p style="font-size:0.75rem;color:#6b7c8f;margin:4px 0 0;">🖍️ Highlight: select words in any box, press <b>✍️ Text highlight</b> (bottom left) and pick a color. ✍️ Everything you type is saved by itself.</p>';
+                setTimeout(() => window.dispatchEvent(new Event('resize')), 30);
                 document.getElementById('tmLeadModalOverlay').classList.add('show');
             }
 
@@ -7050,6 +7102,7 @@
                 tmAutoTimer = setTimeout(() => {
                     const ch = {}; document.querySelectorAll('#tmLeadModalBody [data-tm-edit]').forEach(el => { ch[el.dataset.tmEdit] = el.value.trim(); });
                     Object.assign(lead, ch);
+                    if (tmCurrentLeadIsMine) { try { saveToStorage(); } catch (x) {} return; }
                     const all = loadTmEdits(); all[String(lead.id)] = Object.assign(all[String(lead.id)] || {}, ch);
                     try { localStorage.setItem('webswan_tm_edits', JSON.stringify(all)); scheduleFirebaseAutoSave(); } catch (x) {}
                 }, 600);
@@ -7133,6 +7186,7 @@
             function closeTmLeadModal() {
                 const overlay = document.getElementById('tmLeadModalOverlay');
                 if (overlay) overlay.classList.remove('show');
+                if (tmCurrentLeadIsMine) { tmCurrentLeadIsMine = false; try { renderLeads(); } catch (e) {} }
             }
 
             // Shown when the telemarketing database is locked to the owner's Google account
