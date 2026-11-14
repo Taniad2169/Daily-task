@@ -6207,7 +6207,7 @@
                     if (!g.list.length && !(g.refresh)) return;
                     html += '<div style="display:flex;align-items:center;justify-content:space-between;margin:' + (gi ? '14px' : '0') + ' 0 8px;">'
                         + '<span style="font-weight:700;color:' + g.color + ';font-size:0.85rem;">' + g.title + '</span>'
-                        + (g.refresh ? '<button class="btn btn-outline" id="tmRefreshBtn" style="border-color:#ec407a;color:#ad1457;padding:0.3rem 0.8rem;font-size:0.75rem;"><i class="fas fa-sync"></i> Refresh</button>' : '')
+                        + (g.refresh ? '<span><button class="btn btn-outline" id="tmSocialBtn" title="Find each lead\'s social media link from their website and fill the Social media field — covers telemarketing calls, Voice Studio AI calls, and your own leads" style="border-color:#fb923c;color:#9a3412;padding:0.3rem 0.8rem;font-size:0.75rem;margin-right:6px;"><i class="fas fa-share-nodes"></i> Find social media</button><button class="btn btn-outline" id="tmRefreshBtn" style="border-color:#ec407a;color:#ad1457;padding:0.3rem 0.8rem;font-size:0.75rem;"><i class="fas fa-sync"></i> Refresh</button></span>' : '')
                         + '</div>';
                     g.list.forEach((lead) => { html += tmRowHTML(lead, g.hl); });
                 });
@@ -6360,6 +6360,55 @@
                         fetchTelemarketingLeads(true);
                     });
                 }
+                const socialBtn = document.getElementById('tmSocialBtn');
+                if (socialBtn) { socialBtn.addEventListener('click', (e) => { e.stopPropagation(); findSocialForAllLeads(); }); }
+            }
+
+            // Tania, Nov 13: "Find social media" for every lead that has a website but no social link yet —
+            // telemarketing calls, Voice Studio AI calls, and her own leads from the Lead Form.
+            // Reuses the same Lead Prospector /api/scan check (and saved access code) as the website-audit button above.
+            async function findSocialForAllLeads() {
+                const code = localStorage.getItem('wp_prospector_code') || prompt('Lead Prospector access code (asked once on this device):');
+                if (!code) return;
+                localStorage.setItem('wp_prospector_code', code.trim());
+                if (typeof telemarketingLeads !== 'undefined' && !telemarketingLeads.length && typeof fetchTelemarketingLeads === 'function') { try { await fetchTelemarketingLeads(false); } catch (e) {} }
+                const own = (typeof leads !== 'undefined' ? leads : []).filter(l => l.website && !l.social);
+                const ed0 = loadTmEdits();
+                const tm = (typeof telemarketingLeads !== 'undefined' ? telemarketingLeads : []).filter(l => {
+                    const el = applyTmEdits(l);
+                    return el.website && !el.social && !(ed0[String(l.id)] || {}).social;
+                });
+                const todo = [...own.map(l => ({ kind: 'own', lead: l })), ...tm.map(l => ({ kind: 'tm', lead: l }))].slice(0, 60);
+                if (!todo.length) { if (typeof showToast === 'function') showToast('No leads with a website are missing a social link right now.', 'info'); return; }
+                if (!confirm('Look up social media links for ' + todo.length + ' lead' + (todo.length > 1 ? 's' : '') + ' from their websites?\nThis takes about 10 seconds per lead (up to ' + Math.ceil(todo.length * 10 / 60) + ' minute' + (Math.ceil(todo.length * 10 / 60) > 1 ? 's' : '') + ' total). Run it again for more after this batch.')) return;
+                if (typeof showToast === 'function') showToast('Looking up social media links for ' + todo.length + ' leads…', 'info');
+                let done = 0, found = 0;
+                const ed = loadTmEdits();
+                const worker = async (item) => {
+                    const l = item.lead;
+                    const ind = /attorney|lawyer|law|legal|esq/i.test((l.industry || l.serviceInterested || '') + ' ' + (l.companyName || l.name || '')) ? 'legal' : /dent|doctor|dr\.|chiro|medical|clinic|health|therap|physician|ortho|derm|pediatric|md\b/i.test((l.industry || l.serviceInterested || '') + ' ' + (l.companyName || l.name || '')) ? 'medical' : 'business';
+                    try {
+                        const r = await fetch('https://webswan-lead-prospector.netlify.app/api/scan', { method: 'POST', headers: { 'content-type': 'application/json', 'x-app-key': code.trim() }, body: JSON.stringify({ url: l.website, industry: ind }) });
+                        const d = await r.json().catch(() => ({}));
+                        if (r.status === 401) { localStorage.removeItem('wp_prospector_code'); throw new Error('bad code'); }
+                        const social = (d.social || []).join(', ');
+                        if (social) {
+                            found++;
+                            if (item.kind === 'own') { l.social = social; }
+                            else { ed[String(l.id)] = Object.assign(ed[String(l.id)] || {}, { social }); }
+                        }
+                    } catch (e) { /* skip this one, keep going */ }
+                    done++;
+                };
+                const CONC = 2;
+                let idx = 0;
+                async function lane() { while (idx < todo.length) { const item = todo[idx++]; await worker(item); } }
+                await Promise.all(Array.from({ length: Math.min(CONC, todo.length) }, lane));
+                try { localStorage.setItem('webswan_tm_edits', JSON.stringify(ed)); scheduleFirebaseAutoSave(); } catch (e) {}
+                try { saveToStorage(); } catch (e) {}
+                if (typeof renderLeads === 'function') renderLeads();
+                if (typeof renderTelemarketingLeads === 'function') renderTelemarketingLeads();
+                if (typeof showToast === 'function') showToast('Checked ' + done + ' lead' + (done > 1 ? 's' : '') + ': found a social link for ' + found + '.', found ? 'success' : 'info');
             }
 
             // Voice Studio calls: the WorkPilot lead id is "ai-<Cartesia call id>" and the comment says "Call ID ...".
