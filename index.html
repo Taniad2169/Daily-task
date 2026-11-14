@@ -5380,6 +5380,8 @@
                     <button class="send-option" data-action="calendar" ${extraAttr}><i class="fas fa-calendar-plus"></i> Google Calendar</button>
                     ${sheets}
                     <button class="send-option" data-action="eva" ${extraAttr}><i class="fas fa-paper-plane"></i> Send to Eva</button>
+                    <button class="send-option" data-action="voice" ${extraAttr} style="color:#1d4ed8;font-weight:700;"><i class="fas fa-phone-volume"></i> 📞 Send to Voice Studio</button>
+                    <button class="send-option" data-action="tania" ${extraAttr} style="color:#b45309;font-weight:700;">📒 Move to Tania's Calls</button>
                     <button class="send-option" data-action="alek" ${extraAttr}><i class="fas fa-headset"></i> Alek Call Queue</button>
                     <button class="send-option" data-action="crm" ${extraAttr}><i class="fas fa-database"></i> Open in CRM</button>
                     <button class="send-option" data-action="studio" ${extraAttr}><i class="fas fa-swatchbook"></i> WebSwan Studio (hot lead)</button>`;
@@ -5711,9 +5713,48 @@
                                 lead.website = lead.website || lead.url || '';
                                 lead.myNotes = lead.myNotes || lead.comment || '';
                                 openEvaDraft(lead);
+                            } else if (action === 'tania') {
+                                tcAdd('lead', lead);
+                            } else if (action === 'voice') {
+                                openVoiceAgentPicker(lead);
                             }
                         });
                     });
+                    // Tania, Nov 14: same Color Code swatches the Voice/Telemarketing leads have in this menu.
+                    const colorBtn = document.createElement('button');
+                    colorBtn.className = 'color-code-btn';
+                    colorBtn.innerHTML = '<i class="fas fa-palette"></i> Color Code';
+                    const colorRow = document.createElement('div');
+                    colorRow.className = 'completed-color-swatches';
+                    [['yellow', '#ffd600', 'Yellow'], ['green', '#2e7d32', 'Green'], ['red', '#ef9a9a', 'Red'], ['blue', '#1565c0', 'Blue'], ['orange', '#f57c00', 'Orange'], ['teal', '#0891b2', 'Teal'], ['indigo', '#5c69f2', 'Prepare Audit'], ['charcoal', '#36454f', 'Charcoal Grey'], ['crimson', '#911e1a', 'Deep Red (#911e1a)']].forEach(([c, bg, t]) => {
+                        const sw = document.createElement('button');
+                        sw.className = 'completed-color-swatch';
+                        sw.dataset.color = c; sw.style.background = bg; sw.title = t;
+                        colorRow.appendChild(sw);
+                    });
+                    const clearSw = document.createElement('button');
+                    clearSw.className = 'completed-color-swatch completed-color-clear';
+                    clearSw.innerHTML = '<i class="fas fa-ban"></i>'; clearSw.title = 'Clear color';
+                    colorRow.appendChild(clearSw);
+                    colorBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        document.querySelectorAll('.completed-color-swatches').forEach(row => { if (row !== colorRow) row.classList.remove('show'); });
+                        colorRow.classList.toggle('show');
+                    });
+                    colorRow.querySelectorAll('.completed-color-swatch').forEach(sw => {
+                        sw.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const color = sw.dataset.color || null;
+                            const key = `lead-${lead.id}-name`;
+                            if (color) { highlights[key] = color; } else { delete highlights[key]; }
+                            saveHighlightsToStorage();
+                            sendContent.classList.remove('show');
+                            renderLeads();
+                            showToast(color ? `🖍️ Color coded ${color}!` : '✅ Color code cleared', 'success');
+                        });
+                    });
+                    sendContent.appendChild(colorBtn);
+                    sendContent.appendChild(colorRow);
                     sendContainer.appendChild(sendBtn);
                     sendContainer.appendChild(sendContent);
 
