@@ -2280,8 +2280,8 @@
                         </div>
                         <div class="field-group full-width" data-hlkey="leadForm-comment">
                             <label><i class="fas fa-comment"></i> Notes / Comments</label>
-                            <textarea id="leadFormComment" placeholder="Add any additional notes..." maxlength="45000" style="min-height:80px;resize:vertical;"></textarea>
-                            <div class="word-counter" id="leadFormWordCount">0 / 6000 words</div>
+                            <textarea id="leadFormComment" placeholder="Add any additional notes..." maxlength="22500" style="min-height:80px;resize:none;overflow:hidden;"></textarea>
+                            <div class="word-counter" id="leadFormWordCount">0 / 3000 words</div>
                         </div>
                         <div class="field-group" data-hlkey="leadForm-origin">
                             <label for="leadFormOrigin"><i class="fas fa-route"></i> Where did this lead start?</label>
@@ -3132,7 +3132,7 @@
             const leadFormContact = document.getElementById('leadFormContact');
             const leadFormOrigin = document.getElementById('leadFormOrigin');
             const leadFormAgent = document.getElementById('leadFormAgent');
-            const LEAD_WORDS = 6000, LEAD_CHARS = 45000;
+            const LEAD_WORDS = 3000, LEAD_CHARS = 22500; // Tania, Nov 14: 3000 words for Lead comment and My notes (Tania)
             // Where a lead started, for statistics. "AI agent (Voice Studio)" also records which agent.
             const LEAD_ORIGINS = ['', 'AI agent (Voice Studio)', 'Telemarketing call', 'Lead Prospector', 'My own call (Tania)', 'Social media', 'Referral', 'Website / inbound', 'Email', 'Other'];
             const VOICE_AGENTS = ['', 'Rebecca', 'Monica', 'George', 'Jennifer', 'Alek'];
@@ -3216,6 +3216,8 @@
                 const words = countWords(leadFormComment.value);
                 leadFormWordCount.textContent = `${words} / ${LEAD_WORDS} words`;
                 leadFormWordCount.style.color = words > LEAD_WORDS ? '#b22222' : '#2c7da0';
+                // Tania, Nov 14: stretches taller as she types instead of a fixed box with a scrollbar.
+                leadFormComment.style.height = 'auto'; leadFormComment.style.height = leadFormComment.scrollHeight + 'px';
             }
 
             function updateBriefingWordCounter() {
@@ -5577,11 +5579,14 @@
                     commentGroup.className = 'field-group comment-box';
                     commentGroup.dataset.hlkey = `lead-${lead.id}-comment`;
                     const commentLabel = document.createElement('label');
-                    commentLabel.innerHTML = '<i class="fas fa-comment"></i> Lead comment (6000 words)';
+                    commentLabel.innerHTML = `<i class="fas fa-comment"></i> Lead comment (${LEAD_WORDS} words)`;
                     const textarea = document.createElement('textarea');
                     textarea.placeholder = 'Add details...';
                     textarea.value = lead.comment || '';
-                    textarea.maxLength = LEAD_CHARS; textarea.style.resize = 'vertical';
+                    textarea.maxLength = LEAD_CHARS;
+                    // Tania, Nov 14: stretches taller as she types instead of a fixed box with a scrollbar.
+                    textarea.style.resize = 'none'; textarea.style.overflow = 'hidden'; textarea.style.minHeight = '2.4em';
+                    const growTextarea = (ta) => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; };
                     const wordCounter = document.createElement('div');
                     wordCounter.className = 'word-counter';
 
@@ -5594,8 +5599,10 @@
                         lead.comment = textarea.value;
                         saveToStorage();
                         updateLeadWordCounter();
+                        growTextarea(textarea);
                     });
                     updateLeadWordCounter();
+                    setTimeout(() => growTextarea(textarea), 0);
 
                     commentGroup.appendChild(commentLabel);
                     commentGroup.appendChild(textarea);
@@ -6216,6 +6223,19 @@
             // Yellow = spoke to a real person (call back later / need to speak to someone else). Blue = hang up, voicemail, phone menu ("press 1") or another AI.
             const TM_RANK = { blue: 0, yellow: 1, green: 2, lavender: 3, orange: 4, lightgrey: 4, lightgreen: 4, sky: 5 }; // Tania, Nov 11: lavender = Tania still owes the audit; lightgrey = audit attached, Eva's queue to edit and push; lightgreen = the draft is in Gmail waiting for Tania; sky (#50b9fa) = her own appointment
             function loadTmColors() { try { const o = JSON.parse(localStorage.getItem('webswan_tm_colors') || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
+            // Tania, Nov 14: a one-click 🇭🇹 tag for Haitian-owned leads, independent of the outcome color, so she can
+            // group and jump to them. Auto-detects "Haitian" in the lead's own text too, so she doesn't have to tag every one by hand.
+            function loadTmHaitian() { try { const o = JSON.parse(localStorage.getItem('webswan_tm_haitian') || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
+            function isHaitianLead(l) {
+                const flags = loadTmHaitian(); const key = String(l.id);
+                if (flags[key] === false) return false; // explicitly un-tagged by Tania
+                if (flags[key]) return true;
+                return /ha(ï|i)ti(an)?|kreyòl|creole/i.test([l.companyName, l.name, l.industry, l.comment, l.myNotes].filter(Boolean).join(' '));
+            }
+            function setTmHaitian(id, on) {
+                const all = loadTmHaitian(); all[String(id)] = !!on; localStorage.setItem('webswan_tm_haitian', JSON.stringify(all));
+                scheduleFirebaseAutoSave();
+            }
             // Tania, Nov 13: same color system as the Voice/Telemarketing rows (tmColorOf), but for her own
             // manually-entered leads — no AI-call auto-coloring, just her own pick or a Lead Spotter orange flag.
             function leadColorOf(l) { const c = loadTmColors(); return c[String(l.id)] || (l.flagged ? 'orange' : ''); }
@@ -6303,15 +6323,21 @@
                 } catch (e) { /* storage full: Eva falls back to the live database */ }
                 const tmRank = (l) => TM_RANK[tmColorOf(l)] || 0;
                 const byRank = (a, b) => (tmRank(b) - tmRank(a)) || String(b.timestamp || '').localeCompare(String(a.timestamp || ''));
+                // Tania, Nov 14: Haitian-tagged leads float to the top of whichever group they're already in, so they stay together.
+                const byHaitianThenRank = (a, b) => (isHaitianLead(b) - isHaitianLead(a)) || byRank(a, b);
                 const groups = [
-                    { list: visibleMain.filter(l => isAI(l) && tmRank(l) >= 1).sort(byRank), title: '<i class="fas fa-star"></i> AI Calls: real conversations (call these first) · <span style="background:#ffe0b2;color:#7a3b00;padding:0 6px;border-radius:6px">orange hot: email + appointment</span> <span style="background:#50b9fa;color:#04263d;padding:0 6px;border-radius:6px">sky: my appointment with the doctor/attorney</span> <span style="background:#c8f0c8;color:#14532d;padding:0 6px;border-radius:6px">green: email or Rachel</span> <span style="background:#e6d9ff;color:#3b2470;padding:0 6px;border-radius:6px">lavender: audit sent</span> <span style="background:#fff3a3;color:#4a3b00;padding:0 6px;border-radius:6px">yellow: spoke to a person</span>', color: '#8a6d00', border: '#e0b100', hl: 'aiblue', refresh: false },
-                    { list: visibleMain.filter(l => !isPros(l) && !isAI(l)), title: '<i class="fas fa-phone-volume"></i> From Telemarketing Calls', color: '#ad1457', border: '#ec407a', hl: 'pink', refresh: true },
-                    { list: visibleMain.filter(l => isAI(l) && tmRank(l) === 0).sort(byRank), title: '<i class="fas fa-robot"></i> AI Calls (Voice Studio) · <span style="background:#dbeafe;color:#1d4ed8;padding:0 6px;border-radius:6px">blue</span> hang up, voicemail, phone menu, another AI', color: '#1d4ed8', border: '#1d4ed8', hl: 'aiblue', refresh: false },
-                    { list: visibleMain.filter(isPros), title: '<i class="fas fa-magnifying-glass-location"></i> From Lead Prospector', color: '#0077be', border: '#0077be', hl: 'ocean', refresh: false }
+                    { list: visibleMain.filter(l => isAI(l) && tmRank(l) >= 1).sort(byHaitianThenRank), title: '<i class="fas fa-star"></i> AI Calls: real conversations (call these first) · <span style="background:#ffe0b2;color:#7a3b00;padding:0 6px;border-radius:6px">orange hot: email + appointment</span> <span style="background:#50b9fa;color:#04263d;padding:0 6px;border-radius:6px">sky: my appointment with the doctor/attorney</span> <span style="background:#c8f0c8;color:#14532d;padding:0 6px;border-radius:6px">green: email or Rachel</span> <span style="background:#e6d9ff;color:#3b2470;padding:0 6px;border-radius:6px">lavender: audit sent</span> <span style="background:#fff3a3;color:#4a3b00;padding:0 6px;border-radius:6px">yellow: spoke to a person</span>', color: '#8a6d00', border: '#e0b100', hl: 'aiblue', refresh: false },
+                    { list: visibleMain.filter(l => !isPros(l) && !isAI(l)).sort((a, b) => isHaitianLead(b) - isHaitianLead(a)), title: '<i class="fas fa-phone-volume"></i> From Telemarketing Calls', color: '#ad1457', border: '#ec407a', hl: 'pink', refresh: true },
+                    { list: visibleMain.filter(l => isAI(l) && tmRank(l) === 0).sort(byHaitianThenRank), title: '<i class="fas fa-robot"></i> AI Calls (Voice Studio) · <span style="background:#dbeafe;color:#1d4ed8;padding:0 6px;border-radius:6px">blue</span> hang up, voicemail, phone menu, another AI', color: '#1d4ed8', border: '#1d4ed8', hl: 'aiblue', refresh: false },
+                    { list: visibleMain.filter(isPros).sort((a, b) => isHaitianLead(b) - isHaitianLead(a)), title: '<i class="fas fa-magnifying-glass-location"></i> From Lead Prospector', color: '#0077be', border: '#0077be', hl: 'ocean', refresh: false }
                 ];
                 // Eva (login code) only sees the lavender leads
                 if (window.WP_ROLE === 'eva') groups.splice(0, groups.length, { list: visibleAll.filter(l => tmColorOf(l) === 'lightgrey').sort(byRank), title: '🩶 Light grey: your queue — edit from Tania’s notes, then push to Gmail', color: '#5b3fa8', border: '#9b7ae0', hl: 'lavender', refresh: true });
-                let html = '';
+                // Tania, Nov 14: jump box -- type a keyword, smooth-scroll to the start of that group of leads below.
+                let html = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">'
+                    + '<input type="search" id="tmJumpInput" placeholder="Jump to: telemarketer, studio yellow/green/blue/hot, haitian leads…" style="flex:1;min-width:220px;padding:7px 10px;border:1.5px solid #ec407a;border-radius:9px;font-size:0.82rem;">'
+                    + '<button type="button" id="tmJumpBtn" class="btn btn-outline" style="border-color:#ec407a;color:#ad1457;padding:0.35rem 0.8rem;font-size:0.78rem;"><i class="fas fa-arrow-down"></i> Jump</button>'
+                    + '</div>';
                 groups.forEach((g, gi) => {
                     if (!g.list.length && !(g.refresh)) return;
                     html += '<div style="display:flex;align-items:center;justify-content:space-between;margin:' + (gi ? '14px' : '0') + ' 0 8px;">'
@@ -6347,6 +6373,7 @@
                             ${String(lead.myNotes || '').trim() ? '<span title="You have notes on this lead" style="font-size:0.7rem;font-weight:700;background:#fff8d6;color:#c2185b;border:1px solid #f48fb1;border-radius:8px;padding:1px 6px;">📝 My notes</span>' : ''}
                             ${tmSiteBtn(lead)}
                             ${tmCallId(lead) ? `<button class="tm-push-btn tm-listen-btn" data-call-id="${tmCallId(lead)}" title="Listen to the call recording right here" style="color:#1d4ed8;"><i class="fas fa-headphones"></i></button>` : ''}
+                            <button class="tm-haitian-btn" data-tm-id="${lead.id}" title="${isHaitianLead(lead) ? 'Tagged Haitian-owned — click to untag' : 'Tag as Haitian-owned'}" aria-label="Tag Haitian-owned" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 4px;opacity:${isHaitianLead(lead) ? '1' : '0.3'};">🇭🇹</button>
                             <span class="tm-color-dots" style="display:inline-flex;gap:4px;align-items:center;">${[['blue', '#1d4ed8', 'Blue: hang up, voicemail, phone menu, another AI'], ['yellow', '#ffd600', 'Yellow: spoke to a person (call back later)'], ['green', '#2e7d32', "Green: got an email, transferred to Rachel or got Rachel's number"], ['lavender', '#c4a8f5', 'Lavender: this prospect has an email — I still owe them the audit'], ['orange', '#f57c00', 'Orange: hot lead, email + appointment'], ['sky', '#50b9fa', 'Sky blue: I have an appointment to talk to the doctor/attorney'], ['lightgrey', '#cbd0d8', "Light grey: audit attached — Eva's queue to edit from your notes and push to Gmail"], ['lightgreen', '#bfe3c4', 'Light green: the draft is in Gmail with the audit, ready for you to review and send']].map(([c, bg, t]) => `<button class="tm-color-btn" data-tm-id="${lead.id}" data-color="${c}" title="${t}" aria-label="${t}" style="width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 ${tmColorOf(lead) === c ? '3px #111' : '1px #9aa'};background:${bg};cursor:pointer;padding:0;"></button>`).join('')}${tmColors[String(lead.id)] ? `<button class="tm-color-btn" data-tm-id="${lead.id}" data-color="" title="Undo: go back to the automatic color" aria-label="Undo color" style="border:1px solid #9aa;background:#fff;border-radius:10px;font-size:11px;padding:0 6px;height:18px;cursor:pointer;">↺ undo</button>` : ''}</span>
                             <button class="tm-done-btn tm-done-pill${done ? ' is-done' : ''}" data-tm-id="${lead.id}" title="${done ? 'Clear the check — mark not done' : 'Click after you call or make an audit for this lead, so you know you already did it'}" aria-label="Mark done">${done ? '✓ Done' : '☐ Done'}</button>
                             <button class="tm-tania-btn" data-tm-id="${lead.id}" title="Move to Tania's Calls (it stays here too)" aria-label="Move to Tania's Calls" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 4px;">📒</button>
@@ -6412,6 +6439,15 @@
                 tmQA('.tm-color-btn').forEach((btn) => {
                     btn.addEventListener('click', (e) => { e.stopPropagation(); setTmColor(btn.dataset.tmId, btn.dataset.color); renderTelemarketingLeads(); });
                 });
+                tmQA('.tm-haitian-btn').forEach((btn) => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const lead = telemarketingLeads.find(l => String(l.id) === String(btn.dataset.tmId));
+                        if (!lead) return;
+                        setTmHaitian(lead.id, !isHaitianLead(lead));
+                        renderTelemarketingLeads();
+                    });
+                });
                 tmQA('.tm-listen-btn').forEach((btn) => {
                     btn.addEventListener('click', (e) => { e.stopPropagation(); openCallRecording(btn.dataset.callId); });
                 });
@@ -6471,6 +6507,41 @@
                 }
                 const socialBtn = document.getElementById('tmSocialBtn');
                 if (socialBtn) { socialBtn.addEventListener('click', (e) => { e.stopPropagation(); findSocialForAllLeads(); }); }
+                const jumpBtn = document.getElementById('tmJumpBtn'), jumpInput = document.getElementById('tmJumpInput');
+                if (jumpBtn && jumpInput) {
+                    const go = () => tmJumpTo(jumpInput.value);
+                    jumpBtn.addEventListener('click', (e) => { e.stopPropagation(); go(); });
+                    jumpInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+                }
+            }
+            // Tania, Nov 14: the jump box above the color legend -- type a keyword and smooth-scroll to the
+            // start of that group (reads each row's own rendered color, so it matches what she sees on screen).
+            function tmJumpTo(term) {
+                const q = String(term || '').trim().toLowerCase();
+                if (!q) return;
+                const rows = Array.from(document.querySelectorAll('#telemarketingLeadsContainer .tm-lead-row'));
+                function findRow(predicate) {
+                    for (const row of rows) {
+                        const lead = telemarketingLeads.find(l => String(l.id) === String(row.dataset.tmId));
+                        if (lead && predicate(lead, row)) return row;
+                    }
+                    return null;
+                }
+                const hlOf = (row) => { const t = row.querySelector('.item-text'); return t ? t.dataset.highlight : ''; };
+                let target = null, label = 'matching';
+                if (/haitian/.test(q)) { target = findRow(l => isHaitianLead(l)); label = 'Haitian'; }
+                else if (/telemarket/.test(q)) { target = findRow(l => l.source !== 'voice-studio' && l.source !== 'prospector' && l.source !== 'solene'); label = 'telemarketing'; }
+                else if (/studio.*yellow/.test(q)) { target = findRow((l, row) => l.source === 'voice-studio' && hlOf(row) === 'aiyellow'); label = 'Voice Studio yellow'; }
+                else if (/studio.*green/.test(q)) { target = findRow((l, row) => l.source === 'voice-studio' && hlOf(row) === 'green'); label = 'Voice Studio green'; }
+                else if (/studio.*blue/.test(q)) { target = findRow((l, row) => l.source === 'voice-studio' && hlOf(row) === 'aiblue'); label = 'Voice Studio blue'; }
+                else if (/studio.*(hot|orange)/.test(q)) { target = findRow((l, row) => l.source === 'voice-studio' && hlOf(row) === 'orange'); label = 'Voice Studio hot'; }
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    target.classList.add('lead-card-flash');
+                    setTimeout(() => target.classList.remove('lead-card-flash'), 1600);
+                } else {
+                    showToast(`No ${label} leads found yet.`, 'error');
+                }
             }
 
             // Tania, Nov 13: "Find social media" for every lead that has a website but no social link yet —
@@ -6658,12 +6729,29 @@
                     + '<div class="field-group my-notes-group" data-hlkey="' + tmHlKey(lead, 'myNotes') + '" style="margin-bottom:9px;">'
                     +   '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><label style="font-size:0.75rem;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:#c2185b;">📝 My notes (Tania)</label>'
                     +   '<button type="button" onclick="stampNote()" style="border:1px solid #f48fb1;background:#fff;color:#c2185b;border-radius:8px;padding:2px 9px;font-size:0.72rem;font-weight:700;cursor:pointer;">+ New dated note</button></div>'
-                    +   '<textarea data-tm-edit="myNotes" rows="4" placeholder="Your notes go here: what you learned, next step, when to call back…" style="background:#fff8d6;border:2px solid #f48fb1;border-left:6px solid #e91e63;color:#4a0d2a;font-weight:600;">' + tmEsc(lead.myNotes) + '</textarea></div>'
+                    +   '<textarea data-tm-edit="myNotes" rows="4" maxlength="' + LEAD_CHARS + '" placeholder="Your notes go here: what you learned, next step, when to call back…" style="background:#fff8d6;border:2px solid #f48fb1;border-left:6px solid #e91e63;color:#4a0d2a;font-weight:600;resize:none;overflow:hidden;">' + tmEsc(lead.myNotes) + '</textarea><div class="word-counter" id="tmMyNotesCount"></div></div>'
                     + '<div class="field-group" data-hlkey="' + tmHlKey(lead, 'comment') + '" style="margin-bottom:9px;"><label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#475569;display:block;">' + (lead.source === 'voice-studio' ? '🤖 Their notes (AI call: summary and what they said)' : '📞 Their notes (telemarketer)') + '</label>'
-                    +   '<textarea data-tm-edit="comment" rows="6" style="background:#f1f5f9;color:#334155;">' + tmEsc(lead.comment) + '</textarea></div>'
+                    +   '<textarea data-tm-edit="comment" rows="6" maxlength="' + LEAD_CHARS + '" style="background:#f1f5f9;color:#334155;resize:none;overflow:hidden;">' + tmEsc(lead.comment) + '</textarea><div class="word-counter" id="tmCommentCount"></div></div>'
                     + '<p style="font-size:0.75rem;color:#6b7c8f;margin:4px 0 0;">🖍️ Highlight: select words in any box, press <b>✍️ Text highlight</b> (bottom left) and pick a color. ✍️ Everything you type is saved by itself.</p>';
                 setTimeout(() => window.dispatchEvent(new Event('resize')), 30); // repaint saved highlights in these boxes
+                tmInitNotesBoxes();
                 document.getElementById('tmLeadModalOverlay').classList.add('show');
+            }
+            // Tania, Nov 14: 3000-word counters that grow taller as she types, for My notes and the comment/call-notes
+            // box in the shared lead popup (both openTmLeadModal and openMyLeadModal use this).
+            function tmGrowBox(ta) { if (!ta) return; ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 'px'; }
+            function tmUpdateCount(ta, countEl) {
+                if (!ta || !countEl) return;
+                const words = countWords(ta.value);
+                countEl.textContent = words + ' / ' + LEAD_WORDS + ' words';
+                countEl.style.color = words > LEAD_WORDS ? '#b22222' : '#2c7da0';
+            }
+            function tmInitNotesBoxes() {
+                const myNotes = document.querySelector('#tmLeadModalBody [data-tm-edit="myNotes"]');
+                const comment = document.querySelector('#tmLeadModalBody [data-tm-edit="comment"]');
+                tmGrowBox(myNotes); tmGrowBox(comment);
+                tmUpdateCount(myNotes, document.getElementById('tmMyNotesCount'));
+                tmUpdateCount(comment, document.getElementById('tmCommentCount'));
             }
 
             // Tania, Nov 14: same popup (yellow "My notes" box and all) for her OWN leads -- opened from the
@@ -6692,13 +6780,14 @@
                     +   '<button type="button" onclick="window.wpOpenLeadSite()" title="Open their website" aria-label="Open website" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;border-radius:8px;padding:5px 10px;font-weight:800;font-size:0.78rem;cursor:pointer;background:linear-gradient(90deg,#77c6e0,#0be0c0);color:#062743;">🌐 Open</button></div></div>'
                     + fldMine('social', 'Social media', lead.social)
                     + '<div class="field-group my-notes-group" data-hlkey="lead-' + lead.id + '-myNotes" style="margin-bottom:9px;">'
-                    +   '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><label style="font-size:0.75rem;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:#c2185b;">📝 My notes (Tania)</label>'
+                    +   '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><label style="font-size:0.75rem;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:#c2185b;">📝 My notes (Tania) <span style="font-weight:400;text-transform:none;">— what you want Eva to focus on when she drafts the email</span></label>'
                     +   '<button type="button" onclick="stampNote()" style="border:1px solid #f48fb1;background:#fff;color:#c2185b;border-radius:8px;padding:2px 9px;font-size:0.72rem;font-weight:700;cursor:pointer;">+ New dated note</button></div>'
-                    +   '<textarea data-tm-edit="myNotes" rows="4" placeholder="Your notes go here: what you learned, next step, when to call back…" style="background:#fff8d6;border:2px solid #f48fb1;border-left:6px solid #e91e63;color:#4a0d2a;font-weight:600;">' + tmEsc(lead.myNotes || '') + '</textarea></div>'
-                    + '<div class="field-group" data-hlkey="lead-' + lead.id + '-comment" style="margin-bottom:9px;"><label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#475569;display:block;">💬 Lead comment</label>'
-                    +   '<textarea data-tm-edit="comment" rows="6" style="background:#f1f5f9;color:#334155;">' + tmEsc(lead.comment || '') + '</textarea></div>'
+                    +   '<textarea data-tm-edit="myNotes" rows="4" maxlength="' + LEAD_CHARS + '" placeholder="Your notes go here: what you learned, next step, when to call back…" style="background:#fff8d6;border:2px solid #f48fb1;border-left:6px solid #e91e63;color:#4a0d2a;font-weight:600;resize:none;overflow:hidden;">' + tmEsc(lead.myNotes || '') + '</textarea><div class="word-counter" id="tmMyNotesCount"></div></div>'
+                    + '<div class="field-group" data-hlkey="lead-' + lead.id + '-comment" style="margin-bottom:9px;"><label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#475569;display:block;">💬 Lead comment — what you write as you work this lead</label>'
+                    +   '<textarea data-tm-edit="comment" rows="6" maxlength="' + LEAD_CHARS + '" style="background:#f1f5f9;color:#334155;resize:none;overflow:hidden;">' + tmEsc(lead.comment || '') + '</textarea><div class="word-counter" id="tmCommentCount"></div></div>'
                     + '<p style="font-size:0.75rem;color:#6b7c8f;margin:4px 0 0;">🖍️ Highlight: select words in any box, press <b>✍️ Text highlight</b> (bottom left) and pick a color. ✍️ Everything you type is saved by itself.</p>';
                 setTimeout(() => window.dispatchEvent(new Event('resize')), 30);
+                tmInitNotesBoxes();
                 document.getElementById('tmLeadModalOverlay').classList.add('show');
             }
 
@@ -7110,6 +7199,9 @@
             document.addEventListener('input', (e) => {
                 if (!e.target.closest || !e.target.closest('#tmLeadModalBody') || !e.target.dataset.tmEdit) return;
                 const lead = tmCurrentLead; if (!lead) return;
+                // Tania, Nov 14: grow the box and update the word count immediately, on every keystroke (no debounce).
+                if (e.target.dataset.tmEdit === 'myNotes') { tmGrowBox(e.target); tmUpdateCount(e.target, document.getElementById('tmMyNotesCount')); }
+                if (e.target.dataset.tmEdit === 'comment') { tmGrowBox(e.target); tmUpdateCount(e.target, document.getElementById('tmCommentCount')); }
                 clearTimeout(tmAutoTimer);
                 tmAutoTimer = setTimeout(() => {
                     const ch = {}; document.querySelectorAll('#tmLeadModalBody [data-tm-edit]').forEach(el => { ch[el.dataset.tmEdit] = el.value.trim(); });
