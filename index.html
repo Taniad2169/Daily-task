@@ -6005,7 +6005,7 @@
                     ` : '';
                     div.innerHTML = `
                         <i class="fas fa-check-circle"></i>
-                        <span class="item-text${item.type === 'lead' && item.leadId ? ' item-text-clickable' : ''}"${highlightAttr}${item.type === 'lead' && item.leadId ? ` data-lead-id="${item.leadId}" title="Double-click to jump to this lead's form"` : ''}>${item.text}</span>
+                        <span class="item-text${item.type === 'lead' && item.leadId ? ' item-text-clickable' : ''}"${highlightAttr}${item.type === 'lead' && item.leadId ? ` data-lead-id="${item.leadId}" title="Click for notes · double-click to jump to this lead's form"` : ''}>${item.text}</span>
                         ${cDone ? '<span class="tm-done-mark" title="You already handled this one" style="color:#1b8f3a;font-weight:800;font-size:0.9rem;white-space:nowrap;">✓ done</span>' : ''}
                         <span class="item-type">${item.type === 'lead' ? '📋 Lead' : '📝 To-Do'}</span>
                         <span style="font-size:0.7rem;color:#a0aec0;">${item.timestamp || ''}</span>
@@ -6016,6 +6016,18 @@
                     completedContainer.appendChild(div);
                 });
 
+                // Tania, Nov 14: a single click on a completed lead's name opens the same
+                // yellow notes popup Voice Studio/telemarketing leads open -- no hunting for
+                // a separate button on this compact row.
+                document.querySelectorAll('.item-text-clickable').forEach(el => {
+                    el.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const leadId = this.dataset.leadId;
+                        const lead = leads.find(l => String(l.id) === String(leadId));
+                        if (!lead) { showToast('That lead is no longer in the list.', 'error'); return; }
+                        openMyLeadModal(lead);
+                    });
+                });
                 // Double-click a completed lead's name to smooth-scroll down to
                 // that same lead's card in the lead list, with a brief flash so
                 // it's obvious which card just got scrolled to.
