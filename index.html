@@ -2330,6 +2330,7 @@
 
                 <!-- ===== LEADS CONTAINER (saved leads) ===== -->
                 <div id="leadsContainer"></div>
+                <div id="wpLeadsEnd"></div>
 
                 <div class="todo-section">
                     <h3><i class="fas fa-tasks" style="color:#0077b6;"></i> Personal To-Do <span style="font-weight:400;font-size:0.75rem;color:#2c7da0;">(250 words max)</span></h3>
@@ -8628,22 +8629,32 @@ body { min-height: 100dvh; }
 
 <!-- Tania, Nov 14: floating "back to top" button -- stays on screen while scrolling, smooth-scrolls up to the button header. -->
 <button type="button" id="wpToTopBtn" title="Back to top" aria-label="Back to top"><i class="fas fa-arrow-up"></i></button>
+<!-- Tania, Nov 14: companion "scroll to end of leads" button -- smooth-scrolls down to the end of the client/lead cards, right above Personal To-Do. -->
+<button type="button" id="wpToLeadsEndBtn" title="Scroll to end of leads" aria-label="Scroll to end of leads"><i class="fas fa-arrow-down"></i></button>
 <style>
-#wpToTopBtn{position:fixed;right:20px;bottom:26px;z-index:9998;width:48px;height:48px;border-radius:50%;border:0;background:#0077b6;color:#fff;font-size:18px;box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer;display:none;align-items:center;justify-content:center;opacity:0;transform:translateY(12px);transition:opacity .25s ease,transform .25s ease,background .2s ease}
-#wpToTopBtn.show{display:flex;opacity:1;transform:translateY(0)}
-#wpToTopBtn:hover{background:#005f8f}
+#wpToTopBtn,#wpToLeadsEndBtn{position:fixed;right:20px;z-index:9998;width:48px;height:48px;border-radius:50%;border:0;background:#0077b6;color:#fff;font-size:18px;box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer;display:none;align-items:center;justify-content:center;opacity:0;transform:translateY(12px);transition:opacity .25s ease,transform .25s ease,background .2s ease}
+#wpToTopBtn{bottom:26px}
+#wpToLeadsEndBtn{bottom:82px}
+#wpToTopBtn.show,#wpToLeadsEndBtn.show{display:flex;opacity:1;transform:translateY(0)}
+#wpToTopBtn:hover,#wpToLeadsEndBtn:hover{background:#005f8f}
 </style>
 <script>
 (function(){
-  var btn=document.getElementById('wpToTopBtn'), header=document.getElementById('wpHeader');
-  if(!btn) return;
+  var topBtn=document.getElementById('wpToTopBtn'), header=document.getElementById('wpHeader');
+  var endBtn=document.getElementById('wpToLeadsEndBtn'), leadsEnd=document.getElementById('wpLeadsEnd');
+  if(!topBtn && !endBtn) return;
   function onScroll(){
-    if(window.scrollY>280){ btn.classList.add('show'); } else { btn.classList.remove('show'); }
+    var past=window.scrollY>280;
+    if(topBtn) topBtn.classList.toggle('show',past);
+    if(endBtn) endBtn.classList.toggle('show',past);
   }
   window.addEventListener('scroll',onScroll,{passive:true});
   onScroll();
-  btn.addEventListener('click',function(){
+  if(topBtn) topBtn.addEventListener('click',function(){
     (header||document.body).scrollIntoView({behavior:'smooth',block:'start'});
+  });
+  if(endBtn) endBtn.addEventListener('click',function(){
+    (leadsEnd||document.body).scrollIntoView({behavior:'smooth',block:'start'});
   });
 })();
 </script>
