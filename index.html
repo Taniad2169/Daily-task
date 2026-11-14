@@ -2274,6 +2274,10 @@
                             <label><i class="fas fa-link"></i> URL</label>
                             <input type="url" id="leadFormUrl" placeholder="Enter website URL..." />
                         </div>
+                        <div class="field-group" data-hlkey="leadForm-social">
+                            <label><i class="fas fa-hashtag"></i> Social media</label>
+                            <input type="text" id="leadFormSocial" placeholder="e.g. Instagram/Facebook handle or link" />
+                        </div>
                         <div class="field-group full-width" data-hlkey="leadForm-comment">
                             <label><i class="fas fa-comment"></i> Notes / Comments</label>
                             <textarea id="leadFormComment" placeholder="Add any additional notes..." maxlength="45000" style="min-height:80px;resize:vertical;"></textarea>
@@ -3119,6 +3123,7 @@
             const leadFormPhone = document.getElementById('leadFormPhone');
             const leadFormEmail = document.getElementById('leadFormEmail');
             const leadFormUrl = document.getElementById('leadFormUrl');
+            const leadFormSocial = document.getElementById('leadFormSocial');
             const leadFormComment = document.getElementById('leadFormComment');
             const leadFormWordCount = document.getElementById('leadFormWordCount');
             const leadFormContact = document.getElementById('leadFormContact');
@@ -3559,6 +3564,7 @@
                     phone: leadFormPhone.value.trim(),
                     email: leadFormEmail.value.trim(),
                     url: leadFormUrl.value.trim(),
+                    social: leadFormSocial.value.trim(),
                     comment: leadFormComment.value.trim(),
                     contact: leadFormContact.value.trim()
                 };
@@ -4966,6 +4972,7 @@
                     phone: leadFormPhone.value.trim(),
                     email: leadFormEmail.value.trim(),
                     url: leadFormUrl.value.trim(),
+                    social: leadFormSocial.value.trim(),
                     comment: leadFormComment.value.trim(),
                     origin: leadFormOrigin.value,
                     agent: leadFormOrigin.value === VS_ORIGIN ? leadFormAgent.value : '',
@@ -5385,10 +5392,11 @@
                 const phone = leadFormPhone.value.trim();
                 const email = leadFormEmail.value.trim();
                 const url = leadFormUrl.value.trim();
+                const social = leadFormSocial.value.trim();
                 const comment = leadFormComment.value.trim();
                 const contact = leadFormContact.value.trim();
 
-                if (!name && !contact && !phone && !email && !url && !comment) {
+                if (!name && !contact && !phone && !email && !url && !social && !comment) {
                     showToast('Please fill in at least one field.', 'error');
                     return;
                 }
@@ -5400,6 +5408,7 @@
                     phone: phone || 'No phone',
                     email: email || 'No email',
                     url: url || 'No URL',
+                    social: social || '',
                     comment: comment || '',
                     origin: leadFormOrigin.value,
                     agent: leadFormOrigin.value === VS_ORIGIN ? leadFormAgent.value : '',
@@ -5441,6 +5450,7 @@
                 leadFormPhone.value = '';
                 leadFormEmail.value = '';
                 leadFormUrl.value = '';
+                leadFormSocial.value = '';
                 leadFormComment.value = '';
                 leadFormContact.value = ''; leadFormOrigin.value = ''; syncAgentWrap();
                 updateLeadFormWordCounter();
@@ -5453,6 +5463,7 @@
                 leadFormPhone.value = '';
                 leadFormEmail.value = '';
                 leadFormUrl.value = '';
+                leadFormSocial.value = '';
                 leadFormComment.value = '';
                 leadFormContact.value = ''; leadFormOrigin.value = ''; syncAgentWrap();
                 updateLeadFormWordCounter();
@@ -5499,6 +5510,7 @@
                     grid.appendChild(createField('Phone', 'tel', lead.phone, (val) => { lead.phone = val; saveToStorage(); }, `lead-${lead.id}-phone`));
                     grid.appendChild(createField('Email', 'email', lead.email, (val) => { lead.email = val; saveToStorage(); }, `lead-${lead.id}-email`));
                     grid.appendChild(createField('URL', 'url', lead.url, (val) => { lead.url = val; saveToStorage(); }, `lead-${lead.id}-url`));
+                    grid.appendChild(createField('Social media', 'text', lead.social, (val) => { lead.social = val; saveToStorage(); }, `lead-${lead.id}-social`));
 
                     const comboWrapper = document.createElement('div');
                     comboWrapper.className = 'field-group';
@@ -6862,7 +6874,7 @@
                     const all = loadTmEdits(); all[String(lead.id)] = Object.assign(all[String(lead.id)] || {}, ch);
                     try { localStorage.setItem('webswan_tm_edits', JSON.stringify(all)); scheduleFirebaseAutoSave(); } catch (e) {}
                 }
-                const hasFormData = [leadFormName, leadFormContact, leadFormPhone, leadFormEmail, leadFormUrl, leadFormComment].some(f => f.value.trim());
+                const hasFormData = [leadFormName, leadFormContact, leadFormPhone, leadFormEmail, leadFormUrl, leadFormSocial, leadFormComment].some(f => f.value.trim());
                 if (hasFormData && !confirm('The Lead Form already has information in it. Replace it with this telemarketing lead?')) return;
 
                 const clean = (v) => (v === undefined || v === null) ? '' : String(v).trim();
@@ -6890,6 +6902,7 @@
                 leadFormPhone.value = clean(lead.phone);
                 leadFormEmail.value = clean(lead.email);
                 leadFormUrl.value = url;
+                leadFormSocial.value = clean(lead.social);
                 leadFormComment.value = notes.join('\n').slice(0, leadFormComment.maxLength > 0 ? leadFormComment.maxLength : LEAD_CHARS);
                 updateLeadFormWordCounter();
 
@@ -7535,6 +7548,7 @@
                     leadFormPhone.value = '';
                     leadFormEmail.value = '';
                     leadFormUrl.value = '';
+                    leadFormSocial.value = '';
                     leadFormComment.value = '';
                     leadFormContact.value = ''; leadFormOrigin.value = ''; syncAgentWrap();
                     noteContentInput.value = '';
