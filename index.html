@@ -2668,6 +2668,7 @@
                     <button class="btn btn-outline" id="tmEditBtn" style="border-color:#ad1457;color:#ad1457;"><i class="fas fa-pen"></i> Edit</button>
                     <button class="btn" id="tmPushToFormBtn" style="background:#0077b6;color:white;border-color:#0077b6;"><i class="fas fa-share-square"></i> Push to Lead Form</button>
                     <button class="btn" id="tmEvaDraftBtn" type="button" style="background:#7c5cd6;color:white;border-color:#7c5cd6;"><i class="fas fa-envelope"></i> Email draft (Eva)</button>
+                    <button class="btn" id="tmMarkSentBtn" type="button" style="background:#0e8f6f;color:white;border-color:#0e8f6f;display:none;"><i class="fas fa-paper-plane"></i> Mark email sent (starts 24h)</button>
                     <button class="btn" id="tmSiteFooterBtn" type="button" onclick="window.wpOpenLeadSite()" style="background:linear-gradient(90deg,#77c6e0,#0be0c0);color:#062743;border-color:#0be0c0;font-weight:800;"><i class="fas fa-globe"></i> Open website</button>
                 </div>
             </div>
@@ -4694,6 +4695,7 @@
                 updateNoteInputWordCounter();
                 renderFutureCalls();
                 loadTmDismissed(); renderTelemarketingLeads();
+                try { checkEvaHandoffs(); } catch (e) {} // Tania, Nov 13: 24h-after-sent handoff to Monica/Alek
             }
 
             function updateFirebaseControls(message, connected = false) {
@@ -5722,6 +5724,19 @@
                         siteBtn.addEventListener('click', (e) => { e.stopPropagation(); window.open(/^https?:\/\//i.test(lead.url) ? lead.url : 'https://' + lead.url, '_blank', 'noopener,noreferrer'); });
                         actions.appendChild(siteBtn);
                     }
+                    // Tania, Nov 13: same "mark sent → starts the 24h handoff" button the Voice leads get,
+                    // once Eva's draft for this lead has gone light green (ready in Gmail).
+                    (function () {
+                        const h = evaDrafts()[String(lead.id)] || []; const last = h[h.length - 1];
+                        if (leadHl === 'lightgreen' && last && !last.sentAt) {
+                            const sentBtn = document.createElement('button');
+                            sentBtn.className = 'btn';
+                            sentBtn.style.cssText = 'background:#0e8f6f;color:#fff;border-color:#0e8f6f;';
+                            sentBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Mark email sent (starts 24h)';
+                            sentBtn.addEventListener('click', (e) => { e.stopPropagation(); markLeadEmailSent(lead); });
+                            actions.appendChild(sentBtn);
+                        }
+                    })();
                     actions.appendChild(sendContainer);
                     actions.appendChild(dropdownContainer);
                     card.appendChild(actions);
@@ -6545,6 +6560,13 @@
                 if (tmPushBtnEl) tmPushBtnEl.innerHTML = '<i class="fas fa-share-square"></i> Save &amp; push to Lead Form';
                 if (tmEditBtnEl) tmEditBtnEl.style.display = 'none';
                 const tmSaveEl = document.getElementById('tmSaveEditBtn'); if (tmSaveEl) tmSaveEl.style.display = '';
+                // Tania, Nov 13: once Eva's draft is light green (ready in Gmail), show the "mark sent" button so the
+                // 24h-after-send handoff to Monica/Alek has a real start time instead of guessing from the draft date.
+                (function () {
+                    const btn = document.getElementById('tmMarkSentBtn'); if (!btn) return;
+                    const h = evaDrafts()[String(lead.id)] || []; const last = h[h.length - 1];
+                    btn.style.display = (loadTmColors()[String(lead.id)] === 'lightgreen' && last && !last.sentAt) ? '' : 'none';
+                })();
                 const tmSiteF = document.getElementById('tmSiteFooterBtn'); if (tmSiteF) tmSiteF.innerHTML = (lead.website || tmFindSite(lead)) ? '<i class="fas fa-globe"></i> Open website' : '<i class="fas fa-magnifying-glass"></i> Find website';
                 const lbl = (t) => '<span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ad1457;display:block;">' + t + '</span>';
                 const info = [
@@ -6724,6 +6746,62 @@
                     if (n) { try { renderTelemarketingLeads(); } catch (e) {} try { renderLeads(); } catch (e) {} showToast('💚 Eva saved ' + n + ' draft' + (n > 1 ? 's' : '') + ' in Gmail: light green now.', 'success'); }
                 } catch (e) { /* quiet: tries again on the next render */ }
             }
+            // Tania, Nov 13: a doctor/dentist/chiropractor practice (any health-provider type) goes to Monica;
+            // everything else (attorneys, barbershops, real estate, etc.) goes to Alek. Same split used all
+            // through the CRM and WorkPilot lead distribution — judged from whatever text is on the lead.
+            const EVA_DOCTOR_RE = /\b(dr\.?|doctor|dentist|dental|dds|dmd|dc\b|chiroprac|physician|md\b|clinic|dermatolog|orthodont|optometr|podiatr|psychiat|medical|healthcare|health care|nurse practitioner|\bnp\b|aprn|fnp)\b/i;
+            function isDoctorLead(l) {
+                const txt = [l.name, l.companyName, l.industry, l.otherIndustry, l.contact, l.decisionMakerName].filter(Boolean).join(' ');
+                return EVA_DOCTOR_RE.test(txt);
+            }
+            // Tania, Nov 13: she clicks this once Eva's draft is actually sent (light green only means it's
+            // sitting in Gmail ready for her to send) — it timestamps the real send so the 24h handoff that
+            // follows is counted from the real moment, not guessed from when Eva drafted it.
+            function markLeadEmailSent(lead) {
+                if (!lead) return;
+                const all = evaDrafts(), k = String(lead.id), h = all[k] || [];
+                if (!h.length) { showToast('No Eva draft on file for this lead yet.', 'error'); return; }
+                h[h.length - 1].sentAt = new Date().toISOString();
+                all[k] = h;
+                localStorage.setItem('webswan_eva_drafts', JSON.stringify(all));
+                showToast('✉️ Marked sent. In 24h this gets handed to ' + (isDoctorLead(lead) ? 'Monica' : 'Alek') + ' to call, with what to say.', 'success');
+                try { renderTelemarketingLeads(); } catch (e) {}
+                try { renderLeads(); } catch (e) {}
+                checkEvaHandoffs();
+            }
+            // Tania, Nov 13: "any email I sent with Eva from WorkPilot — wait 24 hours, then push it to the
+            // proper agent with details: when we sent it, and what to say." Runs on load and on every render
+            // (cheap, localStorage-only) so it fires as soon as 24h has actually passed since markLeadEmailSent.
+            function checkEvaHandoffs() {
+                let all; try { all = evaDrafts(); } catch (e) { return; }
+                let changed = false;
+                Object.keys(all).forEach((id) => {
+                    const h = all[id] || []; const last = h[h.length - 1];
+                    if (!last || !last.sentAt || last.handedOff) return;
+                    if (Date.now() - new Date(last.sentAt).getTime() < 24 * 60 * 60 * 1000) return;
+                    const lead = (telemarketingLeads || []).find(l => String(l.id) === id) || (leads || []).find(l => String(l.id) === id);
+                    if (!lead) return; // can't find the lead object (not loaded yet) — try again next render
+                    const agent = isDoctorLead(lead) ? 'Monica' : 'Alek';
+                    const whatToSay = 'Emailed ' + new Date(last.sentAt).toLocaleString() + (last.subject ? (' — subject: "' + last.subject + '"') : '') + '. Follow up on the audit/findings you sent and ask if they have questions.';
+                    lead.assignedAgent = agent;
+                    const noteLine = '\n\n[' + new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit' }) + '] 24h email follow-up → ' + agent + ' — ' + whatToSay;
+                    if (lead.hasOwnProperty('myNotes') || telemarketingLeads.includes(lead)) {
+                        lead.myNotes = (lead.myNotes || '') + noteLine;
+                        const ed = loadTmEdits(); ed[id] = Object.assign(ed[id] || {}, { myNotes: lead.myNotes, assignedAgent: agent }); localStorage.setItem('webswan_tm_edits', JSON.stringify(ed));
+                    } else {
+                        lead.comment = (lead.comment || '') + noteLine;
+                        try { saveToStorage(); } catch (e) {}
+                    }
+                    last.handedOff = true; changed = true;
+                    showToast('📞 24h is up: handed to ' + agent + ' to call — ' + (lead.companyName || lead.name || 'a lead') + '.', 'success');
+                });
+                if (changed) {
+                    localStorage.setItem('webswan_eva_drafts', JSON.stringify(all));
+                    try { scheduleFirebaseAutoSave(); } catch (e) {}
+                    try { renderTelemarketingLeads(); } catch (e) {}
+                    try { renderLeads(); } catch (e) {}
+                }
+            }
             function openEvaDraft(lead) {
                 if (!lead) return;
                 // take any edits typed in the lead pop-up first
@@ -6893,6 +6971,7 @@
             document.addEventListener('click', async (e) => {
                 const id = e.target.closest && e.target.closest('button') && e.target.closest('button').id;
                 if (id === 'tmEvaDraftBtn') { openEvaDraft(tmCurrentLead); try { closeTmLeadModal(); } catch (e) {} }
+                if (id === 'tmMarkSentBtn') { markLeadEmailSent(tmCurrentLead); try { closeTmLeadModal(); } catch (e) {} }
                 if (id === 'evaCloseBtn') document.getElementById('evaDraftOverlay').style.display = 'none';
                 if (id === 'evaSaveBtn') evaSave();
                 if (id === 'evaReadyBtn') evaReady();
