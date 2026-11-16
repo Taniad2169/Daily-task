@@ -1882,7 +1882,7 @@
         }
                 [data-highlight="pink"] { background: #f8bbd0 !important; box-shadow: inset 0 0 0 2px #ec407a; color: #6a1b4d !important; }
                 [data-highlight="ocean"] { background: #cfe9fb !important; box-shadow: inset 0 0 0 2px #0077be; color: #023e5a !important; }
-                [data-highlight="aiblue"] { background: #dbe8ff !important; box-shadow: inset 0 0 0 2px #1d4ed8; color: #0b2a6f !important; }
+                [data-highlight="aiblue"] { background: #cfe9fb !important; box-shadow: inset 0 0 0 2px #0077be; color: #023e5a !important; } /* Tania, Nov 16: Voice Studio call rows in ocean blue */
                 [data-highlight="aiyellow"] { background: #fff3a3 !important; box-shadow: inset 0 0 0 2px #e0b100; color: #4a3b00 !important; font-weight: 700; }
                 [data-highlight="lavender"] { background: #e6d9ff !important; box-shadow: inset 0 0 0 2px #9b7ae0; color: #3b2470 !important; font-weight: 700; }
                 [data-highlight="sky"] { background: #50b9fa !important; box-shadow: inset 0 0 0 2px #1e90d6; color: #04263d !important; font-weight: 800; }
@@ -6465,7 +6465,7 @@
                     return;
                 }
                 // Leads pushed from the Lead Prospector are ocean blue; telemarketing calls stay pink/red.
-                const isPros = (l) => l.source === 'prospector';
+                const isPros = (l) => l.source === 'prospector' || l.source === 'lead-prospector'; // Nov 16: Prospector's daily call push uses 'lead-prospector'
                 const isAI = (l) => l.source === 'voice-studio';
                 // AI calls: a real conversation (talked, email, call back, appointment) is yellow and listed first; hang ups, no answer, voicemail stay blue.
                 // Phone menus ("press 1"), voicemail greetings and AI receptionists never reached a person: keep those AI calls blue, even if marked Talked/Call back/Email.
@@ -6519,7 +6519,7 @@
                 const groups = [
                     { list: visibleMain.filter(l => isAI(l) && tmRank(l) >= 1).sort(byHaitianThenRank), title: '<i class="fas fa-star"></i> AI Calls: real conversations (call these first) · <span style="background:#ffe0b2;color:#7a3b00;padding:0 6px;border-radius:6px">orange hot: email + appointment</span> <span style="background:#50b9fa;color:#04263d;padding:0 6px;border-radius:6px">sky: my appointment with the doctor/attorney</span> <span style="background:#c8f0c8;color:#14532d;padding:0 6px;border-radius:6px">green: email or Rachel</span> <span style="background:#e6d9ff;color:#3b2470;padding:0 6px;border-radius:6px">lavender: audit sent</span> <span style="background:#fff3a3;color:#4a3b00;padding:0 6px;border-radius:6px">yellow: spoke to a person</span>', color: '#8a6d00', border: '#e0b100', hl: 'aiblue', refresh: false },
                     { list: visibleMain.filter(l => !isPros(l) && !isAI(l)).sort((a, b) => isHaitianLead(b) - isHaitianLead(a)), title: '<i class="fas fa-phone-volume"></i> From Telemarketing Calls', color: '#ad1457', border: '#ec407a', hl: 'pink', refresh: true },
-                    { list: visibleMain.filter(l => isAI(l) && tmRank(l) === 0).sort(byHaitianThenRank), title: '<i class="fas fa-robot"></i> AI Calls (Voice Studio) · <span style="background:#dbeafe;color:#1d4ed8;padding:0 6px;border-radius:6px">blue</span> hang up, voicemail, phone menu, another AI', color: '#1d4ed8', border: '#1d4ed8', hl: 'aiblue', refresh: false },
+                    { list: visibleMain.filter(l => isAI(l) && tmRank(l) === 0).sort(byHaitianThenRank), title: '<i class="fas fa-robot"></i> AI Calls (Voice Studio) · <span style="background:#cfe9fb;color:#0077be;padding:0 6px;border-radius:6px">ocean blue</span> hang up, voicemail, phone menu, another AI · 🎧 recording on every row', color: '#0077be', border: '#0077be', hl: 'aiblue', refresh: false },
                     { list: visibleMain.filter(isPros).sort((a, b) => isHaitianLead(b) - isHaitianLead(a)), title: '<i class="fas fa-magnifying-glass-location"></i> From Lead Prospector', color: '#0077be', border: '#0077be', hl: 'ocean', refresh: false }
                 ];
                 // Eva (login code) only sees the lavender leads
@@ -6556,7 +6556,7 @@
                     const done = isTmDone(lead.id);
                     return `
                         <div class="completed-item tm-lead-row${done ? ' tm-lead-done' : ''}" data-tm-id="${lead.id}">
-                            <span style="font-size:1.1rem;">${lead.source === 'prospector' ? '🔎' : lead.source === 'voice-studio' ? '🤖' : emoji}</span>
+                            <span style="font-size:1.1rem;">${isPros(lead) ? '🔎' : lead.source === 'voice-studio' ? '🤖' : emoji}</span>
                             <span class="item-text" data-highlight="${({ blue: 'aiblue', yellow: isAI(lead) ? 'aiyellow' : 'yellow', green: 'green', orange: 'orange', lavender: 'lavender', lightgrey: 'lightgrey', lightgreen: 'lightgreen', sky: 'sky', jennagreen: 'jennagreen' })[tmColorOf(lead)] || hl}">${safeName}${safeCompany}</span>
                             ${done ? '<span class="tm-done-mark" title="You already handled this one' + (loadTmDone()[String(lead.id)] ? ' · ' + new Date(loadTmDone()[String(lead.id)]).toLocaleString() : '') + '" style="color:#1b8f3a;font-weight:800;font-size:0.9rem;white-space:nowrap;">✓ done</span>' : ''}
                             <span class="item-type">${(lead.category || 'Lead').replace(/</g, '&lt;')}${lead.source === 'voice-studio' && lead.telemarketerId ? ' · ' + String(lead.telemarketerId).replace(/</g, '&lt;') : ''}</span>
@@ -6731,7 +6731,7 @@
                 const hlOf = (row) => { const t = row.querySelector('.item-text'); return t ? t.dataset.highlight : ''; };
                 let target = null, label = 'matching';
                 if (/haitian/.test(q)) { target = findRow(l => isHaitianLead(l)); label = 'Haitian'; }
-                else if (/telemarket/.test(q)) { target = findRow(l => l.source !== 'voice-studio' && l.source !== 'prospector' && l.source !== 'solene'); label = 'telemarketing'; }
+                else if (/telemarket/.test(q)) { target = findRow(l => l.source !== 'voice-studio' && l.source !== 'prospector' && l.source !== 'lead-prospector' && l.source !== 'solene'); label = 'telemarketing'; }
                 else if (/studio.*yellow/.test(q)) { target = findRow((l, row) => l.source === 'voice-studio' && hlOf(row) === 'aiyellow'); label = 'Voice Studio yellow'; }
                 else if (/studio.*green/.test(q)) { target = findRow((l, row) => l.source === 'voice-studio' && hlOf(row) === 'green'); label = 'Voice Studio green'; }
                 else if (/studio.*blue/.test(q)) { target = findRow((l, row) => l.source === 'voice-studio' && hlOf(row) === 'aiblue'); label = 'Voice Studio blue'; }
@@ -7080,7 +7080,7 @@
                 const alek = 'My virtual assistant, Alek, from WebSwan Digital Solutions, will follow up with you to set up a quick 10-minute appointment.';
                 const found = evaFindingsText(l);
                 const hi = evaGreeting(l);
-                const call = 'If it is easier, you can book a quick 10-minute call here: ' + EVA_BOOK + '\nor call Rachel, our assistant, at (239) 667-0151.';
+                const call = 'If it is easier, you can book a quick 10-minute call here: ' + EVA_BOOK + '\nor call Rachel, our assistant, at (316) 248-6839.';
                 const stateP = EVA_STATE_P[st] ? EVA_STATE_P[st] + ' You can check the states with the most website compliance lawsuits here: [website compliance lawsuits by state](' + EVA_LAWSUITS + ').\n\n' : '';
                 const adaLink = EVA_STATE_P[st] ? ' You can verify the ADA fines here: [ADA compliance fines](' + EVA_ADA_FINES + ').' : '';
                 const flLine = st === 'FL' ? "\n\nFor Florida, cookie consent and ADA accessibility on your website both matter; you can see the state's own standards here: [Florida accessibility standards](" + EVA_FL_DMS + ').' : '';
@@ -7461,12 +7461,12 @@
                 if (clean(lead.myNotes)) notes.unshift('My notes: ' + clean(lead.myNotes));
                 if (clean(lead.comment)) notes.push('Their notes: ' + clean(lead.comment));
                 if (clean(lead.telemarketerId)) notes.push('Telemarketer: ' + clean(lead.telemarketerId));
-                notes.push('Source: ' + (lead.source === 'voice-studio' ? 'AI call (Voice Studio)' : lead.source === 'prospector' ? 'Lead Prospector' : lead.sheetLabel ? 'Google Sheet - ' + lead.sheetLabel : 'Telemarketing') + (lead.timestamp ? ' (' + new Date(lead.timestamp).toLocaleDateString() + ')' : ''));
+                notes.push('Source: ' + (lead.source === 'voice-studio' ? 'AI call (Voice Studio)' : (lead.source === 'prospector' || lead.source === 'lead-prospector') ? 'Lead Prospector' : lead.sheetLabel ? 'Google Sheet - ' + lead.sheetLabel : 'Telemarketing') + (lead.timestamp ? ' (' + new Date(lead.timestamp).toLocaleDateString() + ')' : ''));
 
                 leadFormName.value = clean(lead.companyName) || clean(lead.name) || clean(lead.decisionMakerName);
                 leadFormContact.value = clean(lead.decisionMakerName) || (clean(lead.companyName) && clean(lead.name) !== clean(lead.companyName) ? clean(lead.name) : '');
                 const tmAgent = VOICE_AGENTS.find(a => a && new RegExp('\\b' + a + '\\b', 'i').test(clean(lead.telemarketerId)));
-                leadFormOrigin.value = tmAgent ? VS_ORIGIN : lead.source === 'prospector' ? 'Lead Prospector' : lead.sheetLabel ? '' : 'Telemarketing call';
+                leadFormOrigin.value = tmAgent ? VS_ORIGIN : (lead.source === 'prospector' || lead.source === 'lead-prospector') ? 'Lead Prospector' : lead.sheetLabel ? '' : 'Telemarketing call';
                 syncAgentWrap(); leadFormAgent.value = tmAgent || '';
                 leadFormPhone.value = clean(lead.phone);
                 leadFormEmail.value = clean(lead.email);

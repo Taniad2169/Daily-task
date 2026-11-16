@@ -328,7 +328,7 @@ ${limits.length ? `<h2>Known limitations</h2><p>We know about the following and 
 <h4>What your visitors can now do</h4><ul>${TOOLBAR.map(t => `<li>${esc(t[0].toUpperCase() + t.slice(1))}</li>`).join('')}</ul>
 <h4>Why it matters for you</h4><p style="font-size:14px">${stateNote()}</p>
 <h4>Important</h4>
-<p style="font-size:13px;color:#3b5266">The accessibility toolbar and statement support your accessibility program. They do not, by themselves, make a website fully accessible or guarantee compliance with the ADA, WCAG, Section 508 or any state law. Items marked "Needs review" or "Recommended" may still need changes to the website's content or code. You, together with your website platform, remain responsible for the full accessibility of your website. Questions: call WebSwan Digital Solutions at (239) 667-0151.</p>
+<p style="font-size:13px;color:#3b5266">The accessibility toolbar and statement support your accessibility program. They do not, by themselves, make a website fully accessible or guarantee compliance with the ADA, WCAG, Section 508 or any state law. Items marked "Needs review" or "Recommended" may still need changes to the website's content or code. You, together with your website platform, remain responsible for the full accessibility of your website. Questions: call WebSwan Digital Solutions at (316) 248-6839.</p>
 </div>`;
   }
 
@@ -380,7 +380,7 @@ ${limits.length ? `<h2>Known limitations</h2><p>We know about the following and 
   $('printBtn').onclick = () => window.print();
   $('mailBtn').onclick = () => {
     const to = val('email'), biz = val('biz') || 'your practice';
-    const body = `Hello,\n\nYour accessibility toolbar is now live on ${origin() || 'your website'}${val('pkg') === 'both' ? ', together with your cookie consent banner' : ''}.\n\nI've attached your Website Accessibility Setup Report. It lists what WebSwan completed, what still needs review, and our recommended next steps. Your accessibility statement will be at ${stmtFull()}.\n\nThe toolbar and statement support your accessibility program; they don't guarantee full ADA or WCAG compliance on their own, so please look over the "Needs review" items with us.\n\nAny questions, just call me at (239) 667-0151.\n\nTania\nWebSwan Digital Solutions`;
+    const body = `Hello,\n\nYour accessibility toolbar is now live on ${origin() || 'your website'}${val('pkg') === 'both' ? ', together with your cookie consent banner' : ''}.\n\nI've attached your Website Accessibility Setup Report. It lists what WebSwan completed, what still needs review, and our recommended next steps. Your accessibility statement will be at ${stmtFull()}.\n\nThe toolbar and statement support your accessibility program; they don't guarantee full ADA or WCAG compliance on their own, so please look over the "Needs review" items with us.\n\nAny questions, just call me at (316) 248-6839.\n\nTania\nWebSwan Digital Solutions`;
     location.href = 'mailto:' + encodeURIComponent(to) + '?subject=' + encodeURIComponent('Your website accessibility setup – ' + biz) + '&body=' + encodeURIComponent(body);
     toast('Save the report as PDF first, then attach it to the email');
   };
