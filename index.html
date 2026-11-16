@@ -4627,7 +4627,7 @@
             async function jcToVoice(x) {
                 const v = jcView(x);
                 if (!v.live) { showToast('That lead is no longer in its list.', 'error'); return; }
-                await doWorkpilotCall(Object.assign({}, v.live, { myNotes: v.my }), 'jenna');
+                await doWorkpilotCall(Object.assign({}, v.live, { myNotes: v.my }), 'jenna', x.doc || null);
             }
             function renderJennaCalls() {
                 const all = jcLoad().filter(x => !x.removedAt);
@@ -4674,6 +4674,8 @@
                                 ${v.callId ? `<button type="button" class="btn btn-outline jcAct" data-act="listen" data-call-id="${fcEsc(v.callId)}" style="color:#1d4ed8;border-color:#1d4ed8;">🎧 Listen to the call</button>` : ''}
                                 <span style="display:inline-flex;gap:5px;align-items:center;">${swatches}</span>
                                 <button type="button" class="btn btn-outline jcAct" data-act="done" data-id="${fcEsc(x.id)}">${v.done ? '↩️ Not done' : '☐ Done'}</button>
+                                <label class="btn btn-outline" style="color:#2d7a03;border-color:#2d7a03;cursor:pointer;" title="Attach a PDF or text file: its text goes into Jenna's brief when you send this lead to her">📎 ${x.doc ? 'Replace document' : 'Attach document'}<input type="file" class="jcDoc" data-id="${fcEsc(x.id)}" accept=".pdf,application/pdf,.txt,.md,.csv,.html,text/*" style="display:none;"></label>
+                                ${x.doc ? `<span style="font-size:0.8rem;color:#2d7a03;font-weight:700;" title="${fcEsc(String(x.doc.text || '').slice(0, 300))}">✓ ${fcEsc(x.doc.name)}</span> <button type="button" class="btn btn-outline jcAct" data-act="undoc" data-id="${fcEsc(x.id)}" style="font-size:0.75rem;padding:2px 8px;">✕</button>` : ''}
                                 <button type="button" class="btn btn-outline jcAct" data-act="voice" data-id="${fcEsc(x.id)}" style="color:#2d7a03;border-color:#2d7a03;">📞 Send to Jenna</button>
                                 <button type="button" class="btn btn-outline jcAct" data-act="remove" data-id="${fcEsc(x.id)}" style="color:#b42318;border-color:#b42318;">Remove from her calls</button>
                             </div>
@@ -4701,12 +4703,20 @@
                 modal.addEventListener('click', e => { if (e.target === modal) modal.hidden = true; });
                 $j('jcSearch').addEventListener('input', renderJennaCalls);
                 $j('jcShowDone').addEventListener('change', renderJennaCalls);
+                // Tania, Nov 16: a document attached on a card goes into Jenna's brief when that lead is sent to her.
+                $j('jcList').addEventListener('change', async (e) => {
+                    const inp = e.target.closest('.jcDoc'); if (!inp || !inp.files[0]) return;
+                    const list = jcLoad(), x = list.find(k => k.id === inp.dataset.id); if (!x) return;
+                    try { showToast('📎 Reading ' + inp.files[0].name + '…', 'success'); x.doc = await wpReadDoc(inp.files[0]); jcSave(list); renderJennaCalls(); showToast('📎 Attached for Jenna: ' + x.doc.name + ' (' + x.doc.text.length + ' characters of text)', 'success'); }
+                    catch (err) { showToast('📎 ' + err.message, 'error'); inp.value = ''; }
+                });
                 $j('jcList').addEventListener('click', async (e) => {
                     const el = e.target.closest('.jcAct'); if (!el) return;
                     if (el.dataset.act === 'listen') { openCallRecording(el.dataset.callId); return; }
                     const list = jcLoad(), x = list.find(k => k.id === el.dataset.id); if (!x) return;
                     const act = el.dataset.act;
                     if (act === 'toggle') { if (jcOpenRows.has(x.id)) jcOpenRows.delete(x.id); else jcOpenRows.add(x.id); renderJennaCalls(); }
+                    else if (act === 'undoc') { delete x.doc; jcSave(list); renderJennaCalls(); showToast('📎 Document removed from this lead.', 'success'); }
                     else if (act === 'save') {
                         const ta = [...document.querySelectorAll('#jcList .jcNotes')].find(t => t.dataset.id === x.id);
                         const taJ = [...document.querySelectorAll('#jcList .jcJennaNotes')].find(t => t.dataset.id === x.id);
@@ -5484,6 +5494,26 @@
                 return m ? (m[1] + m[2] + m[3]) : '';
             }
             // Little picker: Monica (doctors), George (attorneys), Rebecca (Media Network / ads), Alek (Spanish), Jenna (Market Intelligence Director — any service, she decides).
+            // Tania, Nov 16: attach a document for Jenna. A phone agent can't open a file mid-call, so the text is read here
+            // (PDFs with pdf.js, text files as-is) and goes into her brief for that call. Scanned PDFs / pictures have no text to read.
+            async function wpReadDoc(file) {
+                if (!file) return null;
+                if (file.size > 15 * 1024 * 1024) throw new Error('That file is over 15 MB.');
+                const name = String(file.name || 'document').slice(0, 120);
+                let text = '';
+                if (/\.pdf$/i.test(name) || file.type === 'application/pdf') {
+                    const pdfjs = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs');
+                    pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs';
+                    const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+                    for (let i = 1; i <= Math.min(pdf.numPages, 30) && text.length < 12000; i++) { const pg = await pdf.getPage(i); const c = await pg.getTextContent(); text += c.items.map(it => it.str).join(' ') + '\n'; }
+                } else if (/\.(txt|md|csv|html?)$/i.test(name) || /^text\//.test(file.type)) {
+                    text = await file.text();
+                    if (/\.html?$/i.test(name)) text = text.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ');
+                } else throw new Error('Jenna can use a PDF or a text file. For Word, save it as PDF first. Pictures and scanned PDFs have no text she can read.');
+                text = text.replace(/\s+/g, ' ').trim();
+                if (text.length < 20) throw new Error('No readable text found in “' + name + '” (it may be a scan or a picture). Save a text-based PDF and try again.');
+                return { name, text: text.slice(0, 6000), at: new Date().toISOString() };
+            }
             function openVoiceAgentPicker(lead) {
                 const old = document.getElementById('wpVoiceAgentOverlay'); if (old) old.remove();
                 const name = lead.companyName || lead.decisionMakerName || lead.name || lead.contact || 'this lead';
@@ -5502,15 +5532,21 @@
                     + '<button class="wp-agent-pick" data-agent="rebecca" style="' + btn + '">📣 Rebecca<span style="' + sub + '">Media Network / Ads</span></button>'
                     + '<button class="wp-agent-pick" data-agent="alek" style="' + btn + '">🗣️ Alek<span style="' + sub + '">Spanish</span></button>'
                     + '<button class="wp-agent-pick" data-agent="jenna" style="' + jbtn + 'grid-column:1 / -1;">🕵️‍♀️ Jenna<span style="' + sub + '">Market Intelligence — ads, SwanDesk AI or compliance, she decides. Put what you need her to say in Comments.</span></button>'
+                    + '<label style="grid-column:1 / -1;font-size:0.78rem;font-weight:700;color:#2d7a03;">📎 Attach a document for Jenna (optional: audit PDF, flyer text, notes)<input id="wpJennaDoc" type="file" accept=".pdf,application/pdf,.txt,.md,.csv,.html,text/*" style="display:block;margin-top:4px;font-size:0.78rem;max-width:100%;"></label>'
                     + '</div>'
                     + '<button id="wpAgentCancel" style="margin-top:14px;width:100%;padding:9px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;color:#64748b;font-weight:700;cursor:pointer;">Cancel</button>'
                     + '</div>';
                 document.body.appendChild(ov);
                 ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
                 document.getElementById('wpAgentCancel').addEventListener('click', () => ov.remove());
-                ov.querySelectorAll('.wp-agent-pick').forEach(b => b.addEventListener('click', async () => { const a = b.dataset.agent; ov.remove(); await doWorkpilotCall(lead, a); }));
+                ov.querySelectorAll('.wp-agent-pick').forEach(b => b.addEventListener('click', async () => {
+                    const a = b.dataset.agent; let doc = null;
+                    const f = a === 'jenna' && document.getElementById('wpJennaDoc') && document.getElementById('wpJennaDoc').files[0];
+                    if (f) { try { showToast('📎 Reading ' + f.name + '…', 'success'); doc = await wpReadDoc(f); } catch (e) { showToast('📎 ' + e.message, 'error'); return; } }
+                    ov.remove(); await doWorkpilotCall(lead, a, doc);
+                }));
             }
-            async function doWorkpilotCall(lead, agent) {
+            async function doWorkpilotCall(lead, agent, doc) {
                 const nm = agent[0].toUpperCase() + agent.slice(1);
                 let state = wpGuessState(lead);
                 if (!WP_STATE_CODES.has(state)) {
@@ -5530,6 +5566,7 @@
                 const notes = [clean(lead.myNotes), clean(extra)].filter(Boolean).join(' — ');   // your highlighted note first, then the call summary / comment
                 // Jenna visits the site herself and reads the comment as her brief for this one call, so she needs the url and location too.
                 const payload = { id: 'wp-' + String(lead.id || Date.now()), name: dispName, contact, business, url, location, phone, state, agent, notes };
+                if (doc && agent === 'jenna') payload.doc = { name: doc.name, text: doc.text };
                 try {
                     const tok = await window.wpGmail.idToken();
                     if (!tok) throw new Error('Google sign-in missing — open the AI Office once to sign in, then try again.');
@@ -5537,7 +5574,7 @@
                     const d = await r.json().catch(() => ({}));
                     if (!r.ok) throw new Error(d.error || ('Voice Studio error ' + r.status));
                     if (agent === 'jenna') { try { setTmColor(lead.id, 'jennagreen'); checkJennaLeadAlert(); } catch (e) {} } // her green, so it's instantly visible as hers to call, and tell Tania if that makes 10
-                    showToast('📞 Sent to ' + nm + "'s call list" + (d.updated ? ' (updated an existing one)' : ' with your notes') + '.' + (d.paused ? ' Note: the auto-dialer is paused in Voice Studio right now.' : ''), 'success');
+                    showToast('📞 Sent to ' + nm + "'s call list" + (d.updated ? ' (updated an existing one)' : ' with your notes') + (d.docAttached ? ' + 📎 ' + d.docAttached : '') + '.' + (d.paused ? ' Note: the auto-dialer is paused in Voice Studio right now.' : ''), 'success');
                 } catch (e) { console.error('workpilot_call failed', e); showToast('❌ Could not send to Voice Studio: ' + (e && e.message || e), 'error'); }
             }
 
