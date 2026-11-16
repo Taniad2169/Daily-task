@@ -3157,7 +3157,7 @@
             const LEAD_WORDS = 3000, LEAD_CHARS = 22500; // Tania, Nov 14: 3000 words for Lead comment and My notes (Tania)
             // Where a lead started, for statistics. "AI agent (Voice Studio)" also records which agent.
             const LEAD_ORIGINS = ['', 'AI agent (Voice Studio)', 'Telemarketing call', 'Lead Prospector', 'My own call (Tania)', 'Social media', 'Referral', 'Website / inbound', 'Email', 'Other'];
-            const VOICE_AGENTS = ['', 'Rebecca', 'Monica', 'George', 'Jennifer', 'Alek'];
+            const VOICE_AGENTS = ['', 'Rebecca', 'Monica', 'George', 'Jenna', 'Jennifer', 'Alek'];
             const VS_ORIGIN = 'AI agent (Voice Studio)';
             const fillSelect = (sel, list, val, blank) => { sel.innerHTML = list.map(o => `<option value="${o}">${o || blank}</option>`).join(''); sel.value = val || ''; };
             fillSelect(leadFormOrigin, LEAD_ORIGINS, '', '— choose —');
