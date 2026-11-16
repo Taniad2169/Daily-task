@@ -1882,6 +1882,7 @@
         }
                 [data-highlight="pink"] { background: #f8bbd0 !important; box-shadow: inset 0 0 0 2px #ec407a; color: #6a1b4d !important; }
                 [data-highlight="ocean"] { background: #cfe9fb !important; box-shadow: inset 0 0 0 2px #0077be; color: #023e5a !important; }
+                [data-highlight="pros"] { background: #fbe4fd !important; box-shadow: inset 0 0 0 2px #eb5df5; color: #6b0f73 !important; } /* Tania, Nov 16: leads from Lead Prospector */
                 [data-highlight="aiblue"] { background: #cfe9fb !important; box-shadow: inset 0 0 0 2px #0077be; color: #023e5a !important; } /* Tania, Nov 16: Voice Studio call rows in ocean blue */
                 [data-highlight="aiyellow"] { background: #fff3a3 !important; box-shadow: inset 0 0 0 2px #e0b100; color: #4a3b00 !important; font-weight: 700; }
                 [data-highlight="lavender"] { background: #e6d9ff !important; box-shadow: inset 0 0 0 2px #9b7ae0; color: #3b2470 !important; font-weight: 700; }
@@ -2137,6 +2138,7 @@
                     <a class="btn btn-outline" href="https://taniad2169.github.io/webswan-pricing/estimate.html" target="_blank" rel="noopener noreferrer" style="border-color:#339cde;color:#1f6fa3;"><i class="fas fa-calculator"></i> Estimate (shareable)</a>
                     <a class="btn btn-outline" href="https://taniad2169.github.io/Telemarketing/" target="_blank" rel="noopener noreferrer" style="border-color:#ec407a;color:#ad1457;"><i class="fas fa-phone-volume"></i> Telemarketing Calls</a>
                     <a class="btn btn-outline" href="https://webswan-lead-prospector.netlify.app/" target="_blank" rel="noopener noreferrer" style="border-color:#1b70c2;color:#0c3a61;"><i class="fas fa-search"></i> Lead Prospector</a>
+                    <button class="btn btn-outline wp-spot-open" type="button" style="border-color:#eb5df5;color:#a21caf;" title="Lead Spotter: find people posting that they need your service and highlight the ones that are already your Prospector leads"><i class="fas fa-binoculars"></i> Lead Spotter</button>
                     <a class="btn btn-outline" href="https://docs.google.com/spreadsheets/d/1FnmZogC-s2m9AORZLVQsy7dwzPGaGsu0mRW3rR2FNl8/edit" target="_blank" rel="noopener noreferrer" style="border-color:#7c3aed;color:#5b21b6;"><i class="fas fa-headset"></i> Alek Call Queue</a>
                     <a class="btn btn-outline" href="https://taniad2169.github.io/webswan-dagigoia-task/studio/" target="_blank" rel="noopener noreferrer" style="border-color:#0d7c86;color:#0b5f66;"><i class="fas fa-swatchbook"></i> WebSwan Studio</a>
                     <a class="btn btn-outline" href="https://taniad2169.github.io/webswan-dagigoia-task/intake/" target="_blank" rel="noopener noreferrer" style="border-color:#339cde;color:#1f6fa3;"><i class="fas fa-file-signature"></i> WebSwan Intake</a>
@@ -6412,6 +6414,103 @@
             // Tania's own color for a telemarketing / AI-call lead. Orange = hot (email + appointment). Green = got an email, transferred to Rachel or got Rachel's number.
             // Yellow = spoke to a real person (call back later / need to speak to someone else). Blue = hang up, voicemail, phone menu ("press 1") or another AI.
             const TM_RANK = { blue: 0, yellow: 1, green: 2, lavender: 3, orange: 4, lightgrey: 4, lightgreen: 4, sky: 5 }; // Tania, Nov 11: lavender = Tania still owes the audit; lightgrey = audit attached, Eva's queue to edit and push; lightgreen = the draft is in Gmail waiting for Tania; sky (#50b9fa) = her own appointment
+
+            // ===== Lead Spotter inside WorkPilot (Tania, Nov 16) =====
+            // Searches public posts (through Lead Prospector's /api/intent, same access code as the website scan) for people asking
+            // for one of Tania's services, then matches each poster's profile link to the social links on the leads pushed from
+            // Prospector. A match turns that lead orange here (saved to the lead, so every device sees it).
+            const WPS_PHRASES = ['need a website', 'looking for a web designer', 'need a new website', 'website for my practice', 'website for my dental practice', 'website for my law firm', 'ADA compliant website', 'HIPAA compliant website', 'need an app for my business', 'need help with SEO', 'need a social media manager', 'looking for a marketing agency', 'need help with Google Ads', 'need more customers', 'need help advertising my business', 'need a virtual receptionist', 'need an answering service', 'missing calls', 'need a logo', 'need a digital business card'];
+            const WPS_PLATFORMS = [['facebook', 'Facebook'], ['fbgroups', 'Facebook Groups'], ['instagram', 'Instagram'], ['linkedinposts', 'LinkedIn posts'], ['linkedin', 'LinkedIn'], ['x', 'X (Twitter)'], ['reddit', 'Reddit'], ['redditsb', 'Reddit: small business'], ['nextdoor', 'Nextdoor'], ['alignable', 'Alignable'], ['quora', 'Quora'], ['craigslist', 'Craigslist'], ['yelp', 'Yelp']];
+            const wpsEsc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+            function wpsHandle(u) {
+                const m = String(u || '').match(/(facebook|instagram|linkedin|tiktok|x|twitter)\.com\/([a-z0-9_.\-\/]+)/i);
+                if (!m) return null;
+                const plat = m[1].toLowerCase();
+                let path = m[2].toLowerCase().replace(/^@/, '').replace(/\/$/, '').split('/').filter(Boolean);
+                if (plat === 'linkedin') { if (['company', 'in'].includes(path[0]) && path[1]) path = [path[1]]; else return null; } else path = [path[0]];
+                const h = path[0];
+                if (!h || ['sharer', 'share', 'sharer.php', 'intent', 'login', 'plugins', 'widgets', 'home', 'profile.php', 'pages', 'groups', 'p', 'reel', 'reels', 'watch', 'events', 'hashtag', 'explore', 'stories', 'photo', 'photos', 'posts', 'search', 'i', 'tr', 'dialog', 'l.php', 'tv', 'videos', 'story.php', 'permalink.php'].includes(h)) return null;
+                return (plat === 'twitter' ? 'x' : plat) + ':' + h;
+            }
+            const wpsIsPros = (l) => l && (l.source === 'prospector' || l.source === 'lead-prospector');
+            const wpsSocials = (l) => String((l && l.social) || '').split(/[\s,;]+/).filter(Boolean);
+            const wpsNorm = (v) => String(v || '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9 ]/g, ' ').replace(/\b(llc|inc|pllc|pc|pa|dds|dmd|md|dc|esq|the|of|and|law|firm|group|office|offices|center|clinic|medical|dental|chiropractic|associates|practice|family|care|health|wellness)\b/g, ' ').replace(/\s+/g, ' ').trim();
+            function wpsMatch(post, pros) {
+                const h = wpsHandle(post.url);
+                if (h) { const l = pros.find((x) => wpsSocials(x).some((u) => wpsHandle(u) === h)); if (l) return { lead: l, how: 'profile' }; }
+                const text = wpsNorm((post.title || '') + ' ' + (post.snippet || ''));
+                const l2 = pros.find((x) => { const n = wpsNorm(x.companyName || x.name); return n.length >= 6 && n.split(' ').length >= 2 && text.includes(n); });
+                return l2 ? { lead: l2, how: 'name' } : null;
+            }
+            async function wpsFlag(lead, post, phrase) {
+                const data = { flagged: true, flagService: phrase, flagUrl: post.url, flagDate: new Date().toISOString() };
+                if (!window.dailyFirebase || !window.dailyFirebase.addTelemarketingLead) throw new Error('WorkPilot is not connected to the lead list yet.');
+                await window.dailyFirebase.addTelemarketingLead(String(lead.id), data);
+                Object.assign(lead, data);
+                try { renderTelemarketingLeads(); } catch (e) {}
+            }
+            function openWpSpotter() {
+                const old = document.getElementById('wpsOverlay'); if (old) old.remove();
+                const pros = telemarketingLeads.filter(wpsIsPros);
+                const withSoc = pros.filter((l) => wpsSocials(l).length).length;
+                const ov = document.createElement('div'); ov.id = 'wpsOverlay';
+                ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:10050;display:flex;align-items:flex-start;justify-content:center;padding:4vh 12px;overflow:auto;';
+                const sel = 'width:100%;padding:8px;border:1px solid #e9b8f0;border-radius:9px;font:inherit;';
+                ov.innerHTML = '<div style="background:#fff;border-radius:16px;max-width:720px;width:100%;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.25);">'
+                    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;"><h3 style="margin:0;color:#a21caf;">🔭 Lead Spotter</h3><button type="button" id="wpsClose" style="border:none;background:none;font-size:1.4rem;cursor:pointer;" aria-label="Close">×</button></div>'
+                    + '<p style="font-size:.85rem;color:#51607a;margin:6px 0 12px;">Finds people posting that they need your service. If the poster is one of your <b>' + pros.length + '</b> Lead Prospector leads (' + withSoc + ' have social links), that lead turns <b style="color:#f57c00">orange</b> in WorkPilot.</p>'
+                    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+                    + '<label style="font-size:.8rem;font-weight:700;">What they write<select id="wpsPhrase" style="' + sel + '">' + WPS_PHRASES.map((p) => '<option>' + wpsEsc(p) + '</option>').join('') + '<option value="__own">✍️ My own words…</option></select><input id="wpsOwn" type="text" maxlength="80" placeholder="e.g. need someone to fix my website" style="' + sel + 'display:none;margin-top:6px;"></label>'
+                    + '<label style="font-size:.8rem;font-weight:700;">Platform<select id="wpsPlat" style="' + sel + '">' + WPS_PLATFORMS.map(([v, t]) => '<option value="' + v + '">' + t + '</option>').join('') + '</select></label>'
+                    + '<label style="font-size:.8rem;font-weight:700;">Posted within<select id="wpsFresh" style="' + sel + '"><option value="pd">Last day</option><option value="pw" selected>Last week</option><option value="pm">Last month</option></select></label>'
+                    + '<label style="font-size:.8rem;font-weight:700;">City or state (optional)<input id="wpsWhere" type="text" placeholder="Miami, FL" style="' + sel + '"></label>'
+                    + '</div><button type="button" id="wpsGo" style="margin-top:12px;width:100%;padding:10px;border:none;border-radius:10px;background:#eb5df5;color:#fff;font-weight:800;cursor:pointer;">🔭 Search</button>'
+                    + '<div id="wpsOut" style="margin-top:14px;"></div></div>';
+                document.body.appendChild(ov);
+                ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
+                document.getElementById('wpsClose').onclick = () => ov.remove();
+                const ph = document.getElementById('wpsPhrase'), own = document.getElementById('wpsOwn');
+                ph.onchange = () => { own.style.display = ph.value === '__own' ? 'block' : 'none'; };
+                try { const k = JSON.parse(localStorage.getItem('wp_spot_pick') || 'null'); if (k) { ph.value = k.p || ph.value; own.value = k.o || ''; document.getElementById('wpsPlat').value = k.pl || 'facebook'; ph.onchange(); } } catch (e) {}
+                document.getElementById('wpsGo').onclick = () => wpsRun(pros);
+            }
+            async function wpsRun(pros) {
+                const out = document.getElementById('wpsOut'), go = document.getElementById('wpsGo');
+                const pv = document.getElementById('wpsPhrase').value, phrase = pv === '__own' ? document.getElementById('wpsOwn').value.trim() : pv;
+                if (!phrase) { showToast('Type the words people would write first.', 'error'); return; }
+                const plat = document.getElementById('wpsPlat'), platName = plat.options[plat.selectedIndex].text;
+                try { localStorage.setItem('wp_spot_pick', JSON.stringify({ p: pv, o: document.getElementById('wpsOwn').value, pl: plat.value })); } catch (e) {}
+                let code = localStorage.getItem('wp_prospector_code');
+                if (!code) { code = (prompt('Lead Prospector access code (asked once on this device):') || '').trim(); if (!code) return; localStorage.setItem('wp_prospector_code', code); }
+                go.disabled = true; out.innerHTML = '<p style="color:#64748b;">🔭 Reading ' + wpsEsc(platName) + ' posts…</p>';
+                try {
+                    const qs = new URLSearchParams({ phrase, mode: 'ask', sources: plat.value, freshness: document.getElementById('wpsFresh').value, where: document.getElementById('wpsWhere').value.trim(), service: 'web', audience: 'any' });
+                    const r = await fetch('https://webswan-lead-prospector.netlify.app/api/intent?' + qs, { headers: { 'x-app-key': code } });
+                    if (r.status === 401) { localStorage.removeItem('wp_prospector_code'); throw new Error('That access code did not work. Press Search again to re-enter it.'); }
+                    const d = await r.json().catch(() => ({}));
+                    const rows = (d.results || []).filter((x) => !x.seller);
+                    const found = rows.map((x) => ({ x, m: wpsMatch(x, pros) }));
+                    const auto = found.filter((f) => f.m && f.m.how === 'profile');
+                    for (const f of auto) { try { await wpsFlag(f.m.lead, f.x, phrase); f.flagged = true; } catch (e) { f.err = e.message; } }
+                    const card = (f, i) => '<div style="border:1px solid ' + (f.m ? '#f57c00' : '#e2e8f0') + ';border-radius:10px;padding:9px;margin:8px 0;background:' + (f.m ? '#fff4e5' : '#fff') + ';">'
+                        + (f.m ? '<div style="font-weight:800;color:#c2410c;font-size:.85rem;">🟠 ' + (f.flagged ? 'Your lead, now flagged orange: ' : f.m.how === 'name' ? 'Looks like your lead (name match — check it): ' : 'Your lead: ') + wpsEsc(f.m.lead.companyName || f.m.lead.name) + (f.err ? ' · not saved: ' + wpsEsc(f.err) : '') + '</div>' : '')
+                        + '<a href="' + wpsEsc(f.x.url) + '" target="_blank" rel="noopener nofollow" style="font-weight:700;">' + wpsEsc(f.x.title) + '</a>'
+                        + '<div style="font-size:.8rem;color:#475569;margin-top:3px;">' + wpsEsc(String(f.x.snippet || '').slice(0, 260)) + '</div>'
+                        + '<div style="font-size:.75rem;color:#94a3b8;margin-top:3px;">' + wpsEsc(f.x.source || '') + (f.x.age ? ' · ' + wpsEsc(f.x.age) : '') + (f.x.heat ? ' · ' + wpsEsc(f.x.heat) : '') + '</div>'
+                        + (f.m && !f.flagged ? '<button type="button" data-wpsflag="' + i + '" style="margin-top:6px;border:1px solid #f57c00;background:#fff;color:#c2410c;border-radius:8px;font-weight:700;cursor:pointer;padding:3px 10px;">🟠 Flag this lead</button>' : '')
+                        + '</div>';
+                    const mine = found.filter((f) => f.m), others = found.filter((f) => !f.m);
+                    out.innerHTML = (d.error ? '<p style="color:#b45309;">' + wpsEsc(d.error) + '</p>' : '')
+                        + '<p style="font-size:.85rem;"><b>' + rows.length + '</b> buyer post' + (rows.length === 1 ? '' : 's') + ' on ' + wpsEsc(platName) + ' for “' + wpsEsc(phrase) + '” · <b style="color:#c2410c;">' + mine.length + '</b> from your leads' + (d.usage ? ' · ' + Math.max(0, d.usage.max - d.usage.used) + ' searches left this month' : '') + '</p>'
+                        + (mine.length ? '<h4 style="margin:10px 0 0;color:#c2410c;">Your leads asking for it</h4>' + mine.map((f) => card(f, found.indexOf(f))).join('') : '')
+                        + (others.length ? '<h4 style="margin:12px 0 0;color:#334155;">Other buyers (not your leads yet — save them in Lead Prospector)</h4>' + others.map((f) => card(f, found.indexOf(f))).join('') : '')
+                        + (!rows.length ? '<p style="color:#64748b;">No buyers found for that. Try Last month, another platform or other words.</p>' : '');
+                    out.querySelectorAll('[data-wpsflag]').forEach((b) => b.onclick = async () => { const f = found[+b.dataset.wpsflag]; b.disabled = true; try { await wpsFlag(f.m.lead, f.x, phrase); b.textContent = '✓ Flagged orange'; showToast('🟠 ' + (f.m.lead.companyName || f.m.lead.name) + ' flagged in WorkPilot', 'success'); } catch (e) { b.disabled = false; showToast('Could not flag: ' + e.message, 'error'); } });
+                    if (auto.length) showToast('🟠 ' + auto.filter((f) => f.flagged).length + ' of your leads flagged orange', 'success');
+                } catch (e) { out.innerHTML = '<p style="color:#b91c1c;">' + wpsEsc(e.message) + '</p>'; }
+                finally { go.disabled = false; }
+            }
+            document.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('.wp-spot-open')) { e.preventDefault(); e.stopPropagation(); openWpSpotter(); } }, true);
             function loadTmColors() { try { const o = JSON.parse(localStorage.getItem('webswan_tm_colors') || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } }
             // Tania, Nov 14: a one-click 🇭🇹 tag for Haitian-owned leads, independent of the outcome color, so she can
             // group and jump to them. Auto-detects "Haitian" in the lead's own text too, so she doesn't have to tag every one by hand.
@@ -6520,7 +6619,7 @@
                     { list: visibleMain.filter(l => isAI(l) && tmRank(l) >= 1).sort(byHaitianThenRank), title: '<i class="fas fa-star"></i> AI Calls: real conversations (call these first) · <span style="background:#ffe0b2;color:#7a3b00;padding:0 6px;border-radius:6px">orange hot: email + appointment</span> <span style="background:#50b9fa;color:#04263d;padding:0 6px;border-radius:6px">sky: my appointment with the doctor/attorney</span> <span style="background:#c8f0c8;color:#14532d;padding:0 6px;border-radius:6px">green: email or Rachel</span> <span style="background:#e6d9ff;color:#3b2470;padding:0 6px;border-radius:6px">lavender: audit sent</span> <span style="background:#fff3a3;color:#4a3b00;padding:0 6px;border-radius:6px">yellow: spoke to a person</span>', color: '#8a6d00', border: '#e0b100', hl: 'aiblue', refresh: false },
                     { list: visibleMain.filter(l => !isPros(l) && !isAI(l)).sort((a, b) => isHaitianLead(b) - isHaitianLead(a)), title: '<i class="fas fa-phone-volume"></i> From Telemarketing Calls', color: '#ad1457', border: '#ec407a', hl: 'pink', refresh: true },
                     { list: visibleMain.filter(l => isAI(l) && tmRank(l) === 0).sort(byHaitianThenRank), title: '<i class="fas fa-robot"></i> AI Calls (Voice Studio) · <span style="background:#cfe9fb;color:#0077be;padding:0 6px;border-radius:6px">ocean blue</span> hang up, voicemail, phone menu, another AI · 🎧 recording on every row', color: '#0077be', border: '#0077be', hl: 'aiblue', refresh: false },
-                    { list: visibleMain.filter(isPros).sort((a, b) => isHaitianLead(b) - isHaitianLead(a)), title: '<i class="fas fa-magnifying-glass-location"></i> From Lead Prospector', color: '#0077be', border: '#0077be', hl: 'ocean', refresh: false }
+                    { list: visibleMain.filter(isPros).sort((a, b) => isHaitianLead(b) - isHaitianLead(a)), title: '<i class="fas fa-magnifying-glass-location"></i> From Lead Prospector · <button type="button" class="wp-spot-open" style="margin-left:6px;border:1px solid #eb5df5;background:#fff;color:#a21caf;border-radius:8px;font-weight:700;cursor:pointer;padding:1px 8px;">🔭 Lead Spotter</button>', color: '#c026d3', border: '#eb5df5', hl: 'pros', refresh: false }
                 ];
                 // Eva (login code) only sees the lavender leads
                 if (window.WP_ROLE === 'eva') groups.splice(0, groups.length, { list: visibleAll.filter(l => tmColorOf(l) === 'lightgrey').sort(byRank), title: '🩶 Light grey: your queue — edit from Tania’s notes, then push to Gmail', color: '#5b3fa8', border: '#9b7ae0', hl: 'lavender', refresh: true });
