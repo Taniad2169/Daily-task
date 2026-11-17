@@ -6789,12 +6789,15 @@
                     const snap = visibleAll.slice(0, 600).map((l0) => { const l = typeof applyTmEdits === 'function' ? applyTmEdits(l0) : l0; return {
                         id: l.id, company: l.companyName || l.company || '', contact: l.decisionMakerName || l.name || '', phone: l.phone || '', email: l.email || '',
                         website: (typeof tmFindSite === 'function' ? tmFindSite(l) : l.website) || '', social: l.social || '', state: l.state || '', industry: l.industry || l.serviceInterested || '',
-                        color: tmColorOf(l0) || '', lavenderAt: l.lavenderAt || '', notes: [l.comment, l.myNotes].filter(Boolean).join(' | ').slice(0, 1200) }; });
+                        color: tmColorOf(l0) || '', lavenderAt: l.lavenderAt || '', notes: [l.comment, l.myNotes].filter(Boolean).join(' | ').slice(0, 1200),
+                        source: l.source === 'voice-studio' ? 'studio' : (l.source === 'prospector' || l.source === 'lead-prospector') ? 'prospector' : l.source === 'solene' ? 'solene' : 'telemarketing' }; });
+                    // Tania, Nov 17: Sebastien reviews ALL leads, so the hand-typed (manual) leads travel too.
+                    const manualSnap = (Array.isArray(leads) ? leads : []).slice(-300).map((m) => ({ id: m.id, company: m.name || '', contact: m.contact || '', phone: /^no phone$/i.test(m.phone || '') ? '' : (m.phone || ''), email: /^no email$/i.test(m.email || '') ? '' : (m.email || ''), website: /^no url$/i.test(m.url || '') ? '' : (m.url || ''), social: m.social || '', status: String(m.customDropdown || m.dropdown || ''), industry: m.origin || '', notes: String(m.comment || '').slice(0, 1200) })).filter((m) => m.company || m.phone || m.email || m.website);
                     localStorage.setItem('webswan_wp_snapshot', JSON.stringify({ at: Date.now(), leads: snap }));
                     // Tania, Nov 13: also send it to the AI Office server, so Eva has it on any device (at most every 5 minutes).
                     if (!window.__wpSnapAt || Date.now() - window.__wpSnapAt > 300000) { window.__wpSnapAt = Date.now();
                         (async () => { try { const tok = await window.wpGmail.idToken(); if (!tok) return;
-                            await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'wp_snapshot_put', leads: snap }) });
+                            await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'wp_snapshot_put', leads: snap, manual: manualSnap }) });
                         } catch (e) { window.__wpSnapAt = 0; } })(); }
                 } catch (e) { /* storage full: Eva falls back to the live database */ }
                 const tmRank = (l) => TM_RANK[tmColorOf(l)] || 0;
