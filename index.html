@@ -2891,11 +2891,13 @@
                 const out = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
                 // Tania, Nov 16: "I moved 27 leads from Prospector to WorkPilot, I don't see them." Only the newest 600 rows
                 // were loaded, and a lead pushed before kept its OLD date, so it fell outside those 600. Prospector leads are
-                // now always loaded too, whatever their date.
+                // now loaded too when she sent them in the last 7 days.
                 try {
                     const seen = new Set(out.map((l) => l.id));
                     const pq = query(collection(marketingDb, 'leads'), where('source', 'in', ['prospector', 'lead-prospector']), limit(800));
-                    (await getDocs(pq)).docs.forEach((d) => { if (!seen.has(d.id)) out.push({ id: d.id, ...d.data() }); });
+                    // Only what she actually sent this past week shows (not every lead Prospector ever pushed).
+                    const weekAgo = Date.now() - 7 * 864e5;
+                    (await getDocs(pq)).docs.forEach((d) => { const x = d.data(); if (!seen.has(d.id) && Date.parse(x.timestamp || 0) >= weekAgo) out.push({ id: d.id, ...x }); });
                 } catch (e) { console.warn('Prospector leads load', e); }
                 return out;
             }
