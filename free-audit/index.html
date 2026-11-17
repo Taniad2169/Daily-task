@@ -255,6 +255,10 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:10px 24px;justify-content:space-bet
       <div id="formView">
         <h2>Request your free audit</h2>
         <p class="sub">Takes 30 seconds. I'll reach out within one business day.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 14px">
+          <div style="border:1px solid rgba(98,228,240,.45);border-radius:12px;padding:10px 12px"><strong style="display:block">Free audit</strong><span style="font-size:13px;opacity:.85">A quick review of your site's biggest compliance and trust gaps. $0.</span></div>
+          <div style="border:1px solid rgba(98,228,240,.45);border-radius:12px;padding:10px 12px"><strong style="display:block">Thorough audit: $799</strong><span style="font-size:13px;opacity:.85">A full written report with a fix list, ADA, privacy and speed checks.</span></div>
+        </div>
 
         <form id='auditForm' method='POST' name='audit-request' novalidate>
           <input type="hidden" name="form-name" value="audit-request">
@@ -313,6 +317,7 @@ footer .wrap{display:flex;flex-wrap:wrap;gap:10px 24px;justify-content:space-bet
             <label for="interest">I'm also interested in <span class="opt">(optional)</span></label>
             <select id="interest" name="interest">
               <option value="">Just the free audit</option>
+              <option>Thorough audit ($799)</option>
               <option>A new custom website</option>
               <option>WSBPA: a phone app for my business</option>
               <option>WSMN: advertising for my practice</option>

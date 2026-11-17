@@ -612,6 +612,11 @@
             </button>
           </div>
           <span id="vn-status" class="w-full text-[11px] text-slate-500 hidden" role="status" aria-live="polite"></span>
+          <div class="flex items-center gap-1.5" id="sv-bar">
+            <button type="button" id="sv-txt" class="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-[#8cc1f5] text-slate-700 font-semibold text-xs"><i class="fa-solid fa-file-arrow-down mr-1 text-[#3d90e0]"></i>TXT</button>
+            <button type="button" id="sv-pdf" class="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-[#8cc1f5] text-slate-700 font-semibold text-xs"><i class="fa-solid fa-file-pdf mr-1 text-[#3d90e0]"></i>PDF</button>
+            <button type="button" id="sv-share" class="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:border-[#8cc1f5] text-slate-700 font-semibold text-xs"><i class="fa-solid fa-share-nodes mr-1 text-[#3d90e0]"></i>Share / Save to phone</button>
+          </div>
           <button type="button" onclick="clearEditorBody()" class="text-slate-400 hover:text-rose-500 px-2 py-1 text-xs transition">
             <i class="fa-regular fa-trash-can mr-1"></i>Clear
           </button>
@@ -2242,5 +2247,35 @@ Output ONLY the translated text in the target language. Do not add conversationa
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", wire); else wire();
   })();
   </script>
+
+<script>
+(function(){
+  function $(i){return document.getElementById(i);}
+  function data(){var t=($("editor-title")||{}).value||"",b=($("editor-body")||{}).value||"";t=t.trim()||"SwanPad note";return {t:t,b:b};}
+  function toast(m,ty){try{if(typeof window.showToast==="function")window.showToast(m,ty||"success");else alert(m);}catch(e){}}
+  function fname(t){return t.replace(/[^\w\- ]+/g,"").trim().replace(/\s+/g,"-").slice(0,50)||"swanpad-note";}
+  function esc(x){return x.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+  function empty(d){if(!d.b.trim()){toast("Nothing to save yet. Write or speak a note first.","error");return true;}return false;}
+  function txt(){var d=data();if(empty(d))return;
+    var blob=new Blob([d.t+"\n\n"+d.b],{type:"text/plain;charset=utf-8"});
+    var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=fname(d.t)+".txt";document.body.appendChild(a);a.click();
+    setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},1000);toast("Downloaded "+a.download);}
+  function pdf(){var d=data();if(empty(d))return;
+    var w=window.open("","_blank");
+    if(!w){toast("Allow pop-ups to save as PDF, or use the TXT button.","error");return;}
+    w.document.write('<!doctype html><title>'+esc(d.t)+'</title><body style="font-family:Georgia,serif;max-width:720px;margin:40px auto;padding:0 20px;color:#111"><h1 style="font-size:26px;border-bottom:2px solid #123e6b;padding-bottom:8px">'+esc(d.t)+'</h1><div style="white-space:pre-wrap;font-size:16px;line-height:1.6">'+esc(d.b)+'</div><p style="color:#888;font-size:12px;margin-top:40px">SwanPad &middot; '+new Date().toLocaleString()+'</p></body>');
+    w.document.close();w.focus();setTimeout(function(){w.print();},400);
+    toast("Choose \"Save as PDF\" in the print window.");}
+  function share(){var d=data();if(empty(d))return;
+    var text=d.t+"\n\n"+d.b;
+    if(navigator.share){
+      try{var f=new File([text],fname(d.t)+".txt",{type:"text/plain"});
+        if(navigator.canShare&&navigator.canShare({files:[f]})){navigator.share({files:[f],title:d.t}).catch(function(){});return;}}catch(e){}
+      navigator.share({title:d.t,text:text}).catch(function(){});return;}
+    if(navigator.clipboard){navigator.clipboard.writeText(text).then(function(){toast("Copied. Paste it into Notes, Docs or a message.");},function(){txt();});}else{txt();}}
+  function bind(){var m={"sv-txt":txt,"sv-pdf":pdf,"sv-share":share};for(var k in m){var e=$(k);if(e&&!e._b){e._b=1;e.addEventListener("click",m[k]);}}}
+  bind();
+})();
+</script>
 </body>
 </html>
