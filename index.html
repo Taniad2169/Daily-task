@@ -4423,7 +4423,12 @@
                     if (x.src === 'lead' && v.live) {
                         const copy = Object.assign({}, v.live, { comment: [v.my ? "Tania's notes: " + v.my : '', v.live.comment || ''].filter(Boolean).join('\n') });
                         ok = !!(await pushCompletedLeadToTm(copy, 'lightgrey'));
+                        setOwnLeadColor(x.refId, 'lightgrey');
                     }
+                    // Tania, Nov 16: light grey used to stay inside WorkPilot only, so Eva never got the lead. Send it to her queue too.
+                    try {
+                        await evaQueueRemote({ id: String(x.refId), to: v.email || '', practice: v.name || '', contact: v.contact || '', phone: v.phone || '', state: '', website: v.url || '', findings: '', notes: String(v.my || '').trim(), subject: '', body: '' });
+                    } catch (e) { ok = false; showToast("🩶 Light grey, but Eva could NOT receive it (" + (e && e.message || e) + ").", 'error'); return renderTaniaCalls(); }
                     try { const n = JSON.parse(localStorage.getItem('webswan_eva_notices') || '[]'); n.push({ at: new Date().toISOString(), lead: v.name || v.contact || '', email: v.email || '', hasNotes: !!v.my.trim(), todo: v.my.trim() ? 'Edit the email from my notes, then push to Gmail drafts.' : 'No notes: push the email to Gmail drafts as is.' }); localStorage.setItem('webswan_eva_notices', JSON.stringify(n.slice(-100))); } catch (e) {}
                     showToast(ok ? "✉️ Light grey: " + (v.name || 'this lead') + " is in Eva's queue" + (v.my.trim() ? ' with your notes.' : ' (no notes: she pushes the draft as is).') : 'Colored light grey, but Eva could not be reached. Try again.', ok ? 'success' : 'error');
                 }
@@ -4594,6 +4599,13 @@
                 if (had) { delete had.removedAt; had.snap = snap; had.addedAt = new Date().toISOString(); } else list.push({ id, src, refId: String(obj.id), snap, addedAt: new Date().toISOString() });
                 jcSave(list);
                 try { if (src === 'tm') setTmColor(obj.id, 'jennagreen'); } catch (e) {}
+                // Tania, Nov 16: her own (manually entered) leads never reached Jenna: Jenna's view only lists telemarketing
+                // leads colored jennagreen. Copy the lead there in Jenna's green and color the card so it visibly moves.
+                if (src === 'lead') {
+                    setOwnLeadColor(obj.id, 'jennagreen');
+                    const copy = Object.assign({}, obj, { comment: [obj.myNotes ? "Tania's notes: " + obj.myNotes : '', obj.comment || ''].filter(Boolean).join('\n') });
+                    pushCompletedLeadToTm(copy, 'jennagreen').then(id => { if (!id) showToast("Jenna's list could not be reached. Try again.", 'error'); });
+                }
                 try { checkJennaLeadAlert(); } catch (e) {}
                 showToast("🕵️‍♀️ " + (tcClean(obj.companyName || obj.name) || 'Lead') + " moved to Jenna's Calls.", 'success');
             }
@@ -5565,7 +5577,9 @@
                 let extra = ''; try { extra = (typeof commentWithExtras === 'function' && !lead.source) ? commentWithExtras(lead) : (lead.comment || ''); } catch (e) { extra = lead.comment || ''; }
                 const notes = [clean(lead.myNotes), clean(extra)].filter(Boolean).join(' — ');   // your highlighted note first, then the call summary / comment
                 // Jenna visits the site herself and reads the comment as her brief for this one call, so she needs the url and location too.
-                const payload = { id: 'wp-' + String(lead.id || Date.now()), name: dispName, contact, business, url, location, phone, state, agent, notes };
+                // Tania, Nov 16: the callers (Rebecca, Jenna, Monica, George, Alek) get the person's social media with the lead.
+                const socials = (typeof wpSocSlots === 'function' ? wpSocSlots(lead) : []).filter((x) => x.u).map((x) => (x.p || 'Social') + ': ' + x.u).join(' · ');
+                const payload = { id: 'wp-' + String(lead.id || Date.now()), name: dispName, contact, business, url, location, phone, state, agent, notes: socials ? 'Social media: ' + socials + (notes ? ' — ' + notes : '') : notes, social: socials }; // socials first so they're never cut off
                 if (doc && agent === 'jenna') payload.doc = { name: doc.name, text: doc.text };
                 try {
                     const tok = await window.wpGmail.idToken();
@@ -6345,8 +6359,13 @@
                         } else if (action === 'alek') {
                             await pushLeadToAlekQueue(lead);
                         } else if (action === 'eva') {
-                            const id = await pushCompletedLeadToTm(lead, 'lavender');
-                            if (id) showToast('💜 ' + (lead.name || 'Lead') + ' sent to Eva (lavender) to draft the audit email. Your notes came along.', 'success');
+                            // Tania, Nov 16: this used to color the lead LAVENDER and never reached Eva at all. Now it opens
+                            // the same Eva window as the lead card: "Ready for Eva" turns it light grey and sends it to her queue.
+                            lead.companyName = lead.companyName || lead.name || '';
+                            lead.decisionMakerName = lead.decisionMakerName || lead.contact || '';
+                            lead.website = lead.website || lead.url || '';
+                            lead.myNotes = lead.myNotes || lead.comment || '';
+                            openEvaDraft(lead);
                         } else if (action === 'tania') {
                             tcAdd('lead', lead);
                         } else if (action === 'jenna') {
@@ -6459,49 +6478,119 @@
             const WPS_PHRASES = ['need a website', 'looking for a web designer', 'need a new website', 'website for my practice', 'website for my dental practice', 'website for my law firm', 'ADA compliant website', 'HIPAA compliant website', 'need an app for my business', 'need help with SEO', 'need a social media manager', 'looking for a marketing agency', 'need help with Google Ads', 'need more customers', 'need help advertising my business', 'need a virtual receptionist', 'need an answering service', 'missing calls', 'need a logo', 'need a digital business card'];
             const WPS_PLATFORMS = [['facebook', 'Facebook'], ['fbgroups', 'Facebook Groups'], ['instagram', 'Instagram'], ['linkedinposts', 'LinkedIn posts'], ['linkedin', 'LinkedIn'], ['x', 'X (Twitter)'], ['reddit', 'Reddit'], ['redditsb', 'Reddit: small business'], ['nextdoor', 'Nextdoor'], ['alignable', 'Alignable'], ['quora', 'Quora'], ['craigslist', 'Craigslist'], ['yelp', 'Yelp']];
             const wpsEsc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+            // Tania, Nov 16: the Spotter was inaccurate because (1) it only looked at Prospector leads, never her own leads
+            // (like Alicia Barba) or the telemarketing / AI-call leads, (2) it only read a "social" field most leads don't have,
+            // (3) it only understood a few Facebook/Instagram/LinkedIn/X profile URLs, so Reddit, TikTok, Nextdoor, Alignable,
+            // YouTube and Facebook "profile.php?id=" links never matched, and (4) it flagged posts that weren't asking for any of her
+            // services. Now it checks EVERY WorkPilot lead, reads every social link in the lead, matches the poster's profile or full
+            // name, and only flags a post that is really asking for one of her services. "Check my leads" searches lead by lead.
+            const WPS_SERVICE_RE = /\b(website|web ?site|web design(er)?|web developer|landing page|redesign|seo|google (ranking|ads)|ads?\b|advertis|marketing|social media|instagram manager|content creator|app\b|phone app|logo|branding|business card|e-?card|receptionist|answering service|missed calls?|appointment setter|booking|ada|hipaa|compliance|more (customers|clients|patients|leads))/i;
+            const WPS_ASK_RE = /\b(need|needs|needed|looking for|look for|recommend|recommendation|anyone know|who (can|does|do you use)|suggestions?|hire|hiring|help with|in search of|iso\b|seeking|quote|how much (does|for|would))/i;
+            const wpsIsAsking = (post) => { const t = (post.title || '') + ' ' + (post.snippet || ''); return WPS_SERVICE_RE.test(t) && WPS_ASK_RE.test(t); };
             function wpsHandle(u) {
-                const m = String(u || '').match(/(facebook|instagram|linkedin|tiktok|x|twitter)\.com\/([a-z0-9_.\-\/]+)/i);
+                u = String(u || '').trim(); if (!u) return null;
+                let m = u.match(/facebook\.com\/profile\.php\?(?:[^#]*&)?id=(\d+)/i); if (m) return 'facebook:' + m[1];
+                m = u.match(/reddit\.com\/(?:u|user)\/([a-z0-9_\-]+)/i); if (m) return 'reddit:' + m[1].toLowerCase();
+                m = u.match(/(tiktok|youtube)\.com\/@([a-z0-9_.\-]+)/i); if (m) return m[1].toLowerCase() + ':' + m[2].toLowerCase();
+                m = u.match(/nextdoor\.com\/(?:profile|p)\/([a-z0-9_\-]+)/i); if (m) return 'nextdoor:' + m[1].toLowerCase();
+                m = u.match(/alignable\.com\/([a-z0-9_\-]+\/[a-z0-9_\-]+)/i); if (m) return 'alignable:' + m[1].toLowerCase();
+                m = u.match(/(facebook|fb|instagram|linkedin|tiktok|x|twitter)\.com\/([a-z0-9_.\-\/@]+)/i);
                 if (!m) return null;
-                const plat = m[1].toLowerCase();
+                const plat = m[1].toLowerCase() === 'fb' ? 'facebook' : m[1].toLowerCase();
                 let path = m[2].toLowerCase().replace(/^@/, '').replace(/\/$/, '').split('/').filter(Boolean);
-                if (plat === 'linkedin') { if (['company', 'in'].includes(path[0]) && path[1]) path = [path[1]]; else return null; } else path = [path[0]];
+                if (plat === 'linkedin') { if (['company', 'in'].includes(path[0]) && path[1]) path = [path[1]]; else return null; } else path = [path[0].replace(/^@/, '')];
                 const h = path[0];
-                if (!h || ['sharer', 'share', 'sharer.php', 'intent', 'login', 'plugins', 'widgets', 'home', 'profile.php', 'pages', 'groups', 'p', 'reel', 'reels', 'watch', 'events', 'hashtag', 'explore', 'stories', 'photo', 'photos', 'posts', 'search', 'i', 'tr', 'dialog', 'l.php', 'tv', 'videos', 'story.php', 'permalink.php'].includes(h)) return null;
+                if (!h || ['sharer', 'share', 'sharer.php', 'intent', 'login', 'plugins', 'widgets', 'home', 'profile.php', 'pages', 'groups', 'p', 'reel', 'reels', 'watch', 'events', 'hashtag', 'explore', 'stories', 'photo', 'photos', 'posts', 'search', 'i', 'tr', 'dialog', 'l.php', 'tv', 'videos', 'story.php', 'permalink.php', 'marketplace'].includes(h)) return null;
                 return (plat === 'twitter' ? 'x' : plat) + ':' + h;
             }
             const wpsIsPros = (l) => l && (l.source === 'prospector' || l.source === 'lead-prospector');
-            const wpsSocials = (l) => String((l && l.social) || '').split(/[\s,;]+/).filter(Boolean);
+            // every social link anywhere in the lead (the social field, the comment, Tania's notes, the website box)
+            const WPS_URL_RE = /(https?:\/\/)?(www\.|m\.)?(facebook|fb|instagram|linkedin|tiktok|x|twitter|reddit|youtube|nextdoor|alignable)\.com\/[^\s,;"'<>)]+/gi;
+            const wpsSocials = (l) => { if (!l) return []; const t = [l.social, l.facebook, l.instagram, l.linkedin, l.tiktok, l.comment, l.myNotes, l.url, l.website, l.notes].filter(Boolean).join(' '); return Array.from(new Set(t.match(WPS_URL_RE) || [])); };
             const wpsNorm = (v) => String(v || '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9 ]/g, ' ').replace(/\b(llc|inc|pllc|pc|pa|dds|dmd|md|dc|esq|the|of|and|law|firm|group|office|offices|center|clinic|medical|dental|chiropractic|associates|practice|family|care|health|wellness)\b/g, ' ').replace(/\s+/g, ' ').trim();
+            const wpsPerson = (l) => { const n = String(l.decisionMakerName || l.contact || '').toLowerCase().replace(/\b(dr|doctor|atty|attorney|mr|mrs|ms|esq)\b\.?/g, ' ').replace(/[^a-z\s'\-]/g, ' ').replace(/\s+/g, ' ').trim(); return n.split(' ').filter((w) => w.length >= 2).length >= 2 ? n : ''; };
+            // All WorkPilot leads: her own leads + telemarketing / Prospector / AI-call leads.
+            function wpsAllLeads() {
+                const own = (leads || []).map((l) => Object.assign(Object.create(null), l, { _own: true, companyName: l.companyName || l.name, decisionMakerName: l.decisionMakerName || l.contact, _ref: l }));
+                const tm = (telemarketingLeads || []).map((l) => { const e = typeof applyTmEdits === 'function' ? applyTmEdits(l) : l; return Object.assign(Object.create(null), e, { _ref: l }); });
+                return own.concat(tm);
+            }
             function wpsMatch(post, pros) {
-                const h = wpsHandle(post.url);
-                if (h) { const l = pros.find((x) => wpsSocials(x).some((u) => wpsHandle(u) === h)); if (l) return { lead: l, how: 'profile' }; }
-                const text = wpsNorm((post.title || '') + ' ' + (post.snippet || ''));
-                const l2 = pros.find((x) => { const n = wpsNorm(x.companyName || x.name); return n.length >= 6 && n.split(' ').length >= 2 && text.includes(n); });
+                const text = (post.title || '') + ' ' + (post.snippet || '');
+                const handles = [wpsHandle(post.url)].concat((text.match(WPS_URL_RE) || []).map(wpsHandle)).filter(Boolean);
+                if (handles.length) { const l = pros.find((x) => wpsSocials(x).some((u) => handles.includes(wpsHandle(u)))); if (l) return { lead: l, how: 'profile' }; }
+                const low = ' ' + text.toLowerCase().replace(/[^a-z0-9\s'\-]/g, ' ').replace(/\s+/g, ' ') + ' ';
+                const lp = pros.find((x) => { const n = wpsPerson(x); return n && low.includes(' ' + n + ' '); });
+                if (lp) return { lead: lp, how: 'name' };
+                const nt = wpsNorm(text);
+                const l2 = pros.find((x) => { const n = wpsNorm(x.companyName || x.name); return n.length >= 6 && n.split(' ').length >= 2 && nt.includes(n); });
                 return l2 ? { lead: l2, how: 'name' } : null;
             }
             async function wpsFlag(lead, post, phrase) {
                 const data = { flagged: true, flagService: phrase, flagUrl: post.url, flagDate: new Date().toISOString() };
+                if (lead._own) {           // her own lead: save on the lead itself (it used to be written into the telemarketing list by mistake)
+                    Object.assign(lead._ref, data); Object.assign(lead, data);
+                    try { saveToStorage(); } catch (e) {} try { scheduleFirebaseAutoSave(); } catch (e) {} try { renderLeads(); } catch (e) {}
+                    return;
+                }
                 if (!window.dailyFirebase || !window.dailyFirebase.addTelemarketingLead) throw new Error('WorkPilot is not connected to the lead list yet.');
                 await window.dailyFirebase.addTelemarketingLead(String(lead.id), data);
-                Object.assign(lead, data);
+                Object.assign(lead._ref || lead, data); Object.assign(lead, data);
                 try { renderTelemarketingLeads(); } catch (e) {}
+            }
+            // "Check my leads": searches lead by lead (their profile handle or full name), up to 10 leads per click so the
+            // monthly search allowance lasts; the next click continues where the last one stopped.
+            async function wpsCheckMine(all) {
+                const out = document.getElementById('wpsOut'), btn = document.getElementById('wpsMine');
+                const plat = document.getElementById('wpsPlat').value, fresh = document.getElementById('wpsFresh').value;
+                const cand = all.filter((l) => !l.flagged && (wpsSocials(l).length || wpsPerson(l) || wpsNorm(l.companyName || l.name).split(' ').length >= 2));
+                if (!cand.length) { out.innerHTML = '<p style="color:#64748b;">None of your leads has a social link or a full contact name to search for yet.</p>'; return; }
+                let code = localStorage.getItem('wp_prospector_code');
+                if (!code) { code = (prompt('Lead Prospector access code (asked once on this device):') || '').trim(); if (!code) return; localStorage.setItem('wp_prospector_code', code); }
+                let start = 0; try { start = (+localStorage.getItem('wp_spot_mine_at') || 0) % cand.length; } catch (e) {}
+                const batch = cand.slice(start, start + 10); try { localStorage.setItem('wp_spot_mine_at', String(start + batch.length)); } catch (e) {}
+                btn.disabled = true; const hits = []; let n = 0, left = null;
+                for (const l of batch) {
+                    n++; out.innerHTML = '<p style="color:#64748b;">🎯 Checking ' + n + ' of ' + batch.length + ': ' + wpsEsc(l.companyName || l.name || '') + '…</p>';
+                    const h = wpsSocials(l).map(wpsHandle).filter(Boolean)[0];
+                    const who = h ? h.split(':')[1] : (wpsPerson(l) || l.companyName || l.name);
+                    try {
+                        const qs = new URLSearchParams({ phrase: '"' + who + '"', mode: 'ask', sources: plat, freshness: fresh, where: '', service: 'web', audience: 'any' });
+                        const r = await fetch('https://webswan-lead-prospector.netlify.app/api/intent?' + qs, { headers: { 'x-app-key': code } });
+                        if (r.status === 401) { localStorage.removeItem('wp_prospector_code'); throw new Error('That access code did not work.'); }
+                        const d = await r.json().catch(() => ({})); if (d.usage) left = Math.max(0, d.usage.max - d.usage.used);
+                        for (const x of (d.results || []).filter((x) => !x.seller && wpsIsAsking(x))) {
+                            const m = wpsMatch(x, [l]); if (!m) continue;
+                            const svc = ((x.title + ' ' + x.snippet).match(WPS_SERVICE_RE) || [''])[0];
+                            if (m.how === 'profile') { try { await wpsFlag(l, x, 'asking for ' + svc); m.flagged = true; } catch (e) {} }
+                            hits.push({ x, m, svc });
+                        }
+                    } catch (e) { out.innerHTML = '<p style="color:#b91c1c;">' + wpsEsc(e.message) + '</p>'; btn.disabled = false; return; }
+                }
+                btn.disabled = false;
+                out.innerHTML = '<p style="font-size:.85rem;">🎯 Checked <b>' + batch.length + '</b> of your ' + cand.length + ' leads on ' + wpsEsc(document.getElementById('wpsPlat').selectedOptions[0].text) + ' · <b style="color:#c2410c;">' + hits.length + '</b> asking for your services' + (left != null ? ' · ' + left + ' searches left this month' : '') + '. Press again for the next 10.</p>'
+                    + hits.map((f, i) => '<div style="border:1px solid #f57c00;border-radius:10px;padding:9px;margin:8px 0;background:#fff4e5;"><div style="font-weight:800;color:#c2410c;font-size:.85rem;">🟠 ' + (f.m.flagged ? 'Flagged orange: ' : 'Name match — check it: ') + wpsEsc(f.m.lead.companyName || f.m.lead.name) + ' · asking for ' + wpsEsc(f.svc) + '</div><a href="' + wpsEsc(f.x.url) + '" target="_blank" rel="noopener nofollow" style="font-weight:700;">' + wpsEsc(f.x.title) + '</a><div style="font-size:.8rem;color:#475569;margin-top:3px;">' + wpsEsc(String(f.x.snippet || '').slice(0, 260)) + '</div>'
+                        + (f.m.flagged ? '' : '<button type="button" data-wpsmine="' + i + '" style="margin-top:6px;border:1px solid #f57c00;background:#fff;color:#c2410c;border-radius:8px;font-weight:700;cursor:pointer;padding:3px 10px;">🟠 Yes, that\'s my lead — flag it</button>') + '</div>').join('');
+                out.querySelectorAll('[data-wpsmine]').forEach((b) => b.onclick = async () => { const f = hits[+b.dataset.wpsmine]; b.disabled = true; try { await wpsFlag(f.m.lead, f.x, 'asking for ' + f.svc); b.textContent = '✓ Flagged orange'; } catch (e) { b.disabled = false; showToast('Could not flag: ' + e.message, 'error'); } });
+                if (hits.some((f) => f.m.flagged)) showToast('🟠 ' + hits.filter((f) => f.m.flagged).length + ' of your leads flagged orange', 'success');
             }
             function openWpSpotter() {
                 const old = document.getElementById('wpsOverlay'); if (old) old.remove();
-                const pros = telemarketingLeads.filter(wpsIsPros);
+                const pros = wpsAllLeads();
                 const withSoc = pros.filter((l) => wpsSocials(l).length).length;
                 const ov = document.createElement('div'); ov.id = 'wpsOverlay';
                 ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:10050;display:flex;align-items:flex-start;justify-content:center;padding:4vh 12px;overflow:auto;';
                 const sel = 'width:100%;padding:8px;border:1px solid #e9b8f0;border-radius:9px;font:inherit;';
                 ov.innerHTML = '<div style="background:#fff;border-radius:16px;max-width:720px;width:100%;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.25);">'
                     + '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;"><h3 style="margin:0;color:#a21caf;">🔭 Lead Spotter</h3><button type="button" id="wpsClose" style="border:none;background:none;font-size:1.4rem;cursor:pointer;" aria-label="Close">×</button></div>'
-                    + '<p style="font-size:.85rem;color:#51607a;margin:6px 0 12px;">Finds people posting that they need your service. If the poster is one of your <b>' + pros.length + '</b> Lead Prospector leads (' + withSoc + ' have social links), that lead turns <b style="color:#f57c00">orange</b> in WorkPilot.</p>'
+                    + '<p style="font-size:.85rem;color:#51607a;margin:6px 0 12px;">Finds people posting that they need your service. If the poster is one of your <b>' + pros.length + '</b> WorkPilot leads (' + withSoc + ' have social links), that lead turns <b style="color:#f57c00">orange</b> in WorkPilot.</p>'
                     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
                     + '<label style="font-size:.8rem;font-weight:700;">What they write<select id="wpsPhrase" style="' + sel + '">' + WPS_PHRASES.map((p) => '<option>' + wpsEsc(p) + '</option>').join('') + '<option value="__own">✍️ My own words…</option></select><input id="wpsOwn" type="text" maxlength="80" placeholder="e.g. need someone to fix my website" style="' + sel + 'display:none;margin-top:6px;"></label>'
                     + '<label style="font-size:.8rem;font-weight:700;">Platform<select id="wpsPlat" style="' + sel + '">' + WPS_PLATFORMS.map(([v, t]) => '<option value="' + v + '">' + t + '</option>').join('') + '</select></label>'
                     + '<label style="font-size:.8rem;font-weight:700;">Posted within<select id="wpsFresh" style="' + sel + '"><option value="pd">Last day</option><option value="pw" selected>Last week</option><option value="pm">Last month</option></select></label>'
                     + '<label style="font-size:.8rem;font-weight:700;">City or state (optional)<input id="wpsWhere" type="text" placeholder="Miami, FL" style="' + sel + '"></label>'
                     + '</div><button type="button" id="wpsGo" style="margin-top:12px;width:100%;padding:10px;border:none;border-radius:10px;background:#eb5df5;color:#fff;font-weight:800;cursor:pointer;">🔭 Search</button>'
+                    + '<button type="button" id="wpsMine" style="margin-top:8px;width:100%;padding:10px;border:2px solid #eb5df5;border-radius:10px;background:#fff;color:#a21caf;font-weight:800;cursor:pointer;">🎯 Check my leads (10 at a time): are any of them asking for my services?</button>'
                     + '<div id="wpsOut" style="margin-top:14px;"></div></div>';
                 document.body.appendChild(ov);
                 ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
@@ -6510,6 +6599,7 @@
                 ph.onchange = () => { own.style.display = ph.value === '__own' ? 'block' : 'none'; };
                 try { const k = JSON.parse(localStorage.getItem('wp_spot_pick') || 'null'); if (k) { ph.value = k.p || ph.value; own.value = k.o || ''; document.getElementById('wpsPlat').value = k.pl || 'facebook'; ph.onchange(); } } catch (e) {}
                 document.getElementById('wpsGo').onclick = () => wpsRun(pros);
+                document.getElementById('wpsMine').onclick = () => wpsCheckMine(pros);
             }
             async function wpsRun(pros) {
                 const out = document.getElementById('wpsOut'), go = document.getElementById('wpsGo');
@@ -6525,7 +6615,7 @@
                     const r = await fetch('https://webswan-lead-prospector.netlify.app/api/intent?' + qs, { headers: { 'x-app-key': code } });
                     if (r.status === 401) { localStorage.removeItem('wp_prospector_code'); throw new Error('That access code did not work. Press Search again to re-enter it.'); }
                     const d = await r.json().catch(() => ({}));
-                    const rows = (d.results || []).filter((x) => !x.seller);
+                    const rows = (d.results || []).filter((x) => !x.seller && wpsIsAsking(x)); // Nov 16: only posts really asking for a service
                     const found = rows.map((x) => ({ x, m: wpsMatch(x, pros) }));
                     const auto = found.filter((f) => f.m && f.m.how === 'profile');
                     for (const f of auto) { try { await wpsFlag(f.m.lead, f.x, phrase); f.flagged = true; } catch (e) { f.err = e.message; } }
@@ -6564,6 +6654,27 @@
             }
             // Tania, Nov 13: same color system as the Voice/Telemarketing rows (tmColorOf), but for her own
             // manually-entered leads — no AI-call auto-coloring, just her own pick or a Lead Spotter orange flag.
+            function isOwnLeadId(id) { return (leads || []).some(k => String(k.id) === String(id)); }
+            // Tania, Nov 16: one color for her own lead everywhere — the lead card reads webswan_tm_colors, the Completed
+            // list and Tania's/Jenna's Calls read highlights['lead-<id>-name']. Setting only one made colors "not stick".
+            function setOwnLeadColor(id, color) {
+                setTmColor(id, color || '');
+                const key = 'lead-' + id + '-name';
+                if (color) highlights[key] = color; else delete highlights[key];
+                try { saveHighlightsToStorage(); } catch (e) {}
+                try { const el = document.querySelector('[data-hlkey="' + key + '"]'); if (el) applyHighlightToElement(el, color || null); } catch (e) {}
+                try { renderLeads(); } catch (e) {} try { renderCompleted(); } catch (e) {}
+            }
+            // Sends a lead straight to Eva's queue in the AI Office (she can't log in to WorkPilot). No PDF here.
+            async function evaQueueRemote(lead) {
+                const tok = await window.wpGmail.idToken();
+                if (!tok) throw new Error('sign in with Google first');
+                if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(lead.to || '')) throw new Error('this lead has no email address yet');
+                const r = await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'eva_queue_add', lead, pdfBase64: '', filename: '' }) });
+                const d = await r.json().catch(() => ({}));
+                if (!r.ok) throw new Error(d.error || ('AI Office error ' + r.status));
+                return true;
+            }
             function leadColorOf(l) { const c = loadTmColors(); return c[String(l.id)] || (l.flagged ? 'orange' : ''); }
             function setTmColor(id, color) {
                 const all = loadTmColors(); if (color) all[String(id)] = color; else delete all[String(id)]; // empty = back to the automatic color
@@ -7029,6 +7140,36 @@
                 if (q) window.open('https://www.google.com/search?q=' + encodeURIComponent(q + ' ' + ((lead && lead.state) || '') + ' website'), '_blank', 'noopener');
                 else showToast('No website or practice name on this lead yet.', 'error');
             }
+            // Tania, Nov 16: 3 social media fields on every Voice / Prospector lead (platform drop-down + link), filled in
+            // automatically from any social link Prospector found, or typed in by hand. Saved with the lead and joined into
+            // lead.social, which Jenna, Tatiana and Rebecca read so they can study the person before the call/post.
+            const WP_SOC_PLATS = ['Facebook', 'Instagram', 'Reddit', 'LinkedIn', 'TikTok', 'X (Twitter)', 'YouTube', 'Nextdoor', 'Alignable', 'Other'];
+            function wpSocPlatOf(u) { const m = String(u || '').toLowerCase().match(/(facebook|fb\.com|instagram|reddit|linkedin|tiktok|twitter|x\.com|youtube|nextdoor|alignable)/); if (!m) return 'Other';
+                return { facebook: 'Facebook', 'fb.com': 'Facebook', instagram: 'Instagram', reddit: 'Reddit', linkedin: 'LinkedIn', tiktok: 'TikTok', twitter: 'X (Twitter)', 'x.com': 'X (Twitter)', youtube: 'YouTube', nextdoor: 'Nextdoor', alignable: 'Alignable' }[m[1]]; }
+            function wpSocSlots(lead) {
+                const found = (typeof wpsSocials === 'function' ? wpsSocials(lead) : []).map((u) => /^https?:/i.test(u) ? u : 'https://' + u);
+                const out = [];
+                for (let i = 1; i <= 3; i++) { const u = String(lead['soc' + i + 'u'] || '').trim(); if (u) out.push({ p: lead['soc' + i + 'p'] || wpSocPlatOf(u), u }); }
+                for (const u of found) { if (out.length >= 3) break; if (!out.some((x) => x.u.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '').toLowerCase() === u.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '').toLowerCase())) out.push({ p: wpSocPlatOf(u), u }); }
+                while (out.length < 3) out.push({ p: '', u: '' });
+                return out;
+            }
+            function wpSocFieldsHtml(lead) {
+                const lab = 'font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ad1457;display:block;';
+                return '<div class="field-group" style="margin-bottom:9px;"><label style="' + lab + '">📱 Social media (study them before the call)</label>'
+                    + wpSocSlots(lead).map((x, i) => '<div style="display:flex;gap:6px;margin-top:5px;align-items:center;">'
+                        + '<select data-tm-edit="soc' + (i + 1) + 'p" style="flex:0 0 130px;padding:6px;border:1px solid #f8bbd0;border-radius:8px;font:inherit;"><option value="">Platform…</option>' + WP_SOC_PLATS.map((p) => '<option' + (p === x.p ? ' selected' : '') + '>' + p + '</option>').join('') + '</select>'
+                        + '<input data-tm-edit="soc' + (i + 1) + 'u" type="url" value="' + tmEsc(x.u) + '" placeholder="Paste their profile link" style="flex:1;min-width:0;padding:6px;border:1px solid #f8bbd0;border-radius:8px;font:inherit;">'
+                        + '<button type="button" onclick="(function(b){const u=b.previousElementSibling.value.trim();if(u)window.open(/^https?:/i.test(u)?u:\'https://\'+u,\'_blank\',\'noopener\');})(this)" title="Open this profile" style="border:1px solid #f48fb1;background:#fff;color:#c2185b;border-radius:8px;padding:5px 9px;font-weight:700;cursor:pointer;">Open</button></div>').join('')
+                    + '</div>';
+            }
+            // joins the 3 fields into lead.social (one place everyone reads)
+            function wpSocJoin(ch, lead) {
+                if (!['soc1u', 'soc2u', 'soc3u'].some((k) => k in ch)) return;
+                const urls = [1, 2, 3].map((i) => String((ch['soc' + i + 'u'] != null ? ch['soc' + i + 'u'] : lead['soc' + i + 'u']) || '').trim()).filter(Boolean);
+                ch.social = urls.join(' ');
+                [1, 2, 3].forEach((i) => { const u = String(ch['soc' + i + 'u'] || '').trim(); if (u && !ch['soc' + i + 'p']) ch['soc' + i + 'p'] = wpSocPlatOf(u); });
+            }
             function openTmLeadModal(lead) {
                 const body = document.getElementById('tmLeadModalBody');
                 if (!body) return;
@@ -7063,6 +7204,7 @@
                     + (function () { const w = String(lead.website || '').trim() || tmFindSite(lead); return '<div class="field-group" data-hlkey="' + tmHlKey(lead, 'website') + '" style="margin-bottom:9px;"><label style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:#ad1457;display:block;">Website' + (w && !String(lead.website || '').trim() ? ' <span style="text-transform:none;font-weight:600;color:#0b6e5f;">(found in the lead notes)</span>' : '') + '</label>'
                         + '<div style="position:relative;"><textarea data-tm-edit="website" rows="1" style="min-height:0;resize:none;padding-right:96px;">' + tmEsc(w) + '</textarea>'
                         + '<button type="button" onclick="window.wpOpenLeadSite()" title="Open their website (for the audit)" aria-label="Open website" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;border-radius:8px;padding:5px 10px;font-weight:800;font-size:0.78rem;cursor:pointer;background:linear-gradient(90deg,#77c6e0,#0be0c0);color:#062743;">🌐 Open</button></div></div>'; })()
+                    + wpSocFieldsHtml(lead)
                     + '<div class="field-group my-notes-group" data-hlkey="' + tmHlKey(lead, 'myNotes') + '" style="margin-bottom:9px;">'
                     +   '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><label style="font-size:0.75rem;font-weight:800;text-transform:uppercase;letter-spacing:0.5px;color:#c2185b;">📝 My notes (Tania)</label>'
                     +   '<button type="button" onclick="stampNote()" style="border:1px solid #f48fb1;background:#fff;color:#c2185b;border-radius:8px;padding:2px 9px;font-size:0.72rem;font-weight:700;cursor:pointer;">+ New dated note</button></div>'
@@ -7075,6 +7217,8 @@
                     + '<p style="font-size:0.75rem;color:#6b7c8f;margin:4px 0 0;">🖍️ Highlight: select words in any box, press <b>✍️ Text highlight</b> (bottom left) and pick a color. ✍️ Everything you type is saved by itself.</p>';
                 setTimeout(() => window.dispatchEvent(new Event('resize')), 30); // repaint saved highlights in these boxes
                 tmInitNotesBoxes();
+                // save social links Prospector already found, so everyone (Jenna, Tatiana, Rebecca) sees them without Tania retyping
+                try { if (!lead.soc1u) { const f = document.querySelector('#tmLeadModalBody [data-tm-edit="soc1u"]'); if (f && f.value) f.dispatchEvent(new Event('input', { bubbles: true })); } } catch (e) {}
                 if (window.WP_ROLE === 'jenna') { ['tmPushToFormBtn', 'tmEditBtn', 'tmEvaDraftBtn', 'tmMarkSentBtn'].forEach(id => { const b = document.getElementById(id); if (b) b.style.display = 'none'; }); }
                 document.getElementById('tmLeadModalOverlay').classList.add('show');
             }
@@ -7245,7 +7389,7 @@
                 const to = (document.getElementById('evaTo').value || l.email || '').trim();
                 if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) { alert('Add the practice\'s email address first, so Eva can save the draft to Gmail.'); return; }
                 if ((evaDrafts()[String(l.id)] || []).some(d => d.unsubscribed)) { alert('⛔ This practice asked to unsubscribe. Eva must not email them.'); return; }
-                setTmColor(l.id, 'lightgrey');
+                if (isOwnLeadId(l.id)) setOwnLeadColor(l.id, 'lightgrey'); else setTmColor(l.id, 'lightgrey');
                 document.getElementById('evaDraftOverlay').style.display = 'none';
                 try { renderTelemarketingLeads(); } catch (e) {}
                 try { renderLeads(); } catch (e) {} // Tania, Nov 13: so a manually-entered lead also turns light grey right away
@@ -7549,6 +7693,7 @@
                 clearTimeout(tmAutoTimer);
                 tmAutoTimer = setTimeout(() => {
                     const ch = {}; document.querySelectorAll('#tmLeadModalBody [data-tm-edit]').forEach(el => { ch[el.dataset.tmEdit] = el.value.trim(); });
+                    try { wpSocJoin(ch, lead); } catch (x) {}
                     Object.assign(lead, ch);
                     if (tmCurrentLeadIsMine) { try { saveToStorage(); } catch (x) {} return; }
                     const all = loadTmEdits(); all[String(lead.id)] = Object.assign(all[String(lead.id)] || {}, ch);
