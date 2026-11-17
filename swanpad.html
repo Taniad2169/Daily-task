@@ -197,6 +197,10 @@
             <i class="fa-solid fa-plus text-xs"></i>
             <span class="hidden sm:inline">New Note</span>
           </button>
+          <button id="vn-quick" type="button" title="Speak a new note" class="bg-white hover:bg-slate-100 active:scale-95 text-[#123e6b] text-sm font-bold px-4 py-2.5 rounded-xl transition duration-200 shadow-md shadow-black/15 flex items-center gap-2">
+            <i class="fa-solid fa-microphone text-xs"></i>
+            <span class="hidden sm:inline">Speak a note</span>
+          </button>
 
           <!-- User profile avatar / pill -->
           <div class="flex items-center pl-1 border-l border-white/30">
@@ -595,6 +599,19 @@
             </button>
           </div>
 
+          <div class="flex items-center gap-1.5">
+            <select id="vn-lang" aria-label="Speaking language" class="px-2 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-700 text-xs font-semibold outline-none focus:border-[#3d90e0]">
+              <option value="en-US">English</option>
+              <option value="es-US">Español</option>
+              <option value="fr-FR">Français</option>
+              <option value="pt-BR">Português (BR)</option>
+              <option value="it-IT">Italiano</option>
+            </select>
+            <button type="button" id="vn-btn" class="px-3 py-1.5 rounded-lg bg-[#123e6b] hover:bg-[#1b4f85] text-white font-bold text-xs transition flex items-center gap-1.5" aria-pressed="false">
+              <i class="fa-solid fa-microphone"></i> <span id="vn-label">Speak</span>
+            </button>
+          </div>
+          <span id="vn-status" class="w-full text-[11px] text-slate-500 hidden" role="status" aria-live="polite"></span>
           <button type="button" onclick="clearEditorBody()" class="text-slate-400 hover:text-rose-500 px-2 py-1 text-xs transition">
             <i class="fa-regular fa-trash-can mr-1"></i>Clear
           </button>
@@ -2132,6 +2149,95 @@ Output ONLY the translated text in the target language. Do not add conversationa
       }
       try { if (window.activeCategory === "translator") toggle("translator"); } catch (e) {}
       window.swanDictAdd = dictAdd;
+    }
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", wire); else wire();
+  })();
+  </script>
+  <script>
+  /* ── Voice to note (speech to text) ── */
+  (function () {
+    "use strict";
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    var $ = function (id) { return document.getElementById(id); };
+    var rec = null, active = false, before = "", after = "", restartTimer = null;
+
+    function say(msg, type) { try { if (typeof window.showToast === "function") window.showToast(msg, type || "success"); } catch (e) {} if (type === "error") { var s = $("vn-status"); if (s) { s.textContent = "⚠️ " + msg; s.classList.remove("hidden"); } } }
+    function status(msg) { var s = $("vn-status"); if (!s) return; s.textContent = msg || ""; s.classList.toggle("hidden", !msg); }
+    function ui(on) {
+      var b = $("vn-btn"), l = $("vn-label"); if (!b) return;
+      b.setAttribute("aria-pressed", String(on));
+      b.classList.toggle("bg-rose-600", on); b.classList.toggle("hover:bg-rose-700", on);
+      b.classList.toggle("bg-[#123e6b]", !on); b.classList.toggle("hover:bg-[#1b4f85]", !on);
+      b.querySelector("i").className = on ? "fa-solid fa-stop" : "fa-solid fa-microphone";
+      l.textContent = on ? "Stop" : "Speak";
+      status(on ? "🎙️ Listening… speak now. Say \"new line\" for a new line." : "");
+    }
+    function tidy(chunk) {
+      chunk = chunk.replace(/\s+/g, " ").trim();
+      if (/^en/i.test($("vn-lang").value)) chunk = chunk.replace(/\s*\bnew paragraph\b\s*/gi, "\n\n").replace(/\s*\bnew line\b\s*/gi, "\n");
+      if (!chunk) return "";
+      if (!before || /[.!?]\s*$/.test(before) || /\n\s*$/.test(before)) chunk = chunk.charAt(0).toUpperCase() + chunk.slice(1);
+      var glue = (!before || /\s$/.test(before) || /^\n/.test(chunk)) ? "" : " ";
+      return glue + chunk;
+    }
+    function show(interim) {
+      var ta = $("editor-body"); if (!ta) return;
+      var live = interim ? ((before && !/\s$/.test(before) ? " " : "") + interim) : "";
+      ta.value = before + live + after;
+      var pos = (before + live).length; try { ta.setSelectionRange(pos, pos); } catch (e) {}
+      ta.scrollTop = ta.scrollHeight;
+      if (typeof window.handleContentInput === "function") window.handleContentInput();
+    }
+    function autoTitle() {
+      var t = $("editor-title"), ta = $("editor-body");
+      if (t && !t.value.trim() && ta && ta.value.trim()) t.value = ta.value.trim().replace(/\s+/g, " ").split(" ").slice(0, 6).join(" ").slice(0, 60);
+    }
+    function start() {
+      if (!SR) { say("Voice typing isn't supported in this browser. Try Chrome or Safari.", "error"); return false; }
+      var ta = $("editor-body"); if (!ta) return false;
+      var a = ta.selectionStart == null ? ta.value.length : ta.selectionStart, z = ta.selectionEnd == null ? a : ta.selectionEnd;
+      before = ta.value.slice(0, a); after = ta.value.slice(z);
+      rec = new SR(); rec.lang = $("vn-lang").value; rec.continuous = true; rec.interimResults = true;
+      rec.onresult = function (e) {
+        var interim = "";
+        for (var i = e.resultIndex; i < e.results.length; i++) {
+          var r = e.results[i];
+          if (r.isFinal) { before += tidy(r[0].transcript); } else { interim += r[0].transcript; }
+        }
+        show(interim.replace(/\s+/g, " ").trim());
+      };
+      rec.onerror = function (e) {
+        if (e.error === "not-allowed" || e.error === "service-not-allowed") { active = false; ui(false); say("Please allow the microphone for this page, then tap Speak again.", "error"); }
+        else if (e.error === "audio-capture") { active = false; ui(false); say("I can't find a microphone.", "error"); }
+        else if (e.error === "network") { active = false; ui(false); say("Voice typing needs an internet connection.", "error"); }
+      };
+      rec.onend = function () {
+        if (active) { clearTimeout(restartTimer); restartTimer = setTimeout(function () { if (active) { try { rec.start(); } catch (e) {} } }, 250); }
+        else { ui(false); autoTitle(); }
+      };
+      active = true;
+      try { rec.start(); } catch (e) { active = false; return false; }
+      ui(true); return true;
+    }
+    function stop() {
+      active = false; clearTimeout(restartTimer);
+      try { rec && rec.stop(); } catch (e) {}
+      show(""); ui(false); autoTitle();
+    }
+    function toggle() { if (active) stop(); else start(); }
+
+    function wire() {
+      var b = $("vn-btn"), q = $("vn-quick");
+      if (!b) return;
+      if (!SR) { b.title = "Voice typing works in Chrome and Safari"; b.classList.add("opacity-60"); if (q) q.classList.add("opacity-60"); }
+      b.addEventListener("click", toggle);
+      if (q) q.addEventListener("click", function () {
+        if (typeof window.openNoteEditor === "function") window.openNoteEditor();
+        setTimeout(function () { var ta = $("editor-body"); if (ta) { ta.focus(); } if (!active) start(); }, 350);
+      });
+      /* stop listening whenever the editor closes (Close, Cancel or Save) */
+      var m = $("editor-modal");
+      if (m && window.MutationObserver) new MutationObserver(function () { if (active && m.classList.contains("hidden")) stop(); }).observe(m, { attributes: true, attributeFilter: ["class"] });
     }
     if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", wire); else wire();
   })();
