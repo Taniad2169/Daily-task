@@ -2187,7 +2187,7 @@
             <!-- Page Navigation -->
             <div class="page-nav">
                 <button class="btn btn-primary page-btn active" data-page="tasks"><i class="fas fa-tasks"></i> Tasks</button>
-                <button class="btn btn-purple page-btn" data-page="lessons"><i class="fas fa-graduation-cap"></i> Lessons</button>
+                <button class="btn btn-purple" id="wpProsBtn" type="button" title="Load every lead you sent from Lead Prospector and jump to them"><i class="fas fa-magnifying-glass-location"></i> Add leads from Prospector</button>
                 <button class="btn btn-notes page-btn" data-page="notes"><i class="fas fa-sticky-note"></i> Notes</button>
                 <button class="btn btn-outline" id="fcOpenBtn" type="button" style="border-color:#c2185b;color:#c2185b;font-weight:700;"><i class="fas fa-calendar-alt"></i> Future Calls <span id="fcBadge" style="background:#c2185b;color:#fff;border-radius:10px;padding:1px 8px;font-size:12px;margin-left:4px;"></span></button>
                 <button class="btn btn-outline" id="tcOpenBtn" type="button" style="border-color:#b45309;color:#b45309;font-weight:700;">📒 Tania's Calls <span id="tcBadge" style="background:#b45309;color:#fff;border-radius:10px;padding:1px 8px;font-size:12px;margin-left:4px;display:none;"></span></button>
@@ -2888,7 +2888,16 @@
                 await marketingAuthReady;
                 const leadsQuery = query(collection(marketingDb, 'leads'), orderBy('timestamp', 'desc'), limit(600));
                 const snapshot = await getDocs(leadsQuery);
-                return snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+                const out = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+                // Tania, Nov 16: "I moved 27 leads from Prospector to WorkPilot, I don't see them." Only the newest 600 rows
+                // were loaded, and a lead pushed before kept its OLD date, so it fell outside those 600. Prospector leads are
+                // now always loaded too, whatever their date.
+                try {
+                    const seen = new Set(out.map((l) => l.id));
+                    const pq = query(collection(marketingDb, 'leads'), where('source', 'in', ['prospector', 'lead-prospector']), limit(800));
+                    (await getDocs(pq)).docs.forEach((d) => { if (!seen.has(d.id)) out.push({ id: d.id, ...d.data() }); });
+                } catch (e) { console.warn('Prospector leads load', e); }
+                return out;
             }
         };
 
@@ -7842,6 +7851,25 @@
                 });
             }
 
+            // Tania, Nov 16: replaces the Lessons button. Pulls in every lead sent from Lead Prospector (any date), brings back
+            // the ones she re-sent in the last 3 days even if she had dismissed them before, and jumps to that list.
+            document.addEventListener('click', async (e) => {
+                const b = e.target.closest && e.target.closest('#wpProsBtn'); if (!b) return;
+                b.disabled = true; const old = b.innerHTML; b.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading Prospector leads…';
+                try {
+                    await fetchTelemarketingLeads(false);
+                    const isP = (l) => l.source === 'prospector' || l.source === 'lead-prospector';
+                    const recent = telemarketingLeads.filter((l) => isP(l) && Date.now() - Date.parse(l.timestamp || 0) < 3 * 864e5).map((l) => String(l.id));
+                    const before = tmDismissed.length; tmDismissed = tmDismissed.filter((id) => !recent.includes(String(id)));
+                    if (tmDismissed.length !== before) { try { localStorage.setItem('webswan_tm_dismissed', JSON.stringify(tmDismissed)); scheduleFirebaseAutoSave(); } catch (x) {} }
+                    renderTelemarketingLeads();
+                    const n = telemarketingLeads.filter(isP).length;
+                    const head = [...document.querySelectorAll('#telemarketingLeadsContainer *')].find((el) => el.children.length < 6 && /From Lead Prospector/.test(el.textContent || ''));
+                    if (head) head.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    showToast('🔎 ' + n + ' Prospector lead' + (n === 1 ? '' : 's') + ' in WorkPilot' + (before !== tmDismissed.length ? ' (' + (before - tmDismissed.length) + ' you had hidden are back)' : '') + '. Same practice already called? It shows as one row with the newest call.', 'success');
+                } catch (err) { showToast('❌ Could not load Prospector leads: ' + (err && err.message || err), 'error'); }
+                finally { b.disabled = false; b.innerHTML = old; }
+            });
             async function fetchTelemarketingLeads(manual) {
                 if (!window.dailyFirebase || !window.dailyFirebase.loadTelemarketingLeads) return;
                 try {
