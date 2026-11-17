@@ -6678,6 +6678,7 @@
             function leadColorOf(l) { const c = loadTmColors(); return c[String(l.id)] || (l.flagged ? 'orange' : ''); }
             function setTmColor(id, color) {
                 const all = loadTmColors(); if (color) all[String(id)] = color; else delete all[String(id)]; // empty = back to the automatic color
+                try { const rep = (telemarketingLeads || []).find((l) => String(l.id) === String(id)); (rep && rep._dupIds || []).forEach((d) => { if (color) all[d] = color; else delete all[d]; }); } catch (e) {} // Nov 16: same color on its hidden duplicates
                 localStorage.setItem('webswan_tm_colors', JSON.stringify(all));
                 if (color === 'lavender') { try { const ed = loadTmEdits(); ed[String(id)] = Object.assign(ed[String(id)] || {}, { lavenderAt: new Date().toISOString() }); localStorage.setItem('webswan_tm_edits', JSON.stringify(ed)); const lv = telemarketingLeads.find(l => String(l.id) === String(id)); if (lv) lv.lavenderAt = ed[String(id)].lavenderAt; } catch (e) {} }
                 scheduleFirebaseAutoSave();
@@ -6697,6 +6698,27 @@
                 return !!all[k];
             }
 
+            function wpDedupeByPhone(list) {
+                const d10 = (p) => String(p || '').replace(/\D/g, '').slice(-10);
+                const groups = new Map();
+                list.forEach((l) => { const k = d10(l.phone); if (k.length === 10) { if (!groups.has(k)) groups.set(k, []); groups.get(k).push(l); } });
+                const hide = new Set(); const colors = loadTmColors(); const edits = loadTmEdits(); let cChanged = false, eChanged = false;
+                const ts = (l) => { const t = Date.parse(l.timestamp || l.submittedAt || ''); return isNaN(t) ? 0 : t; };
+                groups.forEach((arr) => {
+                    if (arr.length < 2) return;
+                    arr.sort((a, b) => ts(b) - ts(a));
+                    const rep = arr[0], others = arr.slice(1), rk = String(rep.id);
+                    if (!colors[rk]) { const c = others.map((o) => colors[String(o.id)]).find(Boolean); if (c) { colors[rk] = c; cChanged = true; } }
+                    const myOld = others.map((o) => (edits[String(o.id)] || {}).myNotes).filter(Boolean);
+                    if (myOld.length && !((edits[rk] || {}).myNotes)) { edits[rk] = Object.assign(edits[rk] || {}, { myNotes: myOld[0] }); eChanged = true; }
+                    rep._dupIds = others.map((o) => String(o.id));
+                    others.forEach((o) => hide.add(String(o.id)));
+                });
+                if (cChanged) { try { localStorage.setItem('webswan_tm_colors', JSON.stringify(colors)); } catch (e) {} }
+                if (eChanged) { try { localStorage.setItem('webswan_tm_edits', JSON.stringify(edits)); } catch (e) {} }
+                if (cChanged || eChanged) { try { scheduleFirebaseAutoSave(); } catch (e) {} }
+                return hide.size ? list.filter((l) => !hide.has(String(l.id))) : list;
+            }
             function renderTelemarketingLeads() {
                 try { evaQueueSync(); } catch (e) {}
                 const el = document.getElementById('telemarketingLeadsContainer');
@@ -6704,7 +6726,11 @@
                 const tmHasInfo = (l) => ['decisionMakerName', 'name', 'companyName', 'phone', 'email', 'website', 'comment', 'serviceInterested', 'industry'].some(k => l[k] && String(l[k]).trim());
                 const tmGone = new Set(tmDismissed.map(String));
                 const isSol = (l) => l.source === 'solene'; // Tania, Nov 7: Solene's leads with email live in the hidden "Leads to Inspect" list
-                const visibleAll = telemarketingLeads.filter(l => !tmGone.has(String(l.id)) && tmHasInfo(l) && !(l.source === 'voice-studio' && /do not call/i.test(String(l.category || l.status || ''))) && !(l.source === 'voice-studio' && ['4156189200', '4158770687', '5166100203'].includes(String(l.phone || '').replace(/\D/g, '').slice(-10)))); // Tania's own test calls are hidden
+                const visibleAll0 = telemarketingLeads.filter(l => !tmGone.has(String(l.id)) && tmHasInfo(l) && !(l.source === 'voice-studio' && /do not call/i.test(String(l.category || l.status || ''))) && !(l.source === 'voice-studio' && ['4156189200', '4158770687', '5166100203'].includes(String(l.phone || '').replace(/\D/g, '').slice(-10)))); // Tania's own test calls are hidden
+                // Tania, Nov 16: one row per phone number. Every AI call used to arrive as its own row, so a practice called
+                // twice (blue hang-up, then Monica's great call) showed up 2-3 times in different colors. Now the newest call
+                // is the one row; Tania's color and notes from the older rows carry over to it, and the older rows are hidden.
+                const visibleAll = wpDedupeByPhone(visibleAll0);
                 const visibleMain = visibleAll.filter(l => !isSol(l));
                 if (!visibleAll.length) {
                     el.innerHTML = '';
