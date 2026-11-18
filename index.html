@@ -8726,6 +8726,54 @@
                 showToast('💜 ' + (lead.name || 'Lead') + ' added and highlighted for Prepare Audit.', 'success');
             }
 
+            // Sebastien's WorkPilot WRITE integration (Tania, Nov 18, full authorization): he queues create/comment/assign
+            // actions server-side (team.mjs: sebastien_action_add -> sebq-index); this is the ONLY place that actually
+            // applies them, using the exact same lead schema and dedupe pattern as importLeadFromLink/submitLeadForm above.
+            // Comments are always appended with an attributed, timestamped header -- never replacing Tania's or anyone
+            // else's existing notes. Scoped to the hand-typed "leads" list only (not the gated telemarketing store).
+            async function pollSebastienQueue() {
+                try {
+                    const tok = await window.wpGmail.idToken();
+                    if (!tok) return;
+                    const r = await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'sebastien_actions_get' }) });
+                    const d = await r.json().catch(() => ({}));
+                    const items = Array.isArray(d.items) ? d.items : [];
+                    if (!items.length) return;
+                    const digits = v => String(v || '').replace(/\D/g, '').slice(-10);
+                    const results = [];
+                    let applied = 0;
+                    items.forEach(it => {
+                        try {
+                            if (it.kind === 'create') {
+                                const dup = leads.find(l => (it.phone && digits(l.phone) && digits(l.phone) === digits(it.phone)) || (it.name && String(l.name || '').trim().toLowerCase() === String(it.name).trim().toLowerCase()));
+                                if (dup) { results.push({ id: it.id, ok: false, note: 'duplicate of lead #' + dup.id + (dup.name ? ' (' + dup.name + ')' : '') }); return; }
+                                const newLead = { id: newLeadId(), name: it.name || it.phone || it.email || 'No name', contact: '', phone: it.phone || 'No phone', email: it.email || 'No email', url: it.website || 'No URL', social: '', comment: it.comment ? ('--- Sebastien (AI) · ' + new Date(it.at || Date.now()).toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }) + ' PT ---\n' + it.comment) : '', origin: 'Sebastien (AI)', agent: it.agent || '', dropdown: 'call back', customDropdown: '', completed: false };
+                                leads.push(newLead);
+                                applied++;
+                                results.push({ id: it.id, ok: true, note: 'created lead #' + newLead.id + (newLead.name ? ' (' + newLead.name + ')' : '') });
+                            } else if (it.kind === 'comment') {
+                                const target = leads.find(l => String(l.id) === String(it.leadId));
+                                if (!target) { results.push({ id: it.id, ok: false, note: 'lead #' + it.leadId + ' not found in the hand-typed WorkPilot list (it may be a Voice Studio or telemarketing lead, not synced here yet)' }); return; }
+                                const header = (it.tag === 'research' ? 'RESEARCH' : it.tag === 'nextaction' ? 'NEXT ACTION' : 'NOTE') + ' — Sebastien (AI) · ' + new Date(it.at || Date.now()).toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }) + ' PT';
+                                target.comment = (target.comment ? target.comment + '\n\n' : '') + '--- ' + header + ' ---\n' + it.text;
+                                applied++;
+                                results.push({ id: it.id, ok: true, note: 'added a note to lead #' + target.id + (target.name ? ' (' + target.name + ')' : '') });
+                            } else if (it.kind === 'assign') {
+                                const target = leads.find(l => String(l.id) === String(it.leadId));
+                                if (!target) { results.push({ id: it.id, ok: false, note: 'lead #' + it.leadId + ' not found in the hand-typed WorkPilot list' }); return; }
+                                target.agent = it.agent;
+                                applied++;
+                                results.push({ id: it.id, ok: true, note: 'assigned lead #' + target.id + ' to ' + it.agent });
+                            } else {
+                                results.push({ id: it.id, ok: false, note: 'unknown action kind' });
+                            }
+                        } catch (e) { results.push({ id: it.id, ok: false, note: String(e.message || e).slice(0, 140) }); }
+                    });
+                    if (applied) { saveToStorage(); renderLeads(); showToast('🤖 Sebastien: ' + applied + ' WorkPilot update' + (applied > 1 ? 's' : '') + ' applied.', 'success'); }
+                    if (results.length) { await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'sebastien_actions_ack', results }) }); }
+                } catch (e) { console.warn('pollSebastienQueue', e); }
+            }
+
             function initApp() {
                 if (appInitialized) return;
                 appInitialized = true;
@@ -8756,6 +8804,8 @@
             loadTmPushed();
             initSheetSync();
             importLeadFromLink();
+            pollSebastienQueue();
+            setInterval(pollSebastienQueue, 90000);
             fetchTelemarketingLeads(false);
             const tmPushToFormBtn = document.getElementById('tmPushToFormBtn');
             if (tmPushToFormBtn) tmPushToFormBtn.addEventListener('click', () => pushTmLeadToForm(tmCurrentLead));
