@@ -8740,6 +8740,7 @@
                     const items = Array.isArray(d.items) ? d.items : [];
                     if (!items.length) return;
                     const digits = v => String(v || '').replace(/\D/g, '').slice(-10);
+                    const titleCase = s => s ? String(s).charAt(0).toUpperCase() + String(s).slice(1).toLowerCase() : '';
                     const results = [];
                     let applied = 0;
                     items.forEach(it => {
@@ -8747,7 +8748,7 @@
                             if (it.kind === 'create') {
                                 const dup = leads.find(l => (it.phone && digits(l.phone) && digits(l.phone) === digits(it.phone)) || (it.name && String(l.name || '').trim().toLowerCase() === String(it.name).trim().toLowerCase()));
                                 if (dup) { results.push({ id: it.id, ok: false, note: 'duplicate of lead #' + dup.id + (dup.name ? ' (' + dup.name + ')' : '') }); return; }
-                                const newLead = { id: newLeadId(), name: it.name || it.phone || it.email || 'No name', contact: '', phone: it.phone || 'No phone', email: it.email || 'No email', url: it.website || 'No URL', social: '', comment: it.comment ? ('--- Sebastien (AI) · ' + new Date(it.at || Date.now()).toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }) + ' PT ---\n' + it.comment) : '', origin: 'Sebastien (AI)', agent: it.agent || '', dropdown: 'call back', customDropdown: '', completed: false };
+                                const newLead = { id: newLeadId(), name: it.name || it.phone || it.email || 'No name', contact: '', phone: it.phone || 'No phone', email: it.email || 'No email', url: it.website || 'No URL', social: '', comment: it.comment ? ('--- Sebastien (AI) · ' + new Date(it.at || Date.now()).toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }) + ' PT ---\n' + it.comment) : '', origin: 'Sebastien (AI)', assignedAgent: titleCase(it.agent), dropdown: 'call back', customDropdown: '', completed: false };
                                 leads.push(newLead);
                                 applied++;
                                 results.push({ id: it.id, ok: true, note: 'created lead #' + newLead.id + (newLead.name ? ' (' + newLead.name + ')' : '') });
@@ -8761,7 +8762,7 @@
                             } else if (it.kind === 'assign') {
                                 const target = leads.find(l => String(l.id) === String(it.leadId));
                                 if (!target) { results.push({ id: it.id, ok: false, note: 'lead #' + it.leadId + ' not found in the hand-typed WorkPilot list' }); return; }
-                                target.agent = it.agent;
+                                target.assignedAgent = titleCase(it.agent);
                                 applied++;
                                 results.push({ id: it.id, ok: true, note: 'assigned lead #' + target.id + ' to ' + it.agent });
                             } else {
