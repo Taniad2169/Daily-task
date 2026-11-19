@@ -2285,7 +2285,7 @@
                 <!-- ===== LEAD SEARCH BAR ===== -->
                 <div class="lead-search-bar">
                     <i class="fas fa-search"></i>
-                    <input type="text" id="leadSearchInput" placeholder="Search leads &amp; completed tasks by name, or type a status like hotlead, newlead, followup..." />
+                    <input type="text" id="leadSearchInput" placeholder="Search leads &amp; completed tasks by name, company, phone number, or a status like hotlead, newlead, followup..." />
                     <span class="lead-search-count" id="leadSearchCount"></span>
                     <button class="btn btn-outline lead-search-clear" id="leadSearchClearBtn"><i class="fas fa-times"></i></button>
                 </div>
@@ -3533,11 +3533,14 @@
                 if (!rawQuery) { rows.forEach(r => { r.style.display = ''; }); return; }
                 const q = rawQuery.toLowerCase();
                 const colorMatch = COLOR_SEARCH_MAP[normalizeSearchTerm(rawQuery)];
+                const qNormC = normalizeSearchTerm(rawQuery);
                 rows.forEach(r => {
                     const textEl = r.querySelector('.item-text');
+                    const rowText = (r.textContent || '').toLowerCase();
+                    const rowPhoneNorm = normalizeSearchTerm(rowText);
                     const match = colorMatch
                         ? !!(textEl && textEl.getAttribute('data-highlight') === colorMatch)
-                        : (r.textContent || '').toLowerCase().includes(q);
+                        : (rowText.includes(q) || (qNormC.length >= 3 && rowPhoneNorm.includes(qNormC)));
                     r.style.display = match ? '' : 'none';
                 });
             }
@@ -3572,8 +3575,12 @@
                         isMatch = getLeadHighlightColors(leadId).has(colorMatch);
                     } else {
                         const lead = leads.find(l => l.id === leadId);
+                        // Tania, Nov 19: a callback only gives you a name, a company or a phone number -- search all three.
                         const name = (lead && lead.name ? lead.name : '').toLowerCase();
-                        isMatch = name.includes(query);
+                        const contact = (lead && lead.contact ? lead.contact : '').toLowerCase();
+                        const qNorm = normalizeSearchTerm(rawQuery);
+                        const phoneNorm = normalizeSearchTerm(lead && lead.phone ? lead.phone : '');
+                        isMatch = name.includes(query) || contact.includes(query) || (qNorm.length >= 3 && phoneNorm.includes(qNorm));
                     }
                     if (isMatch) {
                         card.style.display = '';
