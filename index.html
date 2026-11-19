@@ -5117,8 +5117,19 @@
                 }, 2000);
             }
 
-            async function synchronizeDailyTaskAfterSignIn() {
-                if (!firebaseUser || !window.dailyFirebase || !appInitialized || firebaseSyncBusy) return;
+            async function synchronizeDailyTaskAfterSignIn(retriesLeft) {
+                if (retriesLeft === undefined) retriesLeft = 20;
+                if (!firebaseUser || !window.dailyFirebase || firebaseSyncBusy) return;
+                // Tania, Nov 19: this used to bail out silently and permanently when initApp() hadn't finished
+                // yet (a real startup race -- Firebase's onAuthStateChanged can fire before the page's own
+                // initApp() runs), leaving the status stuck on "Signed in — preparing sync" forever with no
+                // error and no retry. Now it waits for app init (checking every 250ms, up to 5 seconds) and
+                // only reports a real failure if init genuinely never completes.
+                if (!appInitialized) {
+                    if (retriesLeft > 0) { setTimeout(() => synchronizeDailyTaskAfterSignIn(retriesLeft - 1), 250); }
+                    else { console.error('Firebase sync: appInitialized never became true after 5s'); updateFirebaseControls('Firebase connection failed', false); }
+                    return;
+                }
                 firebaseSyncBusy = true; updateFirebaseControls('Checking Firebase…', true);
                 try {
                     saveToStorage();
