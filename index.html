@@ -5758,6 +5758,27 @@
                 }
                 const phone = wpGuessPhone(lead);
                 if (phone.length < 10) { showToast('📞 Not sent — this lead has no valid US phone number.', 'error'); return; }
+                // Tania, Nov 19: no lead without a real name goes to any agent, period. A bare category ("dentist") or
+                // the phone number itself sitting in the name field isn't a name -- flag it for Sebastien instead of calling it.
+                const wpNameLooksReal = (v) => {
+                    const s = String(v == null ? '' : v).trim();
+                    if (!s) return false;
+                    const d = s.replace(/\D/g, ''), compact = s.replace(/\s/g, '');
+                    if (d.length >= 7 && d.length / Math.max(1, compact.length) > 0.6) return false; // mostly a phone number
+                    const bare = new Set(['dentist','dentists','doctor','doctors','physician','physicians','chiropractor','chiropractors','chiropractic','attorney','attorneys','lawyer','lawyers','law firm','clinic','dermatologist','dermatologists','dermatology','plumber','plumbers','plumbing','electrician','electricians','contractor','contractors','medical','practice','office','business','company','dental','surgeon','surgeons']);
+                    if (bare.has(s.toLowerCase())) return false; // just a category, not a name
+                    return true;
+                };
+                const wpNameCandidate = lead.contact || lead.decisionMakerName || lead.name || lead.companyName || lead.business || '';
+                if (!wpNameLooksReal(wpNameCandidate)) {
+                    try {
+                        const needs = JSON.parse(localStorage.getItem('webswan_needs_info') || '[]');
+                        needs.push({ at: new Date().toISOString(), id: lead.id, name: wpNameCandidate, phone: lead.phone, agent: agent });
+                        localStorage.setItem('webswan_needs_info', JSON.stringify(needs.slice(-500)));
+                    } catch (e) {}
+                    showToast('🚩 Not sent to ' + nm + ' — this lead has no real name on file (just "' + (wpNameCandidate || 'blank') + '"). Flagged for Sebastien to research instead of calling it.', 'error');
+                    return;
+                }
                 const clean = (v) => { v = String(v == null ? '' : v).trim(); return /^no (name|phone|email|url|comment)$/i.test(v) ? '' : v; };
                 // Works for both a Completed-Tasks lead and a telemarketing/AI-call lead (different field names).
                 const contact = clean(lead.contact || lead.decisionMakerName);
