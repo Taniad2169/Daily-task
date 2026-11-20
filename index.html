@@ -3188,6 +3188,7 @@
             const leadFormOrigin = document.getElementById('leadFormOrigin');
             const leadFormAgent = document.getElementById('leadFormAgent');
             const LEAD_WORDS = 3000, LEAD_CHARS = 22500; // Tania, Nov 14: 3000 words for Lead comment and My notes (Tania)
+            const SCRIPT_CHARS = 1000; // Tania, Nov 19: call-script box under the comment box, every lead regardless of origin
             // Where a lead started, for statistics. "AI agent (Voice Studio)" also records which agent.
             const LEAD_ORIGINS = ['', 'AI agent (Voice Studio)', 'Telemarketing call', 'Lead Prospector', 'My own call (Tania)', 'Social media', 'Referral', 'Website / inbound', 'Email', 'Other'];
             const VOICE_AGENTS = ['', 'Rebecca', 'Monica', 'George', 'Jenna', 'Jennifer', 'Alek'];
@@ -6058,6 +6059,39 @@
                     commentGroup.appendChild(textarea);
                     commentGroup.appendChild(wordCounter);
                     grid.appendChild(commentGroup);
+
+                    // Tania, Nov 19: call-script box for whoever calls this lead (her or Jenna).
+                    // Sebastien fills it in after profiling the prospect; lives on every lead
+                    // card regardless of origin (Voice Studio push or manual entry), same
+                    // yellow-highlight system as the comment box above it.
+                    const scriptGroup = document.createElement('div');
+                    scriptGroup.className = 'field-group comment-box';
+                    scriptGroup.dataset.hlkey = `lead-${lead.id}-script`;
+                    const scriptLabel = document.createElement('label');
+                    scriptLabel.innerHTML = '<i class="fas fa-phone"></i> Call script (for Tania & Jenna, ' + SCRIPT_CHARS + ' characters)';
+                    const scriptArea = document.createElement('textarea');
+                    scriptArea.placeholder = 'Call script goes here after Sebastien profiles this lead...';
+                    scriptArea.value = lead.callScript || '';
+                    scriptArea.maxLength = SCRIPT_CHARS;
+                    scriptArea.style.resize = 'none'; scriptArea.style.overflow = 'hidden'; scriptArea.style.minHeight = '2.4em';
+                    const scriptCounter = document.createElement('div');
+                    scriptCounter.className = 'word-counter';
+                    function updateScriptCounter() {
+                        scriptCounter.textContent = `${scriptArea.value.length} / ${SCRIPT_CHARS} characters`;
+                        scriptCounter.style.color = scriptArea.value.length > SCRIPT_CHARS ? '#b22222' : '#2c7da0';
+                    }
+                    scriptArea.addEventListener('input', () => {
+                        lead.callScript = scriptArea.value;
+                        saveToStorage();
+                        updateScriptCounter();
+                        growTextarea(scriptArea);
+                    });
+                    updateScriptCounter();
+                    setTimeout(() => growTextarea(scriptArea), 0);
+                    scriptGroup.appendChild(scriptLabel);
+                    scriptGroup.appendChild(scriptArea);
+                    scriptGroup.appendChild(scriptCounter);
+                    grid.appendChild(scriptGroup);
 
                     card.appendChild(grid);
 
