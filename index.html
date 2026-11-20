@@ -4433,6 +4433,39 @@
                 return { live: l, name: tcClean(o.companyName || o.name), contact: tcClean(o.decisionMakerName), phone: tcClean(o.phone), email: tcClean(o.email), url: site, theirs: tcClean(o.comment), my: String((ed.myNotes != null ? ed.myNotes : o.myNotes) || ''), script: String((ed.callScript != null ? ed.callScript : o.callScript) || ''),
                     outcome: tcClean(o.category || o.status), agent: tcClean(o.telemarketerId), color: loadTmColors()[String(x.refId)] || s.snapColor || '', done: isTmDone(x.refId) };
             }
+            // Tania, Nov 19: the moment a lead lands on Tania's or Jenna's Calls, ask Sebastien to profile it and
+            // write the call script automatically -- no need to ask him in chat first. Skips it if a script is
+            // already there, so re-pushing the same lead later never clobbers what's already written.
+            async function wpAutoProfile(who, src, refId) {
+                try {
+                    const live = src === 'lead' ? (leads || []).find(k => String(k.id) === String(refId)) : (telemarketingLeads || []).find(k => String(k.id) === String(refId));
+                    if (!live) return;
+                    const tmEd = src === 'lead' ? null : (loadTmEdits()[String(refId)] || {});
+                    const existing = src === 'lead' ? live.callScript : (tmEd && tmEd.callScript != null ? tmEd.callScript : live.callScript);
+                    if (String(existing || '').trim()) return;
+                    const name = src === 'lead' ? live.contact : live.decisionMakerName;
+                    const business = src === 'lead' ? live.name : (live.companyName || live.name);
+                    const website = src === 'lead' ? live.url : live.website;
+                    const notes = [live.myNotes, live.comment].filter(Boolean).join(' \u2014 ');
+                    const tok = await window.wpGmail.idToken();
+                    if (!tok) return;
+                    const r = await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'sebastien_profile_lead', lead: { name, business, website, notes, calledBy: who } }) });
+                    const d = await r.json().catch(() => ({}));
+                    if (!r.ok || !d.script) return;
+                    if (src === 'lead') {
+                        const l = (leads || []).find(k => String(k.id) === String(refId));
+                        if (l) { l.callScript = d.script; saveToStorage(); }
+                    } else {
+                        const all = loadTmEdits(); all[String(refId)] = Object.assign(all[String(refId)] || {}, { callScript: d.script });
+                        try { localStorage.setItem('webswan_tm_edits', JSON.stringify(all)); scheduleFirebaseAutoSave(); } catch (e) {}
+                        try { renderTelemarketingLeads(); } catch (e) {}
+                    }
+                    try { renderTaniaCalls(); } catch (e) {}
+                    try { renderJennaCalls(); } catch (e) {}
+                    try { renderLeads(); } catch (e) {}
+                    showToast('\u{1F9E0} Sebastien wrote a call script for this lead.', 'success');
+                } catch (e) { console.error('wpAutoProfile failed', e); }
+            }
             function tcAdd(src, obj) {
                 if (!obj || obj.id == null) { showToast('Could not find this lead.', 'error'); return; }
                 const id = src + ':' + obj.id, list = tcLoad(), had = list.find(x => x.id === id);
@@ -4443,6 +4476,7 @@
                 if (had && !had.removedAt) { showToast("📒 Already in Tania's Calls.", 'success'); return; }
                 if (had) { delete had.removedAt; had.snap = snap; had.addedAt = new Date().toISOString(); } else list.push({ id, src, refId: String(obj.id), snap, addedAt: new Date().toISOString() });
                 tcSave(list);
+                wpAutoProfile('tania', src, String(obj.id));
                 showToast("📒 " + (tcClean(obj.companyName || obj.name) || 'Lead') + " moved to Tania's Calls. It stays on its own list too.", 'success');
             }
             async function tcSetColor(x, color) {
@@ -4653,6 +4687,7 @@
                 if (had && !had.removedAt) { showToast("🕵️‍♀️ Already in Jenna's Calls.", 'success'); return; }
                 if (had) { delete had.removedAt; had.snap = snap; had.addedAt = new Date().toISOString(); } else list.push({ id, src, refId: String(obj.id), snap, addedAt: new Date().toISOString() });
                 jcSave(list);
+                wpAutoProfile('jenna', src, String(obj.id));
                 // Tania, Nov 17: pushing an existing AI-call lead here used to force-recolor it jennagreen, clobbering
                 // its real outcome color (yellow/blue/grey/etc.) and losing that info. Kept as-is for a brand-new
                 // src==='lead' copy below (that's a fresh record, not an overwrite), removed for src==='tm'.
