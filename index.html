@@ -2164,7 +2164,7 @@
                     <a class="btn btn-outline" href="https://taniad2169.github.io/WebSwan-Sales-Analytics/" target="_blank" rel="noopener noreferrer" style="border-color:#2baec2;color:#1b7f90;" title="Sales analytics: which services, divisions, industries, states and lead sources sell the most"><i class="fas fa-chart-pie"></i> Sales Analytics</a>
                     <a class="btn btn-outline" href="https://taniad2169.github.io/webswan-dagigoia-task/business-service/admin.html" target="_blank" rel="noopener noreferrer" style="border-color:#339cde;color:#1f6fa3;"><i class="fas fa-briefcase"></i> Business Service</a>
                     <a class="btn btn-outline" href="https://taniad2169.github.io/webswan-dagigoia-task/business-service/" target="_blank" rel="noopener noreferrer" style="border-color:#339cde;color:#1f6fa3;"><i class="fas fa-file-signature"></i> Business Service (client page)</a>
-                    <a class="btn btn-outline" href="https://taniad2169.github.io/webswan-dagigoia-task/diy-starter/" target="_blank" rel="noopener noreferrer" style="border-color:#1182f0;color:#0f6fd1;" title="\$698 DIY website with Sentinel -- not yet promoted on the public sites"><i class="fas fa-robot"></i> Sentinel DIY (\$698)</a>
+                    <a class="btn btn-outline" href="https://taniad2169.github.io/webswan-dagigoia-task/diy-starter/" target="_blank" rel="noopener noreferrer" style="border-color:#1182f0;color:#0f6fd1;" title="$698 DIY website with Sentinel -- not yet promoted on the public sites"><i class="fas fa-robot"></i> Sentinel DIY ($698)</a>
                     <a class="btn btn-outline" href="https://taniad2169.github.io/webswan-dagigoia-task/business-service/gbp.html" target="_blank" rel="noopener noreferrer" style="border-color:#34a853;color:#1e7b3a;"><i class="fab fa-google"></i> GBP Manager (clients)</a>
                     <a class="btn btn-outline" href="https://business.google.com/locations?authuser=thewebswann%40gmail.com" target="_blank" rel="noopener noreferrer" style="border-color:#1182f0;color:#1182f0;" title="Your own Google Business Profiles (The WebSwan family), signed in as thewebswann@gmail.com"><i class="fab fa-google"></i> My GBP (WebSwan)</a>
                     <button class="btn btn-outline" id="firebaseAuthBtn" style="border-color:#4285f4;color:#2467c7;"><i class="fab fa-google"></i> Sign in to Sync</button>
@@ -8924,6 +8924,35 @@
                 } catch (e) { console.warn('pollSebastienQueue', e); }
             }
 
+            // Sentinel (the $698 DIY builder chatbot on diy-starter) -- a visitor approves their page in
+            // chat, and that lead lands here. Separate queue from Sebastien's (sentinel_diy_leads_get/ack,
+            // its own Blobs store) so the two never collide; same dedupe-and-apply pattern as above.
+            async function pollSentinelDiyQueue() {
+                try {
+                    const tok = await window.wpGmail.idToken();
+                    if (!tok) return;
+                    const r = await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'sentinel_diy_leads_get' }) });
+                    const d = await r.json().catch(() => ({}));
+                    const items = Array.isArray(d.items) ? d.items : [];
+                    if (!items.length) return;
+                    const digits = v => String(v || '').replace(/\D/g, '').slice(-10);
+                    const results = [];
+                    let applied = 0;
+                    items.forEach(it => {
+                        try {
+                            const dup = leads.find(l => (it.phone && digits(l.phone) && digits(l.phone) === digits(it.phone)) || (it.name && String(l.name || '').trim().toLowerCase() === String(it.name).trim().toLowerCase()));
+                            if (dup) { results.push({ id: it.id, ok: false, note: 'duplicate of lead #' + dup.id + (dup.name ? ' (' + dup.name + ')' : '') }); return; }
+                            const newLead = { id: newLeadId(), name: it.name || it.phone || it.email || 'No name', contact: '', phone: it.phone || 'No phone', email: it.email || 'No email', url: 'No URL', social: '', comment: it.comment ? ('--- Sentinel (AI, DIY $698) · ' + new Date(it.at || Date.now()).toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }) + ' PT ---\n' + it.comment) : '', origin: 'Sentinel DIY (AI)', assignedAgent: '', dropdown: it.dropdown || 'call back', customDropdown: '', completed: false };
+                            leads.push(newLead);
+                            applied++;
+                            results.push({ id: it.id, ok: true, note: 'created lead #' + newLead.id + (newLead.name ? ' (' + newLead.name + ')' : '') });
+                        } catch (e) { results.push({ id: it.id, ok: false, note: String(e.message || e).slice(0, 140) }); }
+                    });
+                    if (applied) { saveToStorage(); renderLeads(); showToast('🤖 Sentinel: ' + applied + ' DIY lead' + (applied > 1 ? 's' : '') + ' added to WorkPilot.', 'success'); }
+                    if (results.length) { await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'sentinel_diy_leads_ack', results }) }); }
+                } catch (e) { console.warn('pollSentinelDiyQueue', e); }
+            }
+
             function initApp() {
                 if (appInitialized) return;
                 appInitialized = true;
@@ -8956,6 +8985,8 @@
             importLeadFromLink();
             pollSebastienQueue();
             setInterval(pollSebastienQueue, 90000);
+            pollSentinelDiyQueue();
+            setInterval(pollSentinelDiyQueue, 90000);
             fetchTelemarketingLeads(false);
             const tmPushToFormBtn = document.getElementById('tmPushToFormBtn');
             if (tmPushToFormBtn) tmPushToFormBtn.addEventListener('click', () => pushTmLeadToForm(tmCurrentLead));
