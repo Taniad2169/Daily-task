@@ -4424,13 +4424,13 @@
                 const l = tcLive(x), s = x.snap || {};
                 if (x.src === 'lead') {
                     const o = l || s;
-                    return { live: l, name: tcClean(o.name), contact: tcClean(o.contact), phone: tcClean(o.phone), email: tcClean(o.email), url: tcClean(o.url), theirs: tcClean(o.comment), my: String((l ? l.myNotes : s.myNotes) || ''), outcome: '', agent: '',
+                    return { live: l, name: tcClean(o.name), contact: tcClean(o.contact), phone: tcClean(o.phone), email: tcClean(o.email), url: tcClean(o.url), theirs: tcClean(o.comment), my: String((l ? l.myNotes : s.myNotes) || ''), script: String((l ? l.callScript : s.callScript) || ''), outcome: '', agent: '',
                         color: highlights['lead-' + x.refId + '-name'] || s.snapColor || '', done: isTmDone(x.refId) };
                 }
                 const o = l || s;
                 let site = tcClean(o.website); try { if (!site && l && typeof tmFindSite === 'function') site = tmFindSite(l) || ''; } catch (e) {}
                 const ed = loadTmEdits()[String(x.refId)] || {};
-                return { live: l, name: tcClean(o.companyName || o.name), contact: tcClean(o.decisionMakerName), phone: tcClean(o.phone), email: tcClean(o.email), url: site, theirs: tcClean(o.comment), my: String((ed.myNotes != null ? ed.myNotes : o.myNotes) || ''),
+                return { live: l, name: tcClean(o.companyName || o.name), contact: tcClean(o.decisionMakerName), phone: tcClean(o.phone), email: tcClean(o.email), url: site, theirs: tcClean(o.comment), my: String((ed.myNotes != null ? ed.myNotes : o.myNotes) || ''), script: String((ed.callScript != null ? ed.callScript : o.callScript) || ''),
                     outcome: tcClean(o.category || o.status), agent: tcClean(o.telemarketerId), color: loadTmColors()[String(x.refId)] || s.snapColor || '', done: isTmDone(x.refId) };
             }
             function tcAdd(src, obj) {
@@ -4485,6 +4485,18 @@
                 }
                 showToast('💾 Your comment is saved on this lead.', 'success'); renderTaniaCalls();
             }
+            // Tania, Nov 19: the call script -- what to actually say on this call, for her or whoever picks it up.
+            function tcSaveScript(x, text) {
+                if (x.src === 'lead') {
+                    const l = tcLive(x); if (!l) { showToast('That lead is no longer in the list.', 'error'); return; }
+                    l.callScript = text; saveToStorage();
+                } else {
+                    const all = loadTmEdits(); all[String(x.refId)] = Object.assign(all[String(x.refId)] || {}, { callScript: text });
+                    try { localStorage.setItem('webswan_tm_edits', JSON.stringify(all)); scheduleFirebaseAutoSave(); } catch (e) {}
+                    try { renderTelemarketingLeads(); } catch (e) {}
+                }
+                showToast('📞 Call script saved on this lead.', 'success'); renderTaniaCalls();
+            }
             function tcToVoice(x) {
                 const v = tcView(x);
                 if (!v.live) { showToast('That lead is no longer in its list.', 'error'); return; }
@@ -4527,6 +4539,8 @@
                             </div>
                             <label style="display:block;font-weight:700;color:#8a6d00;margin:10px 0 4px;">Tania's comment</label>
                             <textarea class="tcNotes" data-id="${fcEsc(x.id)}" maxlength="2500" placeholder="What happened on my call, what to send, what Alek or Eva should do…" style="width:100%;min-height:80px;padding:9px;border:2px solid #f2d24b;background:#fffbe0;border-radius:8px;box-sizing:border-box;">${fcEsc(v.my)}</textarea>
+                            <label style="display:block;font-weight:700;color:#0b5c8a;margin:10px 0 4px;">📞 Call script (1000 characters, for whoever calls)</label>
+                            <textarea class="tcScript" data-id="${fcEsc(x.id)}" maxlength="1000" placeholder="What to actually say on this call…" style="width:100%;min-height:60px;padding:9px;border:2px solid #93c5fd;background:#eef6ff;border-radius:8px;box-sizing:border-box;">${fcEsc(v.script || '')}</textarea>
                             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;">
                                 <button type="button" class="btn btn-primary tcAct" data-act="save" data-id="${fcEsc(x.id)}">💾 Save comment</button>
                                 <span style="display:inline-flex;gap:5px;align-items:center;">${swatches}</span>
@@ -4601,7 +4615,7 @@
                     const list = tcLoad(), x = list.find(k => k.id === el.dataset.id); if (!x) return;
                     const act = el.dataset.act;
                     if (act === 'toggle') { if (tcOpenRows.has(x.id)) tcOpenRows.delete(x.id); else tcOpenRows.add(x.id); renderTaniaCalls(); }
-                    else if (act === 'save') { const ta = [...document.querySelectorAll('#tcList .tcNotes')].find(t => t.dataset.id === x.id); tcSaveNotes(x, ta ? ta.value.trim() : ''); }
+                    else if (act === 'save') { const ta = [...document.querySelectorAll('#tcList .tcNotes')].find(t => t.dataset.id === x.id); const tas = [...document.querySelectorAll('#tcList .tcScript')].find(t => t.dataset.id === x.id); tcSaveNotes(x, ta ? ta.value.trim() : ''); if (tas) tcSaveScript(x, tas.value.trim()); }
                     else if (act === 'color') { tcSetColor(x, el.dataset.color || ''); }
                     else if (act === 'done') { toggleTmDone(x.refId); try { renderCompleted(); } catch (err) {} try { renderTelemarketingLeads(); } catch (err) {} renderTaniaCalls(); }
                     else if (act === 'voice') { const ta = [...document.querySelectorAll('#tcList .tcNotes')].find(t => t.dataset.id === x.id); if (ta && ta.value.trim() !== tcView(x).my.trim()) tcSaveNotes(x, ta.value.trim()); tcToVoice(x); }
@@ -4620,13 +4634,13 @@
                 const l = jcLive(x), s = x.snap || {};
                 if (x.src === 'lead') {
                     const o = l || s;
-                    return { live: l, name: tcClean(o.name), contact: tcClean(o.contact), phone: tcClean(o.phone), email: tcClean(o.email), url: tcClean(o.url), theirs: tcClean(o.comment), my: String((l ? l.myNotes : s.myNotes) || ''), jenna: String((l ? l.jennaNotes : s.jennaNotes) || ''), callId: '',
+                    return { live: l, name: tcClean(o.name), contact: tcClean(o.contact), phone: tcClean(o.phone), email: tcClean(o.email), url: tcClean(o.url), theirs: tcClean(o.comment), my: String((l ? l.myNotes : s.myNotes) || ''), jenna: String((l ? l.jennaNotes : s.jennaNotes) || ''), script: String((l ? l.callScript : s.callScript) || ''), callId: '',
                         color: highlights['lead-' + x.refId + '-name'] || s.snapColor || '', done: isTmDone(x.refId) };
                 }
                 const o = l || s;
                 let site = tcClean(o.website); try { if (!site && l && typeof tmFindSite === 'function') site = tmFindSite(l) || ''; } catch (e) {}
                 const ed = loadTmEdits()[String(x.refId)] || {};
-                return { live: l, name: tcClean(o.companyName || o.name), contact: tcClean(o.decisionMakerName), phone: tcClean(o.phone), email: tcClean(o.email), url: site, theirs: tcClean(o.comment), my: String((ed.myNotes != null ? ed.myNotes : o.myNotes) || ''), jenna: String((ed.jennaNotes != null ? ed.jennaNotes : o.jennaNotes) || ''), callId: l ? (typeof tmCallId === 'function' ? tmCallId(l) : '') : '',
+                return { live: l, name: tcClean(o.companyName || o.name), contact: tcClean(o.decisionMakerName), phone: tcClean(o.phone), email: tcClean(o.email), url: site, theirs: tcClean(o.comment), my: String((ed.myNotes != null ? ed.myNotes : o.myNotes) || ''), jenna: String((ed.jennaNotes != null ? ed.jennaNotes : o.jennaNotes) || ''), script: String((ed.callScript != null ? ed.callScript : o.callScript) || ''), callId: l ? (typeof tmCallId === 'function' ? tmCallId(l) : '') : '',
                     color: loadTmColors()[String(x.refId)] || s.snapColor || '', done: isTmDone(x.refId) };
             }
             function jcAdd(src, obj) {
@@ -4722,6 +4736,8 @@
                             </div>
                             <label style="display:block;font-weight:700;color:#8a6d00;margin:10px 0 4px;">Jenna's brief — what you need her to say</label>
                             <textarea class="jcNotes" data-id="${fcEsc(x.id)}" maxlength="2500" placeholder="Who you already spoke with, what to pitch, whether the audit email was already sent…" style="width:100%;min-height:80px;padding:9px;border:2px solid #f2d24b;background:#fffbe0;border-radius:8px;box-sizing:border-box;">${fcEsc(v.my)}</textarea>
+                            <label style="display:block;font-weight:700;color:#0b5c8a;margin:10px 0 4px;">📞 Call script (1000 characters, for Tania & Jenna)</label>
+                            <textarea class="jcScript" data-id="${fcEsc(x.id)}" maxlength="1000" placeholder="What to actually say on this call…" style="width:100%;min-height:60px;padding:9px;border:2px solid #93c5fd;background:#eef6ff;border-radius:8px;box-sizing:border-box;">${fcEsc(v.script || '')}</textarea>
                             <label style="display:block;font-weight:700;color:#2d7a03;margin:10px 0 4px;">🕵️‍♀️ Jenna's notes — what she learned on the call (hers to write, yours to read)</label>
                             <textarea class="jcJennaNotes" data-id="${fcEsc(x.id)}" maxlength="2500" placeholder="(Jenna fills this in after the call)" style="width:100%;min-height:70px;padding:9px;border:2px solid #9fd87a;background:#eefbe3;border-radius:8px;box-sizing:border-box;color:#1f4a0b;">${fcEsc(v.jenna)}</textarea>
                             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;">
@@ -4749,6 +4765,18 @@
                 }
                 showToast("🕵️‍♀️ Jenna's notes saved.", 'success'); renderJennaCalls();
             }
+            // Tania, Nov 19: the call script -- what to actually say on this call, for Tania or Jenna.
+            function jcSaveScript(x, text) {
+                if (x.src === 'lead') {
+                    const l = jcLive(x); if (!l) { showToast('That lead is no longer in the list.', 'error'); return; }
+                    l.callScript = text; saveToStorage();
+                } else {
+                    const all = loadTmEdits(); all[String(x.refId)] = Object.assign(all[String(x.refId)] || {}, { callScript: text });
+                    try { localStorage.setItem('webswan_tm_edits', JSON.stringify(all)); scheduleFirebaseAutoSave(); } catch (e) {}
+                    try { renderTelemarketingLeads(); } catch (e) {}
+                }
+                showToast('📞 Call script saved on this lead.', 'success'); renderJennaCalls();
+            }
             function setupJennaCalls() {
                 const modal = document.getElementById('jcModal'); if (!modal) return;
                 document.body.appendChild(modal);
@@ -4775,8 +4803,10 @@
                     else if (act === 'save') {
                         const ta = [...document.querySelectorAll('#jcList .jcNotes')].find(t => t.dataset.id === x.id);
                         const taJ = [...document.querySelectorAll('#jcList .jcJennaNotes')].find(t => t.dataset.id === x.id);
+                        const taS = [...document.querySelectorAll('#jcList .jcScript')].find(t => t.dataset.id === x.id);
                         jcSaveNotes(x, ta ? ta.value.trim() : '');
                         if (taJ) jcSaveJennaNotes(x, taJ.value.trim());
+                        if (taS) jcSaveScript(x, taS.value.trim());
                     }
                     else if (act === 'color') { jcSetColor(x, el.dataset.color || ''); }
                     else if (act === 'done') { toggleTmDone(x.refId); try { renderCompleted(); } catch (err) {} try { renderTelemarketingLeads(); } catch (err) {} renderJennaCalls(); }
