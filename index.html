@@ -9147,11 +9147,37 @@
                                 results.push({ id: it.id, ok: true, note: 'created lead #' + newLead.id + (newLead.name ? ' (' + newLead.name + ')' : '') });
                             } else if (it.kind === 'comment') {
                                 const target = leads.find(l => String(l.id) === String(it.leadId));
-                                if (!target) { results.push({ id: it.id, ok: false, note: 'lead #' + it.leadId + ' not found in the hand-typed WorkPilot list (it may be a Voice Studio or telemarketing lead, not synced here yet)' }); return; }
-                                const header = (it.tag === 'research' ? 'RESEARCH' : it.tag === 'nextaction' ? 'NEXT ACTION' : 'NOTE') + ' — Sebastien (AI) · ' + new Date(it.at || Date.now()).toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }) + ' PT';
-                                target.comment = (target.comment ? target.comment + '\n\n' : '') + '--- ' + header + ' ---\n' + it.text;
-                                applied++;
-                                results.push({ id: it.id, ok: true, note: 'added a note to lead #' + target.id + (target.name ? ' (' + target.name + ')' : '') });
+                                // Tania, Nov 21: these Rachel-callback leads are telemarketing (cold-agent) sourced, pushed into
+                                // WorkPilot from there -- so script/approved tags also apply against the gated telemarketing
+                                // store (via tmEdits), not just her hand-typed leads. Other tags stay hand-typed-only for now.
+                                const tmTarget = (it.tag === 'script' || it.tag === 'approved') ? (telemarketingLeads || []).find(l => String(l.id) === String(it.leadId)) : null;
+                                if (!target && !tmTarget) { results.push({ id: it.id, ok: false, note: 'lead #' + it.leadId + ' not found in WorkPilot (hand-typed or telemarketing)' }); return; }
+                                if (it.tag === 'script') {
+                                    // Sebastien's personalized Rachel callback script -- lands in the rcScript box, not the general comment thread.
+                                    if (target) {
+                                        target.rachelScript = it.text; target.rachelApproved = false;
+                                        try { rcAdd('lead', target); } catch (e) {}
+                                    } else {
+                                        const all = loadTmEdits(); all[String(it.leadId)] = Object.assign(all[String(it.leadId)] || {}, { rachelScript: it.text, rachelApproved: false });
+                                        try { localStorage.setItem('webswan_tm_edits', JSON.stringify(all)); scheduleFirebaseAutoSave(); } catch (e) {}
+                                        try { rcAdd('tm', tmTarget); } catch (e) {}
+                                    }
+                                    applied++;
+                                    results.push({ id: it.id, ok: true, note: "saved Rachel's script on lead #" + it.leadId + ((target || tmTarget).name || (target || tmTarget).companyName ? ' (' + ((target || tmTarget).name || (target || tmTarget).companyName) + ')' : '') });
+                                } else if (it.tag === 'approved') {
+                                    if (target) { target.rachelApproved = true; }
+                                    else { const all = loadTmEdits(); all[String(it.leadId)] = Object.assign(all[String(it.leadId)] || {}, { rachelApproved: true }); try { localStorage.setItem('webswan_tm_edits', JSON.stringify(all)); scheduleFirebaseAutoSave(); } catch (e) {} }
+                                    applied++;
+                                    results.push({ id: it.id, ok: true, note: 'marked lead #' + it.leadId + " Sebastien-approved for Rachel" });
+                                    try { renderRachelCalls(); } catch (e) {} try { renderTelemarketingLeads(); } catch (e) {}
+                                } else if (!target) {
+                                    results.push({ id: it.id, ok: false, note: 'lead #' + it.leadId + ' is a telemarketing lead -- notes other than script/approved only reach the hand-typed WorkPilot list for now' });
+                                } else {
+                                    const header = (it.tag === 'research' ? 'RESEARCH' : it.tag === 'nextaction' ? 'NEXT ACTION' : 'NOTE') + ' — Sebastien (AI) · ' + new Date(it.at || Date.now()).toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }) + ' PT';
+                                    target.comment = (target.comment ? target.comment + '\n\n' : '') + '--- ' + header + ' ---\n' + it.text;
+                                    applied++;
+                                    results.push({ id: it.id, ok: true, note: 'added a note to lead #' + target.id + (target.name ? ' (' + target.name + ')' : '') });
+                                }
                             } else if (it.kind === 'assign') {
                                 const target = leads.find(l => String(l.id) === String(it.leadId));
                                 if (!target) { results.push({ id: it.id, ok: false, note: 'lead #' + it.leadId + ' not found in the hand-typed WorkPilot list' }); return; }
