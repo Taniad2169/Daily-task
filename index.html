@@ -1568,6 +1568,7 @@
         [data-highlight="lightgrey"] { background: #d4d9e0 !important; box-shadow: inset 0 0 0 2px #9aa2ad; color: #374151 !important; }
         [data-highlight="lightgreen"] { background: #bfe3c4 !important; box-shadow: inset 0 0 0 2px #7cc08a; color: #15381d !important; }
         [data-highlight="jennagreen"] { background: #3a9e05 !important; box-shadow: inset 0 0 0 2px #2d7a03; color: #ffffff !important; }
+        [data-highlight="rachelpink"] { background: #e0117a !important; box-shadow: inset 0 0 0 2px #a30d58; color: #ffffff !important; }
         .tm-lead-done { border-left: 4px solid #1b8f3a; opacity: 0.78; }
         .tm-lead-done .item-text { text-decoration: line-through; text-decoration-color: rgba(27,143,58,0.6); }
         .tm-done-mark { margin-left: 2px; }
@@ -2197,6 +2198,7 @@
                 <button class="btn btn-outline" id="tcOpenBtn" type="button" style="border-color:#b45309;color:#b45309;font-weight:700;">📒 Tania's Calls <span id="tcBadge" style="background:#b45309;color:#fff;border-radius:10px;padding:1px 8px;font-size:12px;margin-left:4px;display:none;"></span></button>
                 <button class="btn btn-outline" id="jcOpenBtn" type="button" style="border-color:#3a9e05;color:#3a9e05;font-weight:700;">🕵️‍♀️ Jenna's Calls <span id="jcBadge" style="background:#3a9e05;color:#fff;border-radius:10px;padding:1px 8px;font-size:12px;margin-left:4px;display:none;"></span></button>
                 <button class="btn btn-outline" id="acOpenBtn" type="button" style="border-color:#7c3aed;color:#7c3aed;font-weight:700;">🗣️ Alek's Calls <span id="acBadge" style="background:#7c3aed;color:#fff;border-radius:10px;padding:1px 8px;font-size:12px;margin-left:4px;display:none;"></span></button>
+                <button class="btn btn-outline" id="rcOpenBtn" type="button" style="border-color:#e0117a;color:#e0117a;font-weight:700;">📞 Rachel's Calls <span id="rcBadge" style="background:#e0117a;color:#fff;border-radius:10px;padding:1px 8px;font-size:12px;margin-left:4px;display:none;"></span></button>
             </div>
 
             <!-- ===== FUTURE CALLS (prospects who asked for a call back 1 month or more out) ===== -->
@@ -2246,6 +2248,24 @@
                         <label style="font-size:13px;color:#555;"><input type="checkbox" id="acShowDone"> Show done</label>
                     </div>
                     <div id="acList"></div>
+                </div>
+            </div>
+
+            <!-- ===== RACHEL'S CALLS (callback appointments after the audit email, batch-reviewed by Sebastien first -- same structure as Tania's/Jenna's Calls) ===== -->
+            <div id="rcModal" hidden style="position:fixed;inset:0;background:rgba(10,25,45,.55);z-index:9999;overflow:auto;padding:16px;">
+                <div style="background:#fff;max-width:980px;margin:24px auto;border-radius:16px;padding:18px;box-shadow:0 18px 50px rgba(0,0,0,.3);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+                        <h3 style="margin:0;color:#a30d58;">📞 Rachel's Calls</h3>
+                        <button class="btn btn-outline" id="rcCloseBtn" type="button"><i class="fas fa-times"></i> Close</button>
+                    </div>
+                    <p style="margin:6px 0 12px;color:#555;font-size:14px;">Callback appointments for leads who already got the audit email. Write your notes in the yellow box. Tell Sebastien a batch is ready and he writes each one's script in the purple box and gives it a ✅ -- once a lead is checked, send it (or the whole approved batch) to Rachel so she can call to book the 10-minute review.</p>
+                    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
+                        <input id="rcSearch" placeholder="Search her calls…" style="flex:1;min-width:200px;padding:9px;border:1px solid #ccd;border-radius:8px;">
+                        <label style="font-size:13px;color:#555;"><input type="checkbox" id="rcShowDone"> Show done</label>
+                        <label style="font-size:13px;color:#555;"><input type="checkbox" id="rcOnlyApproved"> Only Sebastien-approved</label>
+                        <button type="button" class="btn btn-outline" id="rcSendApprovedBtn" style="color:#a30d58;border-color:#a30d58;">📞 Send all approved to Rachel</button>
+                    </div>
+                    <div id="rcList"></div>
                 </div>
             </div>
 
@@ -4853,6 +4873,215 @@
             }
             setupJennaCalls();
 
+            // ===== RACHEL'S CALLS — callback appointments to book after the audit email, same structure as Jenna's Calls,
+            // plus Sebastien's own script box and his green-check approval before a lead is call-ready for Rachel =====
+            const rcOpenRows = new Set();
+            function rcLoad() { try { const a = JSON.parse(localStorage.getItem('webswan_rachel_calls') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+            function rcSave(list) { localStorage.setItem('webswan_rachel_calls', JSON.stringify(list)); scheduleFirebaseAutoSave(); renderRachelCalls(); }
+            function rcLive(x) { if (x.src === 'lead') { return (leads || []).find(k => String(k.id) === String(x.refId)) || null; } const base = (telemarketingLeads || []).find(k => String(k.id) === String(x.refId)); return base ? applyTmEdits(base) : null; }
+            function rcView(x) {
+                const l = rcLive(x), s = x.snap || {};
+                if (x.src === 'lead') {
+                    const o = l || s;
+                    return { live: l, name: tcClean(o.name), contact: tcClean(o.contact), phone: tcClean(o.phone), email: tcClean(o.email), url: tcClean(o.url), theirs: tcClean(o.comment), my: String((l ? l.myNotes : s.myNotes) || ''), script: String((l ? l.rachelScript : s.rachelScript) || ''), approved: !!(l ? l.rachelApproved : s.rachelApproved), rachelNotes: String((l ? l.rachelNotes : s.rachelNotes) || ''), callId: '',
+                        color: highlights['lead-' + x.refId + '-name'] || s.snapColor || '', done: isTmDone(x.refId) };
+                }
+                const o = l || s;
+                let site = tcClean(o.website); try { if (!site && l && typeof tmFindSite === 'function') site = tmFindSite(l) || ''; } catch (e) {}
+                const ed = loadTmEdits()[String(x.refId)] || {};
+                return { live: l, name: tcClean(o.companyName || o.name), contact: tcClean(o.decisionMakerName), phone: tcClean(o.phone), email: tcClean(o.email), url: site, theirs: tcClean(o.comment), my: String((ed.myNotes != null ? ed.myNotes : o.myNotes) || ''), script: String((ed.rachelScript != null ? ed.rachelScript : o.rachelScript) || ''), approved: !!(ed.rachelApproved != null ? ed.rachelApproved : o.rachelApproved), rachelNotes: String((ed.rachelNotes != null ? ed.rachelNotes : o.rachelNotes) || ''), callId: l ? (typeof tmCallId === 'function' ? tmCallId(l) : '') : '',
+                    color: loadTmColors()[String(x.refId)] || s.snapColor || '', done: isTmDone(x.refId) };
+            }
+            function rcAdd(src, obj) {
+                if (!obj || obj.id == null) { showToast('Could not find this lead.', 'error'); return; }
+                const id = src + ':' + obj.id, list = rcLoad(), had = list.find(x => x.id === id);
+                const snapColor = src === 'lead' ? (highlights['lead-' + obj.id + '-name'] || '') : (loadTmColors()[String(obj.id)] || '');
+                const snap = src === 'lead'
+                    ? { name: obj.name, contact: obj.contact, phone: obj.phone, email: obj.email, url: obj.url, comment: obj.comment, myNotes: obj.myNotes || '', snapColor }
+                    : { name: obj.name, companyName: obj.companyName, decisionMakerName: obj.decisionMakerName, phone: obj.phone, email: obj.email, website: obj.website, comment: obj.comment, category: obj.category, status: obj.status, source: obj.source, snapColor };
+                if (had && !had.removedAt) { showToast("📞 Already in Rachel's Calls.", 'success'); return; }
+                if (had) { delete had.removedAt; had.snap = snap; had.addedAt = new Date().toISOString(); } else list.push({ id, src, refId: String(obj.id), snap, addedAt: new Date().toISOString() });
+                rcSave(list);
+                wpAutoProfile('rachel', src, String(obj.id));
+                if (src === 'lead') {
+                    setOwnLeadColor(obj.id, 'rachelpink');
+                    const copy = Object.assign({}, obj, { comment: [obj.myNotes ? "Tania's notes: " + obj.myNotes : '', obj.comment || ''].filter(Boolean).join('\n') });
+                    pushCompletedLeadToTm(copy, 'rachelpink').then(id => { if (!id) showToast("Rachel's list could not be reached. Try again.", 'error'); });
+                }
+                showToast("📞 " + (tcClean(obj.companyName || obj.name) || 'Lead') + " moved to Rachel's Calls.", 'success');
+            }
+            function rcSetColor(x, color) {
+                const v = rcView(x);
+                if (x.src === 'lead') {
+                    const key = 'lead-' + x.refId + '-name';
+                    if (color) highlights[key] = color; else delete highlights[key];
+                    saveHighlightsToStorage(); scheduleFirebaseAutoSave();
+                    try { const el = document.querySelector('[data-hlkey="' + key + '"]'); if (el) applyHighlightToElement(el, color || null); } catch (e) {}
+                    try { renderCompleted(); } catch (e) {}
+                } else {
+                    setTmColor(x.refId, color || '');
+                    try { renderTelemarketingLeads(); } catch (e) {}
+                }
+                renderRachelCalls();
+            }
+            function rcSaveNotes(x, text) {
+                if (x.src === 'lead') {
+                    const l = rcLive(x); if (!l) { showToast('That lead is no longer in the list.', 'error'); return; }
+                    l.myNotes = text; saveToStorage();
+                } else {
+                    const all = loadTmEdits(); all[String(x.refId)] = Object.assign(all[String(x.refId)] || {}, { myNotes: text });
+                    try { localStorage.setItem('webswan_tm_edits', JSON.stringify(all)); scheduleFirebaseAutoSave(); } catch (e) {}
+                    try { renderTelemarketingLeads(); } catch (e) {}
+                }
+                showToast('💾 Your notes are saved.', 'success'); renderRachelCalls();
+            }
+            // Tania, Nov 21: Sebastien writes this box per lead -- his personalized callback script for Rachel.
+            function rcSaveScript(x, text) {
+                if (x.src === 'lead') {
+                    const l = rcLive(x); if (!l) { showToast('That lead is no longer in the list.', 'error'); return; }
+                    l.rachelScript = text; saveToStorage();
+                } else {
+                    const all = loadTmEdits(); all[String(x.refId)] = Object.assign(all[String(x.refId)] || {}, { rachelScript: text });
+                    try { localStorage.setItem('webswan_tm_edits', JSON.stringify(all)); scheduleFirebaseAutoSave(); } catch (e) {}
+                    try { renderTelemarketingLeads(); } catch (e) {}
+                }
+                showToast("📝 Sebastien's script saved.", 'success'); renderRachelCalls();
+            }
+            function rcSetApproved(x, val) {
+                if (x.src === 'lead') {
+                    const l = rcLive(x); if (!l) { showToast('That lead is no longer in the list.', 'error'); return; }
+                    l.rachelApproved = val; saveToStorage();
+                } else {
+                    const all = loadTmEdits(); all[String(x.refId)] = Object.assign(all[String(x.refId)] || {}, { rachelApproved: val });
+                    try { localStorage.setItem('webswan_tm_edits', JSON.stringify(all)); scheduleFirebaseAutoSave(); } catch (e) {}
+                    try { renderTelemarketingLeads(); } catch (e) {}
+                }
+                showToast(val ? '✅ Marked Sebastien-approved — ready for Rachel.' : '⬜ Approval cleared.', 'success'); renderRachelCalls();
+            }
+            function rcSaveRachelNotes(x, text) {
+                if (x.src === 'lead') {
+                    const l = rcLive(x); if (!l) { showToast('That lead is no longer in the list.', 'error'); return; }
+                    l.rachelNotes = text; saveToStorage();
+                } else {
+                    const all = loadTmEdits(); all[String(x.refId)] = Object.assign(all[String(x.refId)] || {}, { rachelNotes: text });
+                    try { localStorage.setItem('webswan_tm_edits', JSON.stringify(all)); scheduleFirebaseAutoSave(); } catch (e) {}
+                    try { renderTelemarketingLeads(); } catch (e) {}
+                }
+                showToast("📞 Rachel's notes saved.", 'success'); renderRachelCalls();
+            }
+            // Pushes straight to her, no picker — this list is hers only. Requires Sebastien's green check first.
+            async function rcToVoice(x) {
+                const v = rcView(x);
+                if (!v.approved) { showToast("Needs Sebastien's ✅ first — ask him to review the script.", 'error'); return; }
+                if (!v.live) { showToast('That lead is no longer in its list.', 'error'); return; }
+                await doWorkpilotCall(Object.assign({}, v.live, { myNotes: v.my, callScript: v.script }), 'rachel', x.doc || null);
+            }
+            function renderRachelCalls() {
+                const all = rcLoad().filter(x => !x.removedAt);
+                const views = all.map(x => ({ x, v: rcView(x) }));
+                const open = views.filter(r => !r.v.done);
+                const badge = document.getElementById('rcBadge');
+                if (badge) { badge.textContent = open.length || ''; badge.style.display = open.length ? '' : 'none'; }
+                const box = document.getElementById('rcList'); if (!box) return;
+                const q = String((document.getElementById('rcSearch') || {}).value || '').trim().toLowerCase();
+                const showDone = !!(document.getElementById('rcShowDone') || {}).checked;
+                const onlyApproved = !!(document.getElementById('rcOnlyApproved') || {}).checked;
+                let rows = (showDone ? views : open).filter(r => !onlyApproved || r.v.approved).filter(r => !q || [r.v.name, r.v.contact, r.v.phone, r.v.email, r.v.my, r.v.theirs, r.v.color].join(' ').toLowerCase().includes(q));
+                rows.sort((a, b) => (a.v.done - b.v.done) || (b.v.approved - a.v.approved) || String(b.x.addedAt).localeCompare(String(a.x.addedAt)));
+                if (!rows.length) { box.innerHTML = '<p style="color:#777;">' + (all.length ? 'Nothing matches.' : "No leads here yet. On any lead, open the ✈️ send menu and choose “Move to Rachel's Calls” once the audit email has gone out.") + '</p>'; return; }
+                box.innerHTML = rows.map(({ x, v }) => {
+                    const isOpen = rcOpenRows.has(x.id), tel = v.phone.replace(/[^\d+]/g, '');
+                    const href = v.url ? (/^https?:/i.test(v.url) ? v.url : 'https://' + v.url) : '';
+                    const swatches = TC_COLORS.map(([c, bg, t]) => `<button type="button" class="rcAct" data-act="color" data-color="${c}" data-id="${fcEsc(x.id)}" title="${fcEsc(t)}" aria-label="${fcEsc(t)}" style="width:20px;height:20px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 ${v.color === c ? '3px #111' : '1px #9aa'};background:${bg};cursor:pointer;padding:0;"></button>`).join('')
+                        + (v.color ? `<button type="button" class="rcAct" data-act="color" data-color="" data-id="${fcEsc(x.id)}" style="border:1px solid #9aa;background:#fff;border-radius:10px;font-size:11px;padding:0 6px;height:20px;cursor:pointer;">↺ clear</button>` : '');
+                    return `<div style="border:1px solid #e3e8ef;border-radius:12px;margin:8px 0;${v.done ? 'opacity:.6;' : ''}">
+                        <div class="rcAct" data-act="toggle" data-id="${fcEsc(x.id)}" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 12px;cursor:pointer;">
+                            <span>${isOpen ? '▾' : '▸'}</span>
+                            <span class="item-text" data-highlight="${fcEsc(v.color || 'rachelpink')}" style="font-weight:700;">${fcEsc(v.name || v.contact || v.phone || 'No name')}${v.contact && v.name && v.contact !== v.name ? ' — ' + fcEsc(v.contact) : ''}</span>
+                            ${v.phone ? `<span style="font-size:13px;color:#334;">📞 ${fcEsc(v.phone)}</span>` : ''}
+                            ${v.done ? '<span style="color:#1b8f3a;font-weight:800;font-size:13px;">✓ done</span>' : ''}
+                            ${v.approved ? '<span style="font-size:11px;font-weight:700;background:#e9f7ee;color:#1b8f3a;border:1px solid #7cc08a;border-radius:8px;padding:1px 6px;">✅ Sebastien approved</span>' : '<span style="font-size:11px;font-weight:700;background:#fff3f3;color:#a3151b;border:1px solid #f3b4b4;border-radius:8px;padding:1px 6px;">⬜ Needs script</span>'}
+                            ${v.my.trim() ? '<span style="font-size:11px;font-weight:700;background:#fff8d6;color:#c2185b;border:1px solid #f48fb1;border-radius:8px;padding:1px 6px;">📝 Notes</span>' : ''}
+                            ${v.callId ? '<span style="font-size:11px;font-weight:700;background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd;border-radius:8px;padding:1px 6px;">🎧 Recording</span>' : ''}
+                            <span style="margin-left:auto;font-size:11px;color:#667;">${x.src === 'tm' ? '🤖 AI call' : '📋 My lead'}</span>
+                        </div>
+                        ${isOpen ? `<div style="padding:0 12px 12px;">
+                            <div style="font-size:14px;line-height:1.7;">
+                                ${v.contact ? `<div><b>Contact:</b> ${fcEsc(v.contact)}</div>` : ''}
+                                ${v.phone ? `<div><b>Phone:</b> <a href="tel:${fcEsc(tel)}">${fcEsc(v.phone)}</a></div>` : ''}
+                                ${v.email ? `<div><b>Email:</b> <a href="mailto:${fcEsc(v.email)}">${fcEsc(v.email)}</a></div>` : ''}
+                                ${href ? `<div><b>Website:</b> <a href="${fcEsc(href)}" target="_blank" rel="noopener noreferrer">${fcEsc(v.url)}</a></div>` : ''}
+                                ${v.theirs ? `<div style="margin-top:6px;"><b>Lead notes:</b><div style="white-space:pre-wrap;background:#f6f8fb;border-radius:8px;padding:8px;margin-top:2px;max-height:180px;overflow:auto;">${fcEsc(v.theirs)}</div></div>` : ''}
+                            </div>
+                            <label style="display:block;font-weight:700;color:#8a6d00;margin:10px 0 4px;">📝 Tania's notes — name of the person you spoke to, who the audit went to (doctor/attorney name)</label>
+                            <textarea class="rcNotes" data-id="${fcEsc(x.id)}" maxlength="2500" placeholder="Spoke to: … · Audit sent to Dr./Attorney … · anything Rachel needs to know before she calls…" style="width:100%;min-height:80px;padding:9px;border:2px solid #f2d24b;background:#fffbe0;border-radius:8px;box-sizing:border-box;">${fcEsc(v.my)}</textarea>
+                            <label style="display:block;font-weight:700;color:#3f4bd1;margin:10px 0 4px;">🧑‍💼 Sebastien's script — exact lines for Rachel to say on this call</label>
+                            <textarea class="rcScript" data-id="${fcEsc(x.id)}" maxlength="1500" placeholder="(Sebastien writes this once Tania tells him the batch is ready)" style="width:100%;min-height:80px;padding:9px;border:2px solid #5c69f2;background:#eef0ff;border-radius:8px;box-sizing:border-box;">${fcEsc(v.script || '')}</textarea>
+                            <label style="display:block;font-weight:700;color:#a30d58;margin:10px 0 4px;">📞 Rachel's notes — what she learned on the call (hers to write, yours to read)</label>
+                            <textarea class="rcRachelNotes" data-id="${fcEsc(x.id)}" maxlength="2500" placeholder="(Rachel fills this in after the call)" style="width:100%;min-height:70px;padding:9px;border:2px solid #f48fb1;background:#ffeef6;border-radius:8px;box-sizing:border-box;color:#7a0a40;">${fcEsc(v.rachelNotes)}</textarea>
+                            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;">
+                                <button type="button" class="btn btn-primary rcAct" data-act="save" data-id="${fcEsc(x.id)}">💾 Save</button>
+                                <button type="button" class="btn btn-outline rcAct" data-act="approve" data-id="${fcEsc(x.id)}" style="color:${v.approved ? '#b42318' : '#1b8f3a'};border-color:${v.approved ? '#b42318' : '#1b8f3a'};">${v.approved ? '⬜ Undo approval' : '✅ Mark Sebastien-approved'}</button>
+                                ${v.callId ? `<button type="button" class="btn btn-outline rcAct" data-act="listen" data-call-id="${fcEsc(v.callId)}" style="color:#1d4ed8;border-color:#1d4ed8;">🎧 Listen to the call</button>` : ''}
+                                <span style="display:inline-flex;gap:5px;align-items:center;">${swatches}</span>
+                                <button type="button" class="btn btn-outline rcAct" data-act="done" data-id="${fcEsc(x.id)}">${v.done ? '↩️ Not done' : '☐ Done'}</button>
+                                <label class="btn btn-outline" style="color:#a30d58;border-color:#a30d58;cursor:pointer;" title="Attach a PDF or text file: its text goes with this lead when it's sent to Rachel">📎 ${x.doc ? 'Replace document' : 'Attach document'}<input type="file" class="rcDoc" data-id="${fcEsc(x.id)}" accept=".pdf,application/pdf,.txt,.md,.csv,.html,text/*" style="display:none;"></label>
+                                ${x.doc ? `<span style="font-size:0.8rem;color:#a30d58;font-weight:700;" title="${fcEsc(String(x.doc.text || '').slice(0, 300))}">✓ ${fcEsc(x.doc.name)}</span> <button type="button" class="btn btn-outline rcAct" data-act="undoc" data-id="${fcEsc(x.id)}" style="font-size:0.75rem;padding:2px 8px;">✕</button>` : ''}
+                                <button type="button" class="btn btn-outline rcAct" data-act="voice" data-id="${fcEsc(x.id)}" style="color:#a30d58;border-color:#a30d58;" title="${v.approved ? 'Send to Rachel now' : 'Needs Sebastien&#39;s approval first'}">📞 Send to Rachel</button>
+                                <button type="button" class="btn btn-outline rcAct" data-act="remove" data-id="${fcEsc(x.id)}" style="color:#b42318;border-color:#b42318;">Remove from her calls</button>
+                            </div>
+                        </div>` : ''}
+                    </div>`;
+                }).join('');
+            }
+            function setupRachelCalls() {
+                const modal = document.getElementById('rcModal'); if (!modal) return;
+                document.body.appendChild(modal);
+                const $r = id => document.getElementById(id);
+                $r('rcOpenBtn').addEventListener('click', () => { modal.hidden = false; renderRachelCalls(); });
+                $r('rcCloseBtn').addEventListener('click', () => { modal.hidden = true; });
+                modal.addEventListener('click', e => { if (e.target === modal) modal.hidden = true; });
+                $r('rcSearch').addEventListener('input', renderRachelCalls);
+                $r('rcShowDone').addEventListener('change', renderRachelCalls);
+                $r('rcOnlyApproved').addEventListener('change', renderRachelCalls);
+                $r('rcSendApprovedBtn').addEventListener('click', async () => {
+                    const all = rcLoad().filter(x => !x.removedAt && !isTmDone(x.refId));
+                    const ready = all.filter(x => rcView(x).approved);
+                    if (!ready.length) { showToast("No Sebastien-approved leads waiting — mark them ✅ first.", 'error'); return; }
+                    showToast('📞 Sending ' + ready.length + ' approved lead(s) to Rachel…', 'success');
+                    for (const x of ready) { try { await rcToVoice(x); } catch (e) {} }
+                });
+                $r('rcList').addEventListener('change', async (e) => {
+                    const inp = e.target.closest('.rcDoc'); if (!inp || !inp.files[0]) return;
+                    const list = rcLoad(), x = list.find(k => k.id === inp.dataset.id); if (!x) return;
+                    try { showToast('📎 Reading ' + inp.files[0].name + '…', 'success'); x.doc = await wpReadDoc(inp.files[0]); rcSave(list); renderRachelCalls(); showToast('📎 Attached for Rachel: ' + x.doc.name + ' (' + x.doc.text.length + ' characters of text)', 'success'); }
+                    catch (err) { showToast('📎 ' + err.message, 'error'); inp.value = ''; }
+                });
+                $r('rcList').addEventListener('click', async (e) => {
+                    const el = e.target.closest('.rcAct'); if (!el) return;
+                    if (el.dataset.act === 'listen') { openCallRecording(el.dataset.callId); return; }
+                    const list = rcLoad(), x = list.find(k => k.id === el.dataset.id); if (!x) return;
+                    const act = el.dataset.act;
+                    if (act === 'toggle') { if (rcOpenRows.has(x.id)) rcOpenRows.delete(x.id); else rcOpenRows.add(x.id); renderRachelCalls(); }
+                    else if (act === 'undoc') { delete x.doc; rcSave(list); renderRachelCalls(); showToast('📎 Document removed from this lead.', 'success'); }
+                    else if (act === 'save') {
+                        const ta = [...document.querySelectorAll('#rcList .rcNotes')].find(t => t.dataset.id === x.id);
+                        const taS = [...document.querySelectorAll('#rcList .rcScript')].find(t => t.dataset.id === x.id);
+                        const taR = [...document.querySelectorAll('#rcList .rcRachelNotes')].find(t => t.dataset.id === x.id);
+                        rcSaveNotes(x, ta ? ta.value.trim() : '');
+                        if (taS) rcSaveScript(x, taS.value.trim());
+                        if (taR) rcSaveRachelNotes(x, taR.value.trim());
+                    }
+                    else if (act === 'approve') { rcSetApproved(x, !rcView(x).approved); }
+                    else if (act === 'color') { rcSetColor(x, el.dataset.color || ''); }
+                    else if (act === 'done') { toggleTmDone(x.refId); try { renderCompleted(); } catch (err) {} try { renderTelemarketingLeads(); } catch (err) {} renderRachelCalls(); }
+                    else if (act === 'voice') { const ta = [...document.querySelectorAll('#rcList .rcNotes')].find(t => t.dataset.id === x.id); if (ta && ta.value.trim() !== rcView(x).my.trim()) rcSaveNotes(x, ta.value.trim()); await rcToVoice(x); }
+                    else if (act === 'remove') { x.removedAt = new Date().toISOString(); rcOpenRows.delete(x.id); rcSave(list); showToast("Removed from Rachel's Calls. The lead itself is still on its list.", 'success'); }
+                });
+                renderRachelCalls();
+            }
+            setupRachelCalls();
+
             // ===== ALEK'S CALLS — his floater batch, pushed here manually from any lead, mirrors Tania's Calls =====
             const acOpenRows = new Set();
             function acLoad() { try { const a = JSON.parse(localStorage.getItem('webswan_alek_calls') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
@@ -5793,6 +6022,7 @@
                 const btn = 'display:flex;flex-direction:column;align-items:center;gap:2px;padding:14px 8px;border-radius:12px;border:2px solid #d4dae3;background:#f7fafc;cursor:pointer;font-weight:800;font-size:0.95rem;color:#12314f;';
                 const sub = 'font-weight:600;font-size:0.72rem;color:#64748b;';
                 const jbtn = btn.replace('background:#f7fafc;', 'background:#eefbe3;border-color:#3a9e05;');
+                const rbtn = btn.replace('background:#f7fafc;', 'background:#ffeef6;border-color:#e0117a;');
                 ov.innerHTML = '<div style="background:#fff;border-radius:16px;max-width:430px;width:100%;padding:20px;box-shadow:0 18px 50px rgba(0,0,0,0.3);">'
                     + '<div style="font-weight:800;font-size:1.05rem;color:#0e2a47;margin-bottom:4px;">📞 Send to Voice Studio</div>'
                     + '<div style="font-size:0.85rem;color:#51607a;margin-bottom:14px;">Which agent should call <b>' + tmEsc(name) + '</b>? They get the name, business, website, location, state, phone and your notes before they call.</div>'
@@ -5801,6 +6031,7 @@
                     + '<button class="wp-agent-pick" data-agent="george" style="' + btn + '">⚖️ George<span style="' + sub + '">Attorneys</span></button>'
                     + '<button class="wp-agent-pick" data-agent="rebecca" style="' + btn + '">📣 Rebecca<span style="' + sub + '">Media Network / Ads</span></button>'
                     + '<button class="wp-agent-pick" data-agent="alek" style="' + btn + '">🗣️ Alek<span style="' + sub + '">Spanish</span></button>'
+                    + '<button class="wp-agent-pick" data-agent="rachel" style="' + rbtn + '">📞 Rachel<span style="' + sub + '">Callback appt. — after the audit email, to book the 10-min review</span></button>'
                     + '<button class="wp-agent-pick" data-agent="jenna" style="' + jbtn + 'grid-column:1 / -1;">🕵️‍♀️ Jenna<span style="' + sub + '">Market Intelligence — ads, SwanDesk AI or compliance, she decides. Put what you need her to say in Comments.</span></button>'
                     + '<label style="grid-column:1 / -1;font-size:0.78rem;font-weight:700;color:#2d7a03;">📎 Attach a document for Jenna (optional: audit PDF, flyer text, notes)<input id="wpJennaDoc" type="file" accept=".pdf,application/pdf,.txt,.md,.csv,.html,text/*" style="display:block;margin-top:4px;font-size:0.78rem;max-width:100%;"></label>'
                     + '</div>'
@@ -5903,6 +6134,7 @@
                     <button class="send-option" data-action="tania" ${extraAttr} style="color:#b45309;font-weight:700;">📒 Move to Tania's Calls</button>
                     <button class="send-option" data-action="jenna" ${extraAttr} style="color:#2d7a03;font-weight:700;">🕵️‍♀️ Move to Jenna's Calls</button>
                     <button class="send-option" data-action="alek" ${extraAttr}><i class="fas fa-headset"></i> Move to Alek's Calls</button>
+                    <button class="send-option" data-action="rachel" ${extraAttr} style="color:#a30d58;font-weight:700;">📞 Move to Rachel's Calls</button>
                     <button class="send-option" data-action="crm" ${extraAttr}><i class="fas fa-database"></i> Open in CRM</button>
                     <button class="send-option" data-action="studio" ${extraAttr}><i class="fas fa-swatchbook"></i> WebSwan Studio (hot lead)</button>`;
             }
@@ -6275,6 +6507,8 @@
                                 tcAdd('lead', lead);
                             } else if (action === 'jenna') {
                                 jcAdd('lead', lead);
+                            } else if (action === 'rachel') {
+                                rcAdd('lead', lead);
                             } else if (action === 'voice') {
                                 openVoiceAgentPicker(lead);
                             }
@@ -6682,6 +6916,8 @@
                             tcAdd('lead', lead);
                         } else if (action === 'jenna') {
                             jcAdd('lead', lead);
+                        } else if (action === 'rachel') {
+                            rcAdd('lead', lead);
                         } else if (action === 'voice') {
                             openVoiceAgentPicker(lead);
                         }
@@ -7146,7 +7382,7 @@
                     return `
                         <div class="completed-item tm-lead-row${done ? ' tm-lead-done' : ''}" data-tm-id="${lead.id}">
                             <span style="font-size:1.1rem;">${isPros(lead) ? '🔎' : lead.source === 'voice-studio' ? '🤖' : emoji}</span>
-                            <span class="item-text" data-highlight="${({ blue: 'aiblue', darkblue: 'aidarkblue', yellow: isAI(lead) ? 'aiyellow' : 'yellow', green: 'green', orange: 'orange', lavender: 'lavender', lightgrey: 'lightgrey', lightgreen: 'lightgreen', sky: 'sky', jennagreen: 'jennagreen' })[tmColorOf(lead)] || hl}">${safeName}${safeCompany}</span>
+                            <span class="item-text" data-highlight="${({ blue: 'aiblue', darkblue: 'aidarkblue', yellow: isAI(lead) ? 'aiyellow' : 'yellow', green: 'green', orange: 'orange', lavender: 'lavender', lightgrey: 'lightgrey', lightgreen: 'lightgreen', sky: 'sky', jennagreen: 'jennagreen', rachelpink: 'rachelpink' })[tmColorOf(lead)] || hl}">${safeName}${safeCompany}</span>
                             ${done ? '<span class="tm-done-mark" title="You already handled this one' + (loadTmDone()[String(lead.id)] ? ' · ' + new Date(loadTmDone()[String(lead.id)]).toLocaleString() : '') + '" style="color:#1b8f3a;font-weight:800;font-size:0.9rem;white-space:nowrap;">✓ done</span>' : ''}
                             <span class="item-type">${(lead.category || 'Lead').replace(/</g, '&lt;')}${lead.source === 'voice-studio' && lead.telemarketerId ? ' · ' + String(lead.telemarketerId).replace(/</g, '&lt;') : ''}</span>
                             <span style="font-size:0.7rem;color:#8a4a63;">${when}</span>
@@ -7156,11 +7392,12 @@
                             ${tmSiteBtn(lead)}
                             ${tmCallId(lead) ? `<button class="tm-push-btn tm-listen-btn" data-call-id="${tmCallId(lead)}" title="Listen to the call recording right here" style="color:#1d4ed8;"><i class="fas fa-headphones"></i></button>` : ''}
                             <button class="tm-haitian-btn" data-tm-id="${lead.id}" title="${isHaitianLead(lead) ? 'Tagged Haitian-owned — click to untag' : 'Tag as Haitian-owned'}" aria-label="Tag Haitian-owned" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 4px;opacity:${isHaitianLead(lead) ? '1' : '0.3'};">🇭🇹</button>
-                            <span class="tm-color-dots" style="display:inline-flex;gap:4px;align-items:center;">${[['blue', '#1d4ed8', 'Light blue: no answer, voicemail, automated system, phone menu'], ['darkblue', '#0a3d62', 'Dark blue: hang up'], ['yellow', '#ffd600', 'Yellow: spoke to a person (call back later)'], ['green', '#2e7d32', "Green: got an email, transferred to Rachel or got Rachel's number"], ['lavender', '#c4a8f5', 'Lavender: this prospect has an email — I still owe them the audit'], ['orange', '#f57c00', 'Orange: hot lead, email + appointment'], ['sky', '#50b9fa', 'Sky blue: I have an appointment to talk to the doctor/attorney'], ['lightgrey', '#cbd0d8', "Light grey: audit attached — Eva's queue to edit from your notes and push to Gmail"], ['lightgreen', '#bfe3c4', 'Light green: the draft is in Gmail with the audit, ready for you to review and send'], ['jennagreen', '#3a9e05', "Jenna's green: hers to call this week"]].map(([c, bg, t]) => `<button class="tm-color-btn" data-tm-id="${lead.id}" data-color="${c}" title="${t}" aria-label="${t}" style="width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 ${tmColorOf(lead) === c ? '3px #111' : '1px #9aa'};background:${bg};cursor:pointer;padding:0;"></button>`).join('')}${tmColors[String(lead.id)] ? `<button class="tm-color-btn" data-tm-id="${lead.id}" data-color="" title="Undo: go back to the automatic color" aria-label="Undo color" style="border:1px solid #9aa;background:#fff;border-radius:10px;font-size:11px;padding:0 6px;height:18px;cursor:pointer;">↺ undo</button>` : ''}</span>
+                            <span class="tm-color-dots" style="display:inline-flex;gap:4px;align-items:center;">${[['blue', '#1d4ed8', 'Light blue: no answer, voicemail, automated system, phone menu'], ['darkblue', '#0a3d62', 'Dark blue: hang up'], ['yellow', '#ffd600', 'Yellow: spoke to a person (call back later)'], ['green', '#2e7d32', "Green: got an email, transferred to Rachel or got Rachel's number"], ['lavender', '#c4a8f5', 'Lavender: this prospect has an email — I still owe them the audit'], ['orange', '#f57c00', 'Orange: hot lead, email + appointment'], ['sky', '#50b9fa', 'Sky blue: I have an appointment to talk to the doctor/attorney'], ['lightgrey', '#cbd0d8', "Light grey: audit attached — Eva's queue to edit from your notes and push to Gmail"], ['lightgreen', '#bfe3c4', 'Light green: the draft is in Gmail with the audit, ready for you to review and send'], ['jennagreen', '#3a9e05', "Jenna's green: hers to call this week"], ['rachelpink', '#e0117a', "Rachel's pink: callback appointment, hers to call"]].map(([c, bg, t]) => `<button class="tm-color-btn" data-tm-id="${lead.id}" data-color="${c}" title="${t}" aria-label="${t}" style="width:16px;height:16px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 ${tmColorOf(lead) === c ? '3px #111' : '1px #9aa'};background:${bg};cursor:pointer;padding:0;"></button>`).join('')}${tmColors[String(lead.id)] ? `<button class="tm-color-btn" data-tm-id="${lead.id}" data-color="" title="Undo: go back to the automatic color" aria-label="Undo color" style="border:1px solid #9aa;background:#fff;border-radius:10px;font-size:11px;padding:0 6px;height:18px;cursor:pointer;">↺ undo</button>` : ''}</span>
                             <button class="tm-done-btn tm-done-pill${done ? ' is-done' : ''}" data-tm-id="${lead.id}" title="${done ? 'Clear the check — mark not done' : 'Click after you call or make an audit for this lead, so you know you already did it'}" aria-label="Mark done">${done ? '✓ Done' : '☐ Done'}</button>
                             <button class="tm-tania-btn" data-tm-id="${lead.id}" title="Move to Tania's Calls (it stays here too)" aria-label="Move to Tania's Calls" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 4px;">📒</button>
                             <button class="tm-jenna-btn" data-tm-id="${lead.id}" title="Move to Jenna's Calls (it stays here too)" aria-label="Move to Jenna's Calls" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 4px;">🕵️‍♀️</button>
                             <button class="tm-alek-btn" data-tm-id="${lead.id}" title="Move to Alek's Calls (it stays here too)" aria-label="Move to Alek's Calls" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 4px;">🗣️</button>
+                            <button class="tm-rachel-btn" data-tm-id="${lead.id}" title="Move to Rachel's Calls (it stays here too)" aria-label="Move to Rachel's Calls" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 4px;">📞</button>
                             <button class="tm-voice-btn tm-push-btn" data-tm-id="${lead.id}" title="Send or move this lead to a Voice Studio agent (Monica, George, Rebecca, Alek or Jenna)" aria-label="Send to a Voice Studio agent" style="color:#1d4ed8;"><i class="fas fa-phone-volume"></i></button>
                             <button class="tm-push-btn tm-edit-btn" data-tm-id="${lead.id}" title="Edit (name, email, comments), then push to the Lead Form" style="color:#ad1457;"><i class="fas fa-pen"></i></button>
                             <button class="tm-push-btn" data-tm-id="${lead.id}" title="Push to Lead Form"><i class="fas fa-share-square"></i></button>
@@ -7261,6 +7498,13 @@
                         e.stopPropagation();
                         const lead = telemarketingLeads.find(l => String(l.id) === String(btn.dataset.tmId));
                         if (lead) jcAdd('tm', lead);
+                    });
+                });
+                tmQA('.tm-rachel-btn').forEach((btn) => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const lead = telemarketingLeads.find(l => String(l.id) === String(btn.dataset.tmId));
+                        if (lead) rcAdd('tm', lead);
                     });
                 });
                 tmQA('.tm-alek-btn').forEach((btn) => {
