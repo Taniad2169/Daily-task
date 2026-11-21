@@ -8953,6 +8953,35 @@
                 } catch (e) { console.warn('pollSentinelDiyQueue', e); }
             }
 
+            // "Take me there" banner leads -- $899 Managed Website Program (WebSwan Media Network) and
+            // $799 full audit (WebSwan Digital Solutions). Separate queue (package_leads_get/ack, its own
+            // Blobs store) from Sebastien's and Sentinel's so none of the three ever collide.
+            async function pollPackageLeadsQueue() {
+                try {
+                    const tok = await window.wpGmail.idToken();
+                    if (!tok) return;
+                    const r = await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'package_leads_get' }) });
+                    const d = await r.json().catch(() => ({}));
+                    const items = Array.isArray(d.items) ? d.items : [];
+                    if (!items.length) return;
+                    const digits = v => String(v || '').replace(/\D/g, '').slice(-10);
+                    const results = [];
+                    let applied = 0;
+                    items.forEach(it => {
+                        try {
+                            const dup = leads.find(l => (it.phone && digits(l.phone) && digits(l.phone) === digits(it.phone)) || (it.name && String(l.name || '').trim().toLowerCase() === String(it.name).trim().toLowerCase()));
+                            if (dup) { results.push({ id: it.id, ok: false, note: 'duplicate of lead #' + dup.id + (dup.name ? ' (' + dup.name + ')' : '') }); return; }
+                            const newLead = { id: newLeadId(), name: it.name || it.phone || it.email || 'No name', contact: '', phone: it.phone || 'No phone', email: it.email || 'No email', url: 'No URL', social: '', comment: it.comment ? ('--- Take me there · ' + new Date(it.at || Date.now()).toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }) + ' PT ---\n' + it.comment) : '', origin: 'Take me there (AI)', assignedAgent: '', dropdown: it.dropdown || 'call back', customDropdown: '', completed: false };
+                            leads.push(newLead);
+                            applied++;
+                            results.push({ id: it.id, ok: true, note: 'created lead #' + newLead.id + (newLead.name ? ' (' + newLead.name + ')' : '') });
+                        } catch (e) { results.push({ id: it.id, ok: false, note: String(e.message || e).slice(0, 140) }); }
+                    });
+                    if (applied) { saveToStorage(); renderLeads(); showToast('📣 Take me there: ' + applied + ' lead' + (applied > 1 ? 's' : '') + ' added to WorkPilot.', 'success'); }
+                    if (results.length) { await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'package_leads_ack', results }) }); }
+                } catch (e) { console.warn('pollPackageLeadsQueue', e); }
+            }
+
             function initApp() {
                 if (appInitialized) return;
                 appInitialized = true;
@@ -8987,6 +9016,8 @@
             setInterval(pollSebastienQueue, 90000);
             pollSentinelDiyQueue();
             setInterval(pollSentinelDiyQueue, 90000);
+            pollPackageLeadsQueue();
+            setInterval(pollPackageLeadsQueue, 90000);
             fetchTelemarketingLeads(false);
             const tmPushToFormBtn = document.getElementById('tmPushToFormBtn');
             if (tmPushToFormBtn) tmPushToFormBtn.addEventListener('click', () => pushTmLeadToForm(tmCurrentLead));
