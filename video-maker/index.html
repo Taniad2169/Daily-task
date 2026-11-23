@@ -82,6 +82,30 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
     doesn't like.
   Never name Canva to a client; this is a feature bar for this app's own roadmap, not a tool WebSwan runs.
 -->
+<!--
+  LIP-SYNC COST RESEARCH -- CAN WE DROP THE PER-VIDEO FEE? (HeyGen / ElevenLabs / Vozo / sync.so research, Tania
+  Nov 23; not a build instruction by itself -- a straight answer on whether their tech is something this app
+  can just take for free):
+
+  SHORT ANSWER: no, not from their sites. HeyGen, ElevenLabs Lip Sync, Vozo, and sync.so are all closed, hosted
+  SaaS products -- their page source is marketing HTML/JS, not their model, so there is nothing in it to lift.
+  Vozo's "free" claim is a 30-point / 3-minute trial, then it's the same pay-per-point model as everyone else.
+  HeyGen's pricing is pay-as-you-go through their own account/API, not published on the page. None of these four
+  can be copied into this app to make lip sync free.
+
+  WHAT WOULD ACTUALLY WORK: this app's own Lip Sync step (step 6) already pays per generation through a Netlify
+  function (LIPSYNC_API, below) that proxies to fal.ai and Hedra for OmniHuman/Veo/Hedra/Kling -- same category
+  of service as HeyGen etc., just metered per second instead of a monthly plan. The only real way to stop paying
+  per video is to self-host the model instead of renting it by the call: open-source lip-sync models like
+  SadTalker, Wav2Lip, or LivePortrait (the same class of model fal.ai already resells) run on a rented or owned
+  GPU, with no per-video charge once the server is up -- only the GPU's own running cost. A starter pattern for
+  that (Node/Express + an image + an audio file in, an .mp4 out) was sketched for a different project and could
+  be adapted, but it is a real infrastructure build -- a GPU server to stand up and keep running -- not a change
+  to this page's code, and that Netlify billing/lipsync function lives in a separate repo (webswan-billing) this
+  session can't reach. Kling Lip Sync is already the cheapest of the four built-in engines above (~3 cents a
+  clip); self-hosting only pays off once volume is high enough to beat that against a GPU's running cost.
+  Never name HeyGen, ElevenLabs, Vozo, or sync.so to a client; this is cost research for WebSwan's own roadmap.
+-->
 <main>
 <section>
   <div class="card" id="s-brand">
