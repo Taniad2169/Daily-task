@@ -7772,7 +7772,13 @@
                 splitMyNotes(lead);
                 const tmListenEl = document.getElementById('tmListenBtn'); if (tmListenEl) tmListenEl.style.display = tmCallId(lead) ? '' : 'none';
                 const tmPushBtnEl = document.getElementById('tmPushToFormBtn'), tmEditBtnEl = document.getElementById('tmEditBtn');
-                if (tmPushBtnEl) tmPushBtnEl.innerHTML = '<i class="fas fa-share-square"></i> Save &amp; push to Lead Form';
+                // Tania, Nov 23 (fix): these two used to only ever get HIDDEN (by openMyLeadModal, or by the jenna-role
+                // check further down) and nothing ever showed them again -- so once hidden once this session, every
+                // lead's modal after that was missing its Eva button, even leads that had nothing to do with Jenna or
+                // "my leads". Reset both to visible on every open; the jenna-role check below still hides them for her.
+                const tmEvaBtnEl = document.getElementById('tmEvaDraftBtn');
+                if (tmPushBtnEl) { tmPushBtnEl.style.display = ''; tmPushBtnEl.innerHTML = '<i class="fas fa-share-square"></i> Save &amp; push to Lead Form'; }
+                if (tmEvaBtnEl) tmEvaBtnEl.style.display = '';
                 if (tmEditBtnEl) tmEditBtnEl.style.display = 'none';
                 const tmSaveEl = document.getElementById('tmSaveEditBtn'); if (tmSaveEl) tmSaveEl.style.display = '';
                 // Tania, Nov 13: once Eva's draft is light green (ready in Gmail), show the "mark sent" button so the
@@ -7851,6 +7857,7 @@
                 const tmPushBtnEl = document.getElementById('tmPushToFormBtn'), tmEditBtnEl = document.getElementById('tmEditBtn');
                 if (tmPushBtnEl) tmPushBtnEl.style.display = 'none'; // already in her own Lead Form -- nothing to push
                 if (tmEditBtnEl) tmEditBtnEl.style.display = 'none';
+                const tmEvaBtnEl = document.getElementById('tmEvaDraftBtn'); if (tmEvaBtnEl) tmEvaBtnEl.style.display = ''; // Nov 23 (fix): reset so a stale hide (jenna role, etc.) never sticks into this modal
                 const tmSaveEl = document.getElementById('tmSaveEditBtn'); if (tmSaveEl) tmSaveEl.style.display = '';
                 const tmMarkSentEl = document.getElementById('tmMarkSentBtn'); if (tmMarkSentEl) tmMarkSentEl.style.display = 'none';
                 const tmSiteF = document.getElementById('tmSiteFooterBtn'); if (tmSiteF) tmSiteF.innerHTML = (lead.url && lead.url !== 'No URL') ? '<i class="fas fa-globe"></i> Open website' : '<i class="fas fa-magnifying-glass"></i> Find website';
