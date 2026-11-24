@@ -2746,7 +2746,7 @@
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;">
                     <label style="font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">To<input id="evaTo" type="email" style="width:100%;padding:8px;border:1.5px solid #d9cff5;border-radius:9px;font-size:0.9rem;text-transform:none;font-weight:400;"></label>
                     <label style="font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">Their state<select id="evaState" style="width:100%;padding:8px;border:1.5px solid #d9cff5;border-radius:9px;font-size:0.9rem;text-transform:none;font-weight:400;"><option value="">Other state</option><option value="NY">New York</option><option value="FL">Florida</option><option value="IL">Illinois</option><option value="NV">Nevada</option></select></label>
-                    <label style="font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">Email type<select id="evaTpl" style="width:100%;padding:8px;border:1.5px solid #d9cff5;border-radius:9px;font-size:0.9rem;text-transform:none;font-weight:400;"><option value="audit">Free audit (report attached)</option><option value="flyer">Flyer from Jimmy</option><option value="both">Audit + flyer</option><option value="followup">Follow-up (no reply yet)</option><option value="newpatients">New patients / clients (Rebecca · Media Network, 10 a day)</option></select></label>
+                    <label style="font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#5b3fa8;">Email type<select id="evaTpl" style="width:100%;padding:8px;border:1.5px solid #d9cff5;border-radius:9px;font-size:0.9rem;text-transform:none;font-weight:400;"><option value="audit">Free audit (report attached)</option><option value="flyer">Flyer from Jimmy</option><option value="both">Audit + flyer</option><option value="followup">Follow-up (no reply yet)</option><option value="newpatients">New patients / clients (Rebecca · Media Network, 10 a day)</option><option value="advertising">Advertising (WebSwan Media Network -- not a compliance audit)</option><option value="swandesk">SwanDesk AI receptionist (not a compliance audit)</option></select></label>
                 </div>
                 <div style="margin-top:8px;border:1.5px solid #d9cff5;border-radius:10px;padding:8px 10px;background:#faf7ff;">
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
@@ -7969,10 +7969,20 @@
                 const stateP = EVA_STATE_P[st] ? EVA_STATE_P[st] + ' You can check the states with the most website compliance lawsuits here: [website compliance lawsuits by state](' + EVA_LAWSUITS + ').\n\n' : '';
                 const adaLink = EVA_STATE_P[st] ? ' You can verify the ADA fines here: [ADA compliance fines](' + EVA_ADA_FINES + ').' : '';
                 const flLine = st === 'FL' ? "\n\nFor Florida, cookie consent and ADA accessibility on your website both matter; you can see the state's own standards here: [Florida accessibility standards](" + EVA_FL_DMS + ').' : '';
+                const lawTone = /attorney|lawyer|law firm|\blaw\b|legal|esq/i.test((l.industry || '') + ' ' + co + ' ' + (l.decisionMakerName || ''));
                 if (kind === 'newpatients') {
-                    const law = /attorney|lawyer|law firm|\blaw\b|legal|esq/i.test((l.industry || '') + ' ' + co + ' ' + (l.decisionMakerName || ''));
-                    const who = law ? 'clients' : 'patients', pros = law ? 'attorneys' : 'doctors';
+                    const who = lawTone ? 'clients' : 'patients', pros = lawTone ? 'attorneys' : 'doctors';
                     return { s: 'Are you still accepting new ' + who + '?', b: hi + '\n\nThis is Eva with WebSwan Media Network. Our new platform features qualified ' + pros + ' who are open to new ' + who + '. We checked the Google reviews for ' + co + ', and your practice pre-qualifies for added visibility to reach new ' + who + '.\n\nWe would like to schedule a 10-minute appointment with you or the person in charge of your practice to go over how it works and answer your questions. Rebecca from our team will give you a call soon to set it up.' };
+                }
+                // Tania, Nov 23: dedicated templates for advertising and SwanDesk AI, so these never default to the
+                // ADA-audit wording. Sebastien now owns the talking points for both -- he gets the appointment, not Rebecca.
+                if (kind === 'advertising') {
+                    const who = lawTone ? 'clients' : 'patients';
+                    return { s: 'A faster way to reach new ' + who + ' -- ' + co, b: hi + '\n\nThis is Eva with WebSwan Media Network. We built a members-only referral platform for doctors and attorneys -- a calmer, more professional alternative to fighting for position in a crowded Google search.\n\n' + co + ' looked like a strong fit, so I wanted to reach out directly.\n\nSebastien, our marketing director, can walk you through exactly how it works in about 10 minutes, whenever suits you. ' + call };
+                }
+                if (kind === 'swandesk') {
+                    const who = lawTone ? 'client' : 'patient';
+                    return { s: 'Never miss another ' + who + ' call -- ' + co, b: hi + '\n\nThis is Eva with WebSwan Digital Solutions. We built SwanDesk AI, an affordable AI receptionist that answers every call to ' + co + ' -- day or night -- so no new ' + who + ' goes to voicemail.\n\nSebastien, our marketing director, can walk you through how it works and what it would cost for a practice your size, usually in about 10 minutes.\n\n' + call };
                 }
                 if (kind === 'flyer') return { s: 'Something we made for ' + co, b: hi + '\n\nI put together a flyer idea for ' + co + ' and attached it to this email. It shows how your business could look in front of more local customers.\n\nWould you like me to adjust it with your colors and offers? ' + call };
                 if (kind === 'both') return { s: 'Your free website audit for ' + co + ' (plus a flyer)', b: hi + '\n\n' + stateP + opener + ran + co + '.' + adaLink + ' The report is attached, along with a flyer idea we designed for you.' + found + flLine + '\n\nThe audit shows the items worth fixing first. Would you have 10 minutes this week to go over it? ' + alek + '\n\n' + call };
@@ -8090,20 +8100,38 @@
                     try { renderLeads(); } catch (e) {}
                 }
             }
+            // Tania, Nov 23: guess which template fits BEFORE Eva ever sees the draft, so an advertising or SwanDesk
+            // lead never silently defaults to the ADA-audit wording just because "audit" used to be the only default.
+            function evaGuessKind(l) {
+                const t = ((l.serviceInterested || '') + ' ' + (l.industry || '') + ' ' + (l.comment || '') + ' ' + (l.myNotes || '')).toLowerCase();
+                if (/swandesk|ai receptionist|virtual receptionist|answering service|phone bot/.test(t)) return 'swandesk';
+                if (/advertis|media network|wsmn|referral platform/.test(t)) return 'advertising';
+                return 'audit';
+            }
+            // Shows Eva a reminder to loop in Sebastien (who owns advertising + SwanDesk content and pricing) on top
+            // of Tania's own notes, whenever the chosen template is one of his -- never for the compliance templates.
+            function evaUpdateGuidance() {
+                const kind = document.getElementById('evaTpl').value, l = evaLead || {}, el = document.getElementById('evaTaniaNotes');
+                if (!el) return;
+                const tn = String(l.myNotes || '').trim();
+                const sebNote = ['advertising', 'swandesk'].includes(kind) ? "\u{1F9D1}‍\u{1F4BC} <b>This is advertising / SwanDesk, not a compliance audit -- check with Sebastien for the right talking points and pricing before you save or send this draft.</b>" : '';
+                const parts = [sebNote, tn ? "📝 <b>Tania's instructions — edit the draft to match these:</b><br>" + tmEsc(tn).replace(/\n/g, '<br>') : ''].filter(Boolean);
+                if (parts.length) { el.style.display = 'block'; el.innerHTML = parts.join('<br><br>'); } else { el.style.display = 'none'; el.textContent = ''; }
+            }
             function openEvaDraft(lead) {
                 if (!lead) return;
                 // take any edits typed in the lead pop-up first
                 document.querySelectorAll('#tmLeadModalBody [data-tm-edit]').forEach(el => { lead[el.dataset.tmEdit] = el.value.trim(); });
                 evaLead = lead;
                 document.getElementById('evaTo').value = lead.email || '';
-                document.getElementById('evaTpl').value = 'audit';
+                document.getElementById('evaTpl').value = evaGuessKind(lead);
                 document.getElementById('evaAgent').value = lead.ppc ? 'rebecca' : '';
                 document.getElementById('evaAddress').value = localStorage.getItem('webswan_eva_address') || '';
                 document.getElementById('evaReply').value = ''; document.getElementById('evaReplyMsg').textContent = '';
                 document.getElementById('evaState').value = evaGuessState(lead);
                 evaIssues = []; evaAds = lead.ppc ? ['Google pay-per-click (Sponsored on Google)'] : []; evaRenderFindings();
                 document.getElementById('evaCall').innerHTML = evaCallSummary(lead);
-                (function () { const tn = String(lead.myNotes || '').trim(), el = document.getElementById('evaTaniaNotes'); if (!el) return; if (tn) { el.style.display = 'block'; el.innerHTML = "📝 <b>Tania's instructions — edit the draft to match these:</b><br>" + tmEsc(tn).replace(/\n/g, '<br>'); } else { el.style.display = 'none'; el.textContent = ''; } })();
+                evaUpdateGuidance();
                 ['evaAudit', 'evaFlyer'].forEach(id => document.getElementById(id).value = '');
                 // Tania, Nov 11: the file box always starts empty, so say plainly whether an audit
                 // already went out for this lead instead of leaving her guessing.
@@ -8176,7 +8204,7 @@
                 const addr = document.getElementById('evaAddress').value.trim();
                 if (!addr) { msg.style.color = '#b42318'; msg.textContent = 'Add the mailing address first (required by law on every marketing email).'; return; }
                 localStorage.setItem('webswan_eva_address', addr); scheduleFirebaseAutoSave();
-                const brand = document.getElementById('evaTpl').value === 'newpatients' ? 'WebSwan Media Network' : 'WebSwan Digital Solutions';
+                const brand = ['newpatients', 'advertising'].includes(document.getElementById('evaTpl').value) ? 'WebSwan Media Network' : 'WebSwan Digital Solutions';
                 body += '\n\n--\n' + brand + ' · ' + addr + '\nIf you would rather not receive emails from us, just reply "unsubscribe".';
                 if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) { msg.style.color = '#b42318'; msg.textContent = 'Add a valid email in "To".'; return; }
                 const kind = document.getElementById('evaTpl').value;
@@ -8273,7 +8301,7 @@
                         out.style.color = '#b42318'; out.textContent = '⛔ Marked as unsubscribed: no more emails to this practice, and the reply was not sent to a caller.'; return;
                     }
                     const last = (evaDrafts()[String((evaLead || {}).id)] || []).slice(-1)[0] || {};
-                    if (last.kind === 'newpatients') { document.getElementById('evaTpl').value = 'newpatients'; document.getElementById('evaAgent').value = 'rebecca'; }
+                    if (['newpatients', 'advertising', 'swandesk'].includes(last.kind)) { document.getElementById('evaTpl').value = last.kind; document.getElementById('evaAgent').value = last.kind === 'newpatients' ? 'rebecca' : ''; evaUpdateGuidance(); }
                     out.style.color = '#5b3fa8'; out.textContent = 'Sending…';
                     out.innerHTML = await evaHandoff(document.getElementById('evaTo').value.trim() || last.to || '', last.subject || document.getElementById('evaSubject').value, last.files || [], rep);
                 }
@@ -8282,6 +8310,7 @@
             });
             document.addEventListener('change', (e) => {
                 if (e.target && (e.target.id === 'evaTpl' || e.target.id === 'evaState')) evaFill(false);
+                if (e.target && e.target.id === 'evaTpl') evaUpdateGuidance();
                 if (e.target && e.target.id === 'evaTpl') document.getElementById('evaAgent').value = e.target.value === 'newpatients' ? 'rebecca' : '';
                 if (e.target && e.target.dataset && e.target.dataset.evaIssue !== undefined) { const it = evaIssues[Number(e.target.dataset.evaIssue)]; if (it) { it.on = e.target.checked; evaFill(false); } }
             });
