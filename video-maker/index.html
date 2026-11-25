@@ -351,6 +351,8 @@ input,textarea,select,[contenteditable],[data-selectable]{-webkit-user-select:te
     <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:800">💡 Idea to video (it writes the whole script)</summary>
       <label for="idea">Your idea</label>
       <textarea id="idea" style="min-height:70px" placeholder="A 30-second Reel for dentists: why their website needs an ADA check, and how to book a free audit"></textarea>
+      <label for="ideaUrl" style="margin-top:8px">🌐 Or one of your websites (it reads the real page and writes the script from that — leave your idea blank, or fill both)</label>
+      <input id="ideaUrl" type="text" placeholder="thewebswan.com, webswandigitalsolutions.com, or your Media Network site">
       <div class="row">
         <div><label for="ideaLen">Length</label><select id="ideaLen"><option value="15">15 seconds</option><option value="30" selected>30 seconds</option><option value="45">45 seconds</option><option value="60">1 minute</option><option value="90">90 seconds</option></select></div>
         <div><label for="ideaLang">Language</label><select id="ideaLang"><option value="en">English</option><option value="pt">Português (Brasil)</option><option value="fr">Français</option><option value="es">Español (Latino)</option><option value="ht">Kreyòl ayisyen</option></select></div>
@@ -1347,11 +1349,11 @@ async function loadClaudeList(){
 }
 // idea to video (DeepSeek on the server)
 $("ideaBtn").onclick = async () => {
-  const idea = $("idea").value.trim(), st = (m) => { $("ideaStatus").textContent = m; };
-  if (!idea) return st("Write your idea first.");
-  $("ideaBtn").disabled = true; st("Writing your video… (about 15 seconds)");
+  const idea = $("idea").value.trim(), url = $("ideaUrl").value.trim(), st = (m) => { $("ideaStatus").textContent = m; };
+  if (!idea && !url) return st("Write your idea, or give a website link, first.");
+  $("ideaBtn").disabled = true; st(url ? "Reading your site and writing your video… (about 15 seconds)" : "Writing your video… (about 15 seconds)");
   try {
-    const j = await api({ action: "write_script", idea, seconds: $("ideaLen").value, language: $("ideaLang").value, brand: brand().name });
+    const j = await api({ action: "write_script", idea, url, seconds: $("ideaLen").value, language: $("ideaLang").value, brand: brand().name });
     loadProject({ title: j.title || "New video", brand: $("brand").value, format: $("format").value, scenes: j.scenes.map(x => ({ text: x.text, action: x.action, avatar: "selected" })) });
     st("✅ Done! Read each scene and fix anything you want before making the voice. Nothing is made until you say so.");
   } catch (e) { st("⚠️ " + e.message); }
