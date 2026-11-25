@@ -2113,6 +2113,7 @@
                     <a class="btn btn-outline" href="https://taniad2169.github.io/webswan-dagigoia-task/voice-studio/jennifer.html" target="_blank" rel="noopener noreferrer" style="border-color:#339cde;color:#339cde;" title="Jennifer's back office: every virtual-receptionist client's profile and script"><i class="fas fa-headset"></i> Jennifer Back Office</a>
                     <a class="btn btn-outline" href="https://taniad2169.github.io/webswan-dagigoia-task/team/" target="_blank" rel="noopener noreferrer" style="border-color:#1182f0;color:#1182f0;" title="Eva (executive assistant), Tatiana (content), Linda (legal) and Rachel (receptionist)"><i class="fas fa-users"></i> AI Office</a>
                     <a class="btn btn-outline" href="https://taniad2169.github.io/webswan-dagigoia-task/team/#sentinel" target="_blank" rel="noopener noreferrer" style="border-color:#c0392b;color:#c0392b;" title="One-click chat with Sentinel: security across your laptop, browser, apps/SaaS/cloud, software supply chain and the AI Office's own agents"><i class="fas fa-shield-alt"></i> Talk to Sentinel (Security)</a>
+                    <button type="button" class="btn btn-outline" id="dispatchOpenBtn" onclick="openDispatchPanel()" style="border-color:#0f6fd1;color:#0f6fd1;" title="Dispatch, right here in WorkPilot: find a client/lead/note, send one to Sebastien for profiling, check a website or social link, a quick punchy script, or relay a question to Eva or anyone on the team"><i class="fas fa-satellite-dish"></i> Talk to Dispatch</button>
                     <a class="btn btn-outline" href="https://travel-pwa.netlify.app/" target="_blank" rel="noopener noreferrer" style="border-color:#0be0c0;color:#0b8f7d;" title="Travel Hub with Tania: fares, stays, car rentals, restaurants, events and community spots"><i class="fas fa-plane-departure"></i> Travel Hub · Tania</a>
                     <a class="btn btn-outline" href="https://ads.webswanmedianetwork.com/find/" target="_blank" rel="noopener noreferrer" style="border-color:#1b70c2;color:#0c3a61;" title="Demo of the patient/client directory with Rachel: show doctors and lawyers how people find them"><i class="fas fa-user-doctor"></i> WSMN Directory Demo</a>
                     <a class="btn btn-outline" href="https://www.haitianbusiness.org/my-businesses" target="_blank" rel="noopener noreferrer" style="border-color:#c0392b;color:#8e2a1f;" title="Your 3 WebSwan listings on the Haitian Business Directory (The WebSwan, WebSwan Digital Solutions, WebSwan Media Network) — pending approval"><i class="fas fa-building"></i> Haitian Business Directory</a>
@@ -7246,6 +7247,75 @@
                         + (f.m.flagged ? '' : '<button type="button" data-wpsmine="' + i + '" style="margin-top:6px;border:1px solid #f57c00;background:#fff;color:#c2410c;border-radius:8px;font-weight:700;cursor:pointer;padding:3px 10px;">🟠 Yes, that\'s my lead — flag it</button>') + '</div>').join('');
                 out.querySelectorAll('[data-wpsmine]').forEach((b) => b.onclick = async () => { const f = hits[+b.dataset.wpsmine]; b.disabled = true; try { await wpsFlag(f.m.lead, f.x, 'asking for ' + f.svc); b.textContent = '✓ Flagged orange'; } catch (e) { b.disabled = false; showToast('Could not flag: ' + e.message, 'error'); } });
                 if (hits.some((f) => f.m.flagged)) showToast('🟠 ' + hits.filter((f) => f.m.flagged).length + ' of your leads flagged orange', 'success');
+            }
+            // Dispatch (Tania, Nov 24): her WorkPilot console, right here -- find a client/lead/note, send one to
+            // Sebastien for profiling, check a website or social link, a quick punchy script, or relay a question
+            // to Eva or anyone on the team, all without leaving WorkPilot to open the AI Office or Voice Studio.
+            // Same team.mjs chat agent used by the AI Office (agent: 'dispatch'), same sign-in token WorkPilot
+            // already uses for Eva's queue -- this panel is just a second, embedded front door onto it.
+            let dispatchBusy = false;
+            function dispatchEsc(s) { const d = document.createElement('div'); d.textContent = String(s == null ? '' : s); return d.innerHTML; }
+            function dispatchRenderMsgs(list) {
+                const box = document.getElementById('dispatchMsgs'); if (!box) return;
+                box.innerHTML = (list || []).filter(m => m.text).map(m => {
+                    const mine = m.role === 'user';
+                    return '<div style="margin:8px 0;display:flex;' + (mine ? 'justify-content:flex-end;' : 'justify-content:flex-start;') + '">'
+                        + '<div style="max-width:82%;padding:8px 12px;border-radius:12px;font-size:.88rem;line-height:1.4;white-space:pre-wrap;' + (mine ? 'background:#0f6fd1;color:#fff;border-bottom-right-radius:3px;' : 'background:#eef4fb;color:#0f1b2d;border-bottom-left-radius:3px;') + '">' + dispatchEsc(m.text) + '</div></div>';
+                }).join('');
+                box.scrollTop = box.scrollHeight + 9999;
+            }
+            async function dispatchLoadHistory() {
+                try {
+                    const tok = await window.wpGmail.idToken(); if (!tok) return;
+                    const r = await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'history', agent: 'dispatch' }) });
+                    const d = await r.json().catch(() => ({}));
+                    if (r.ok) dispatchRenderMsgs(d.messages || []);
+                } catch (e) { /* history is a nice-to-have on open; a failed load just starts blank */ }
+            }
+            async function dispatchSend() {
+                if (dispatchBusy) return;
+                const ta = document.getElementById('dispatchInput'); const text = (ta.value || '').trim();
+                if (!text) return;
+                const box = document.getElementById('dispatchMsgs');
+                box.insertAdjacentHTML('beforeend', '<div style="margin:8px 0;display:flex;justify-content:flex-end;"><div style="max-width:82%;padding:8px 12px;border-radius:12px;font-size:.88rem;line-height:1.4;white-space:pre-wrap;background:#0f6fd1;color:#fff;border-bottom-right-radius:3px;">' + dispatchEsc(text) + '</div></div>');
+                box.scrollTop = box.scrollHeight + 9999;
+                ta.value = ''; ta.disabled = true; dispatchBusy = true;
+                const btn = document.getElementById('dispatchSendBtn'); if (btn) btn.disabled = true;
+                box.insertAdjacentHTML('beforeend', '<div id="dispatchThinking" style="margin:8px 0;color:#64748b;font-size:.82rem;">🧭 Dispatch is thinking…</div>');
+                box.scrollTop = box.scrollHeight + 9999;
+                try {
+                    const tok = await window.wpGmail.idToken();
+                    if (!tok) { showToast('Sign in with Google first (top of WorkPilot) to talk to Dispatch.', 'error'); return; }
+                    const r = await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'chat', agent: 'dispatch', text }) });
+                    const d = await r.json().catch(() => ({}));
+                    const think = document.getElementById('dispatchThinking'); if (think) think.remove();
+                    if (!r.ok) { showToast(d.error || 'Dispatch could not answer just now.', 'error'); return; }
+                    const reply = (d.messages || []).slice(-1)[0];
+                    if (reply && reply.text) box.insertAdjacentHTML('beforeend', '<div style="margin:8px 0;display:flex;justify-content:flex-start;"><div style="max-width:82%;padding:8px 12px;border-radius:12px;font-size:.88rem;line-height:1.4;white-space:pre-wrap;background:#eef4fb;color:#0f1b2d;border-bottom-left-radius:3px;">' + dispatchEsc(reply.text) + '</div></div>');
+                    box.scrollTop = box.scrollHeight + 9999;
+                } catch (e) { const think = document.getElementById('dispatchThinking'); if (think) think.remove(); showToast('Dispatch: ' + e.message, 'error'); }
+                finally { ta.disabled = false; dispatchBusy = false; if (btn) btn.disabled = false; ta.focus(); }
+            }
+            function openDispatchPanel() {
+                const old = document.getElementById('dispatchOverlay'); if (old) { old.remove(); return; }
+                const ov = document.createElement('div'); ov.id = 'dispatchOverlay';
+                ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:10060;display:flex;align-items:flex-end;justify-content:flex-end;padding:0;';
+                ov.innerHTML = '<div style="background:#fff;border-radius:16px 0 0 0;width:min(420px,100vw);height:min(640px,92vh);display:flex;flex-direction:column;box-shadow:0 -10px 40px rgba(0,0,0,.3);">'
+                    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid #e6edf5;">'
+                    + '<div><h3 style="margin:0;color:#0f6fd1;font-size:1.05rem;"><i class="fas fa-satellite-dish"></i> Dispatch</h3><p style="margin:2px 0 0;font-size:.75rem;color:#64748b;">WorkPilot concierge — leads, scripts, relay</p></div>'
+                    + '<button type="button" id="dispatchClose" style="border:none;background:none;font-size:1.4rem;cursor:pointer;color:#64748b;" aria-label="Close">×</button></div>'
+                    + '<div id="dispatchMsgs" style="flex:1;overflow:auto;padding:14px 16px;"><p style="color:#94a3b8;font-size:.85rem;">Ask about a client or lead, say "send this one to Sebastien", paste a website or social link to check, ask for a quick script, or ask him to check with Eva or anyone else on the team.</p></div>'
+                    + '<div style="display:flex;gap:8px;padding:12px 14px;border-top:1px solid #e6edf5;">'
+                    + '<textarea id="dispatchInput" placeholder="Ask Dispatch…" style="flex:1;resize:none;min-height:40px;max-height:120px;border:1px solid #d7e2ef;border-radius:10px;padding:9px 11px;font:inherit;font-size:.88rem;"></textarea>'
+                    + '<button type="button" id="dispatchSendBtn" style="border:none;background:#0f6fd1;color:#fff;border-radius:10px;padding:0 16px;font-weight:700;cursor:pointer;">Send</button></div></div>';
+                document.body.appendChild(ov);
+                ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
+                document.getElementById('dispatchClose').onclick = () => ov.remove();
+                const ta = document.getElementById('dispatchInput');
+                ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); dispatchSend(); } });
+                document.getElementById('dispatchSendBtn').onclick = dispatchSend;
+                dispatchLoadHistory();
+                setTimeout(() => ta.focus(), 50);
             }
             function openWpSpotter() {
                 const old = document.getElementById('wpsOverlay'); if (old) old.remove();
