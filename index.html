@@ -4446,32 +4446,58 @@
                 const l = tcLive(x), s = x.snap || {};
                 if (x.src === 'lead') {
                     const o = l || s;
-                    return { live: l, name: tcClean(o.name), contact: tcClean(o.contact), phone: tcClean(o.phone), email: tcClean(o.email), url: tcClean(o.url), theirs: tcClean(o.comment), my: String((l ? l.myNotes : s.myNotes) || ''), script: String((l ? l.callScript : s.callScript) || ''), outcome: '', agent: '',
+                    return { live: l, name: tcClean(o.name), contact: tcClean(o.contact), phone: tcClean(o.phone), email: tcClean(o.email), url: tcClean(o.url), theirs: tcClean(o.comment), my: String((l ? l.myNotes : s.myNotes) || ''), script: String((l ? l.callScript : s.callScript) || ''), outcome: '', agent: '', callId: '',
                         color: highlights['lead-' + x.refId + '-name'] || s.snapColor || '', done: isTmDone(x.refId) };
                 }
                 const o = l || s;
                 let site = tcClean(o.website); try { if (!site && l && typeof tmFindSite === 'function') site = tmFindSite(l) || ''; } catch (e) {}
                 const ed = loadTmEdits()[String(x.refId)] || {};
                 return { live: l, name: tcClean(o.companyName || o.name), contact: tcClean(o.decisionMakerName), phone: tcClean(o.phone), email: tcClean(o.email), url: site, theirs: tcClean(o.comment), my: String((ed.myNotes != null ? ed.myNotes : o.myNotes) || ''), script: String((ed.callScript != null ? ed.callScript : o.callScript) || ''),
-                    outcome: tcClean(o.category || o.status), agent: tcClean(o.telemarketerId), color: loadTmColors()[String(x.refId)] || s.snapColor || '', done: isTmDone(x.refId) };
+                    outcome: tcClean(o.category || o.status), agent: tcClean(o.telemarketerId), callId: l ? (typeof tmCallId === 'function' ? tmCallId(l) : '') : '', color: loadTmColors()[String(x.refId)] || s.snapColor || '', done: isTmDone(x.refId) };
             }
             // Tania, Nov 19: the moment a lead lands on Tania's or Jenna's Calls, ask Sebastien to profile it and
             // write the call script automatically -- no need to ask him in chat first. Skips it if a script is
             // already there, so re-pushing the same lead later never clobbers what's already written.
-            async function wpAutoProfile(who, src, refId) {
+            // Tania, Nov 24: Sebastien now also reads the lead's own call recording (if it has one) before writing --
+            // "he needs to inspect their social media website personality the recordings as well" -- the website and
+            // social/reputation search already happen server-side; this is the piece that gets him the transcript.
+            // wpProfilingIds tracks who's mid-profile so the light-blue/green status dot can show it; force=true lets
+            // the manual light-blue click re-run Sebastien even if a script is already there.
+            const wpProfilingIds = new Set();
+            const VOICE_FN_URL = 'https://webswan-billing.netlify.app/.netlify/functions/voice-calls';
+            async function wpFetchRecordingTranscript(tok, callId) {
+                if (!callId) return '';
+                try {
+                    const rr = await fetch(VOICE_FN_URL, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'get', callId }) });
+                    const rd = await rr.json().catch(() => ({}));
+                    if (!rr.ok || !Array.isArray(rd.transcript)) return '';
+                    return rd.transcript.filter(x => x.role === 'user' || x.role === 'assistant').map(x => (x.role === 'user' ? 'Them: ' : 'Us: ') + String(x.text || '').trim()).filter(Boolean).join('\n').slice(0, 6000);
+                } catch (e) { return ''; }
+            }
+            function wpRerenderAll() {
+                try { renderTaniaCalls(); } catch (e) {}
+                try { renderJennaCalls(); } catch (e) {}
+                try { renderRachelCalls(); } catch (e) {}
+                try { renderLeads(); } catch (e) {}
+            }
+            async function wpAutoProfile(who, src, refId, force) {
+                const pid = src + ':' + refId;
                 try {
                     const live = src === 'lead' ? (leads || []).find(k => String(k.id) === String(refId)) : (telemarketingLeads || []).find(k => String(k.id) === String(refId));
                     if (!live) return;
                     const tmEd = src === 'lead' ? null : (loadTmEdits()[String(refId)] || {});
                     const existing = src === 'lead' ? live.callScript : (tmEd && tmEd.callScript != null ? tmEd.callScript : live.callScript);
-                    if (String(existing || '').trim()) return;
+                    if (!force && String(existing || '').trim()) return;
                     const name = src === 'lead' ? live.contact : live.decisionMakerName;
                     const business = src === 'lead' ? live.name : (live.companyName || live.name);
                     const website = src === 'lead' ? live.url : live.website;
                     const notes = [live.myNotes, live.comment].filter(Boolean).join(' \u2014 ');
+                    const callId = src === 'lead' ? '' : (typeof tmCallId === 'function' ? tmCallId(live) : '');
                     const tok = await window.wpGmail.idToken();
                     if (!tok) return;
-                    const r = await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'sebastien_profile_lead', lead: { name, business, website, notes, calledBy: who } }) });
+                    wpProfilingIds.add(pid); wpRerenderAll();
+                    const recordingTranscript = await wpFetchRecordingTranscript(tok, callId);
+                    const r = await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'sebastien_profile_lead', lead: { name, business, website, notes, calledBy: who, recordingTranscript } }) });
                     const d = await r.json().catch(() => ({}));
                     if (!r.ok || !d.script) return;
                     if (src === 'lead') {
@@ -4482,11 +4508,9 @@
                         try { localStorage.setItem('webswan_tm_edits', JSON.stringify(all)); scheduleFirebaseAutoSave(); } catch (e) {}
                         try { renderTelemarketingLeads(); } catch (e) {}
                     }
-                    try { renderTaniaCalls(); } catch (e) {}
-                    try { renderJennaCalls(); } catch (e) {}
-                    try { renderLeads(); } catch (e) {}
                     showToast('\u{1F9E0} Sebastien wrote a call script for this lead.', 'success');
                 } catch (e) { console.error('wpAutoProfile failed', e); }
+                finally { wpProfilingIds.delete(pid); wpRerenderAll(); }
             }
             function tcAdd(src, obj) {
                 if (!obj || obj.id == null) { showToast('Could not find this lead.', 'error'); return; }
@@ -4573,6 +4597,11 @@
                 box.innerHTML = rows.map(({ x, v }) => {
                     const isOpen = tcOpenRows.has(x.id), tel = v.phone.replace(/[^\d+]/g, '');
                     const href = v.url ? (/^https?:/i.test(v.url) ? v.url : 'https://' + v.url) : '';
+                    const profiling = wpProfilingIds.has(x.src + ':' + x.refId);
+                    const sebBadge = profiling
+                        ? '<span style="font-size:11px;font-weight:700;background:#dbeafe;color:#1e88e5;border:1px solid #93c5fd;border-radius:8px;padding:1px 6px;">⏳ Sebastien is on it</span>'
+                        : v.script.trim() ? '<span style="font-size:11px;font-weight:700;background:#e8f7ea;color:#2e7d32;border:1px solid #a9d9ad;border-radius:8px;padding:1px 6px;">🟢 Script ready</span>'
+                        : `<button type="button" class="tcAct" data-act="profile" data-id="${fcEsc(x.id)}" title="Send to Sebastien to research and write the script" style="font-size:11px;font-weight:700;background:#eaf4fe;color:#1e88e5;border:1px solid #93c5fd;border-radius:8px;padding:1px 6px;cursor:pointer;">🔵 Ask Sebastien</button>`;
                     const swatches = TC_COLORS.map(([c, bg, t]) => `<button type="button" class="tcAct" data-act="color" data-color="${c}" data-id="${fcEsc(x.id)}" title="${fcEsc(t)}" aria-label="${fcEsc(t)}" style="width:20px;height:20px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 ${v.color === c ? '3px #111' : '1px #9aa'};background:${bg};cursor:pointer;padding:0;"></button>`).join('')
                         + (v.color ? `<button type="button" class="tcAct" data-act="color" data-color="" data-id="${fcEsc(x.id)}" style="border:1px solid #9aa;background:#fff;border-radius:10px;font-size:11px;padding:0 6px;height:20px;cursor:pointer;">↺ clear</button>` : '');
                     return `<div style="border:1px solid #e3e8ef;border-radius:12px;margin:8px 0;${v.done ? 'opacity:.6;' : ''}">
@@ -4582,8 +4611,11 @@
                             ${v.phone ? `<span style="font-size:13px;color:#334;">📞 ${fcEsc(v.phone)}</span>` : ''}
                             ${v.done ? '<span style="color:#1b8f3a;font-weight:800;font-size:13px;">✓ done</span>' : ''}
                             ${v.my.trim() ? '<span style="font-size:11px;font-weight:700;background:#fff8d6;color:#c2185b;border:1px solid #f48fb1;border-radius:8px;padding:1px 6px;">📝 My notes</span>' : ''}
+                            ${v.callId ? '<span style="font-size:11px;font-weight:700;background:#dbeafe;color:#1d4ed8;border:1px solid #93c5fd;border-radius:8px;padding:1px 6px;">🎧 Recording</span>' : ''}
+                            ${sebBadge}
                             <span style="margin-left:auto;font-size:11px;color:#667;">${x.src === 'tm' ? '🤖 ' + fcEsc(v.agent || 'AI call') + (v.outcome ? ' · ' + fcEsc(v.outcome) : '') : '📋 My lead'}</span>
                         </div>
+                        ${!isOpen && v.script.trim() ? `<div style="padding:0 12px 10px;font-size:13px;color:#2e7d32;white-space:pre-wrap;">📝 ${fcEsc(v.script.length > 180 ? v.script.slice(0, 180) + '…' : v.script)}</div>` : ''}
                         ${isOpen ? `<div style="padding:0 12px 12px;">
                             <div style="font-size:14px;line-height:1.7;">
                                 ${v.contact ? `<div><b>Doctor / lawyer:</b> ${fcEsc(v.contact)}</div>` : ''}
@@ -4598,6 +4630,8 @@
                             <label style="display:block;font-weight:700;color:#0b5c8a;margin:10px 0 4px;">📞 Call script (1000 characters, for whoever calls)</label>
                             <textarea class="tcScript" data-id="${fcEsc(x.id)}" maxlength="1000" placeholder="What to actually say on this call…" style="width:100%;min-height:60px;padding:9px;border:2px solid #93c5fd;background:#eef6ff;border-radius:8px;box-sizing:border-box;">${fcEsc(v.script || '')}</textarea>
                             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;">
+                                ${v.callId ? `<button type="button" class="btn btn-outline tcAct" data-act="listen" data-call-id="${fcEsc(v.callId)}" style="color:#1d4ed8;border-color:#1d4ed8;">🎧 Listen to the call</button>` : ''}
+                                <button type="button" class="btn btn-outline tcAct" data-act="profile" data-id="${fcEsc(x.id)}" style="color:#1e88e5;border-color:#1e88e5;" ${profiling ? 'disabled' : ''}>${profiling ? '⏳ Researching…' : '🧠 ' + (v.script.trim() ? 'Re-run Sebastien' : 'Ask Sebastien')}</button>
                                 <button type="button" class="btn btn-primary tcAct" data-act="save" data-id="${fcEsc(x.id)}">💾 Save comment</button>
                                 <span style="display:inline-flex;gap:5px;align-items:center;">${swatches}</span>
                                 <button type="button" class="btn btn-outline tcAct" data-act="done" data-id="${fcEsc(x.id)}">${v.done ? '↩️ Not done' : '☐ Done'}</button>
@@ -4668,6 +4702,7 @@
                 });
                 $t('tcList').addEventListener('click', (e) => {
                     const el = e.target.closest('.tcAct'); if (!el) return;
+                    if (el.dataset.act === 'listen') { openCallRecording(el.dataset.callId); return; }
                     const list = tcLoad(), x = list.find(k => k.id === el.dataset.id); if (!x) return;
                     const act = el.dataset.act;
                     if (act === 'toggle') { if (tcOpenRows.has(x.id)) tcOpenRows.delete(x.id); else tcOpenRows.add(x.id); renderTaniaCalls(); }
@@ -4676,6 +4711,7 @@
                     else if (act === 'done') { toggleTmDone(x.refId); try { renderCompleted(); } catch (err) {} try { renderTelemarketingLeads(); } catch (err) {} renderTaniaCalls(); }
                     else if (act === 'voice') { const ta = [...document.querySelectorAll('#tcList .tcNotes')].find(t => t.dataset.id === x.id); if (ta && ta.value.trim() !== tcView(x).my.trim()) tcSaveNotes(x, ta.value.trim()); tcToVoice(x); }
                     else if (act === 'remove') { x.removedAt = new Date().toISOString(); tcOpenRows.delete(x.id); tcSave(list); showToast("Removed from Tania's Calls. The lead itself is still on its list.", 'success'); }
+                    else if (act === 'profile') { wpAutoProfile('tania', x.src, x.refId, true); }
                 });
                 renderTaniaCalls();
             }
