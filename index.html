@@ -2114,6 +2114,13 @@
                     <a class="btn btn-outline" href="https://taniad2169.github.io/webswan-dagigoia-task/team/" target="_blank" rel="noopener noreferrer" style="border-color:#1182f0;color:#1182f0;" title="Eva (executive assistant), Tatiana (content), Linda (legal) and Rachel (receptionist)"><i class="fas fa-users"></i> AI Office</a>
                     <a class="btn btn-outline" href="https://taniad2169.github.io/webswan-dagigoia-task/team/#sentinel" target="_blank" rel="noopener noreferrer" style="border-color:#c0392b;color:#c0392b;" title="One-click chat with Sentinel: security across your laptop, browser, apps/SaaS/cloud, software supply chain and the AI Office's own agents"><i class="fas fa-shield-alt"></i> Talk to Sentinel (Security)</a>
                     <button type="button" class="btn btn-outline" id="dispatchOpenBtn" onclick="openDispatchPanel()" style="border-color:#0f6fd1;color:#0f6fd1;" title="Dispatch, right here in WorkPilot: find a client/lead/note, send one to Sebastien for profiling, check a website or social link, a quick punchy script, or relay a question to Eva or anyone on the team"><i class="fas fa-satellite-dish"></i> Talk to Dispatch</button>
+                    <!-- Tania, Nov 25: Mariska's own button, her picture in a circle so there's nothing to search for --
+                         the green dot lights up when she has something new for Tania (a teammate's reply, a call
+                         report, a roleplay/Brain Room readout) that hasn't been seen yet. -->
+                    <button type="button" id="mariskaOpenBtn" onclick="openMariskaPanel()" title="Mariska — conversation, deep research, legal check, lead research &amp; team desk" style="position:relative;width:42px;height:42px;min-width:42px;padding:0;border-radius:50%;border:2px solid #b5179e;background:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;overflow:visible;">
+                        <img src="https://taniad2169.github.io/webswan-dagigoia-task/team/img/mariska.jpg" alt="Mariska" style="width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;">
+                        <span id="mariskaDot" style="display:none;position:absolute;top:-2px;right:-2px;width:13px;height:13px;border-radius:50%;background:#22c55e;border:2px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.08);"></span>
+                    </button>
                     <a class="btn btn-outline" href="https://travel-pwa.netlify.app/" target="_blank" rel="noopener noreferrer" style="border-color:#0be0c0;color:#0b8f7d;" title="Travel Hub with Tania: fares, stays, car rentals, restaurants, events and community spots"><i class="fas fa-plane-departure"></i> Travel Hub · Tania</a>
                     <a class="btn btn-outline" href="https://ads.webswanmedianetwork.com/find/" target="_blank" rel="noopener noreferrer" style="border-color:#1b70c2;color:#0c3a61;" title="Demo of the patient/client directory with Rachel: show doctors and lawyers how people find them"><i class="fas fa-user-doctor"></i> WSMN Directory Demo</a>
                     <a class="btn btn-outline" href="https://www.haitianbusiness.org/my-businesses" target="_blank" rel="noopener noreferrer" style="border-color:#c0392b;color:#8e2a1f;" title="Your 3 WebSwan listings on the Haitian Business Directory (The WebSwan, WebSwan Digital Solutions, WebSwan Media Network) — pending approval"><i class="fas fa-building"></i> Haitian Business Directory</a>
@@ -7317,6 +7324,206 @@
                 dispatchLoadHistory();
                 setTimeout(() => ta.focus(), 50);
             }
+            // Claude, Nov 25 -- real bug found while building Mariska's panel, fixed in the same pass: this whole
+            // app lives inside one big (function(){ ... })() IIFE (opens ~line 2971, closes ~line 10086), so a
+            // plain `function openDispatchPanel(){...}` declared in here is scoped to THAT closure only -- it was
+            // never actually reachable from the "Talk to Dispatch" button's inline onclick="openDispatchPanel()"
+            // attribute, which can only ever resolve names against the real global (window) scope. Confirmed with
+            // a real headless-browser click: it threw "openDispatchPanel is not defined" and did nothing -- so
+            // this button has not worked since it was added. One line fixes it for good.
+            window.openDispatchPanel = openDispatchPanel;
+            // Mariska (Tania, Nov 25): her own panel, right here in WorkPilot -- conversation, deep research, legal
+            // check, Claygent/Apollo lead research, and the team notification desk, all in one place. Same
+            // team.mjs chat agent (agent: 'mariska') and sign-in token as Dispatch above; this just adds voice
+            // (mic in, Cartesia TTS out, 4 languages), a file attach, her two chat-shaped AEO/GEO + Website
+            // Analytics tools, and a local (no AI call) WorkPilot button finder so "open ___" never has to be
+            // exact or guessed -- it reads the SAME button index the page's own top search box uses
+            // (window.wpFindButtons), so it can never show or open a button that isn't really there.
+            let mariskaBusy = false, mariskaPendingFile = null, mariskaMsgTexts = [], mariskaRecog = null, mariskaListening = false;
+            function mariskaEsc(s) { const d = document.createElement('div'); d.textContent = String(s == null ? '' : s); return d.innerHTML; }
+            function mariskaLangCode() { const v = (document.getElementById('mariskaLangSel') || {}).value || 'en'; return v; }
+            function mariskaSpeechLocale(v) { return { en: 'en-US', fr: 'fr-FR', es: 'es-US', pt: 'pt-BR' }[v] || 'en-US'; }
+            function mariskaBubble(text, mine) {
+                return '<div style="margin:8px 0;display:flex;' + (mine ? 'justify-content:flex-end;' : 'justify-content:flex-start;') + '">'
+                    + '<div style="max-width:82%;padding:8px 12px;border-radius:12px;font-size:.88rem;line-height:1.4;white-space:pre-wrap;' + (mine ? 'background:#b5179e;color:#fff;border-bottom-right-radius:3px;' : 'background:#fbeef8;color:#1b0e18;border-bottom-left-radius:3px;') + '">' + mariskaEsc(text)
+                    + (mine ? '' : ' <button type="button" class="mariskaPlay" data-idx="' + (mariskaMsgTexts.push(text) - 1) + '" title="Hear this out loud" style="border:none;background:none;cursor:pointer;color:#b5179e;vertical-align:-2px;">🔊</button>') + '</div></div>';
+            }
+            function mariskaRenderMsgs(list) {
+                const box = document.getElementById('mariskaMsgs'); if (!box) return;
+                mariskaMsgTexts = [];
+                box.innerHTML = (list || []).filter(m => m.text).map(m => mariskaBubble(m.text, m.role === 'user')).join('');
+                box.scrollTop = box.scrollHeight + 9999;
+            }
+            async function mariskaPlay(text, btn) {
+                try {
+                    if (btn) { btn.disabled = true; btn.textContent = '…'; }
+                    const tok = await window.wpGmail.idToken(); if (!tok) { showToast('Sign in with Google first to hear Mariska.', 'error'); return; }
+                    const r = await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'tts', agent: 'mariska', text, lang: mariskaLangCode() }) });
+                    const d = await r.json().catch(() => ({}));
+                    if (!r.ok) { showToast(d.error || 'Could not get her voice just now.', 'error'); return; }
+                    new Audio('data:' + (d.mime || 'audio/mpeg') + ';base64,' + d.audio).play().catch(() => {});
+                } catch (e) { showToast('Voice: ' + e.message, 'error'); }
+                finally { if (btn) { btn.disabled = false; btn.textContent = '🔊'; } }
+            }
+            async function mariskaLoadHistory() {
+                try {
+                    const tok = await window.wpGmail.idToken(); if (!tok) return;
+                    const r = await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'history', agent: 'mariska' }) });
+                    const d = await r.json().catch(() => ({}));
+                    if (r.ok) {
+                        mariskaRenderMsgs(d.messages || []);
+                        const last = (d.messages || []).slice(-1)[0];
+                        if (last) localStorage.setItem('mariskaLastSeenId', last.id || '');
+                        const dot = document.getElementById('mariskaDot'); if (dot) dot.style.display = 'none';
+                    }
+                } catch (e) { /* a failed history load just starts blank, same as Dispatch */ }
+            }
+            // Local WorkPilot button finder: runs entirely in the browser, no AI call, and can only ever surface or
+            // open a button that is really, currently on this page (window.wpFindButtons reads the live DOM). If
+            // the message doesn't read like a request to open/find something, or nothing matches, this does
+            // nothing and the message goes to her chat as normal.
+            function mariskaTryFindButton(text) {
+                if (typeof window.wpFindButtons !== 'function') return false;
+                const asksOpen = /\b(open|find|locate|pull up|bring up|where(?:'s| is))\b/i.test(text);
+                const short = text.trim().split(/\s+/).length <= 4;
+                if (!asksOpen && !short) return false;
+                const stripped = text.replace(/\b(open|find|locate|pull up|bring up|where(?:'s| is)|the|button|for me|please)\b/gi, ' ').replace(/\s+/g, ' ').trim();
+                const hits = window.wpFindButtons(stripped || text).slice(0, 8);
+                if (!hits.length) return false;
+                const box = document.getElementById('mariskaMsgs'); if (!box) return false;
+                box.insertAdjacentHTML('beforeend', mariskaBubble(text, true));
+                const opts = hits.map((h, i) => '<button type="button" class="mariskaOpenHit" data-i="' + i + '" style="display:block;width:100%;text-align:left;margin:4px 0;border:1px solid #e3c6dd;background:#fff;color:#7a1763;border-radius:8px;padding:7px 10px;cursor:pointer;font-size:.85rem;">' + mariskaEsc(h.label || h.title || 'Open') + '</button>').join('');
+                box.insertAdjacentHTML('beforeend', '<div style="margin:8px 0;display:flex;justify-content:flex-start;"><div style="max-width:88%;padding:8px 12px;border-radius:12px;font-size:.88rem;background:#fbeef8;color:#1b0e18;border-bottom-left-radius:3px;">Here\'s what I found in WorkPilot -- tap one to open it:' + '<div style="margin-top:6px;">' + opts + '</div></div></div>');
+                box.scrollTop = box.scrollHeight + 9999;
+                box.querySelectorAll('.mariskaOpenHit').forEach((b) => b.onclick = () => { hits[+b.dataset.i].el.click(); });
+                return true;
+            }
+            function mariskaToggleMic() {
+                const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+                const micBtn = document.getElementById('mariskaMicBtn');
+                if (!SR) { showToast('Voice input isn\'t supported in this browser.', 'error'); return; }
+                if (mariskaListening) { try { mariskaRecog && mariskaRecog.stop(); } catch (e) {} return; }
+                mariskaRecog = new SR();
+                mariskaRecog.lang = mariskaSpeechLocale(mariskaLangCode());
+                mariskaRecog.interimResults = false;
+                mariskaRecog.onstart = () => { mariskaListening = true; if (micBtn) { micBtn.style.color = '#dc2626'; micBtn.title = 'Listening… click to stop'; } };
+                mariskaRecog.onend = () => { mariskaListening = false; if (micBtn) { micBtn.style.color = '#b5179e'; micBtn.title = 'Talk to her'; } };
+                mariskaRecog.onerror = () => { mariskaListening = false; if (micBtn) { micBtn.style.color = '#b5179e'; } };
+                mariskaRecog.onresult = (e) => { const t = Array.prototype.map.call(e.results, (r) => r[0].transcript).join(' '); const ta = document.getElementById('mariskaInput'); if (ta) { ta.value = (ta.value ? ta.value + ' ' : '') + t; ta.focus(); } };
+                mariskaRecog.start();
+            }
+            function mariskaPickFile() { const inp = document.getElementById('mariskaFileInput'); if (inp) inp.click(); }
+            function mariskaOnFile(e) {
+                const f = e.target.files && e.target.files[0]; if (!f) return;
+                const chip = document.getElementById('mariskaFileChip');
+                const isImg = /^image\//.test(f.type);
+                const rd = new FileReader();
+                rd.onload = () => {
+                    mariskaPendingFile = isImg ? { name: f.name, image: rd.result } : { name: f.name, text: String(rd.result).slice(0, 60000) };
+                    if (chip) { chip.style.display = 'flex'; chip.querySelector('span').textContent = '📎 ' + f.name; }
+                };
+                rd.onerror = () => showToast('Could not read that file.', 'error');
+                if (isImg) rd.readAsDataURL(f); else rd.readAsText(f);
+                e.target.value = '';
+            }
+            function mariskaClearFile() { mariskaPendingFile = null; const chip = document.getElementById('mariskaFileChip'); if (chip) chip.style.display = 'none'; }
+            async function mariskaSendText(text) {
+                if (mariskaBusy || !text.trim()) return;
+                if (!mariskaPendingFile && mariskaTryFindButton(text)) { const ta = document.getElementById('mariskaInput'); if (ta) ta.value = ''; return; }
+                const box = document.getElementById('mariskaMsgs');
+                const att = mariskaPendingFile;
+                box.insertAdjacentHTML('beforeend', mariskaBubble(text + (att ? '\n📎 ' + att.name : ''), true));
+                box.scrollTop = box.scrollHeight + 9999;
+                const ta = document.getElementById('mariskaInput'); if (ta) ta.value = '';
+                mariskaClearFile();
+                const sendBtn = document.getElementById('mariskaSendBtn'); if (sendBtn) sendBtn.disabled = true;
+                mariskaBusy = true;
+                box.insertAdjacentHTML('beforeend', '<div id="mariskaThinking" style="margin:8px 0;color:#64748b;font-size:.82rem;">💭 Mariska is thinking…</div>');
+                box.scrollTop = box.scrollHeight + 9999;
+                try {
+                    const tok = await window.wpGmail.idToken();
+                    if (!tok) { showToast('Sign in with Google first (top of WorkPilot) to talk to Mariska.', 'error'); return; }
+                    const body = { action: 'chat', agent: 'mariska', text };
+                    if (att) body.file = att;
+                    const r = await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify(body) });
+                    const d = await r.json().catch(() => ({}));
+                    const think = document.getElementById('mariskaThinking'); if (think) think.remove();
+                    if (!r.ok) { showToast(d.error || 'Mariska could not answer just now.', 'error'); return; }
+                    const reply = (d.messages || []).slice(-1)[0];
+                    if (reply && reply.text) { box.insertAdjacentHTML('beforeend', mariskaBubble(reply.text, false)); localStorage.setItem('mariskaLastSeenId', reply.id || ''); }
+                    box.scrollTop = box.scrollHeight + 9999;
+                } catch (e) { const think = document.getElementById('mariskaThinking'); if (think) think.remove(); showToast('Mariska: ' + e.message, 'error'); }
+                finally { mariskaBusy = false; if (sendBtn) sendBtn.disabled = false; if (ta) ta.focus(); }
+            }
+            function mariskaSend() { const ta = document.getElementById('mariskaInput'); if (ta) mariskaSendText(ta.value || ''); }
+            function mariskaQuickTool(kind) {
+                const urlInp = document.getElementById(kind === 'aeo' ? 'mariskaAeoUrl' : 'mariskaAnUrl');
+                const url = (urlInp && urlInp.value || '').trim();
+                if (!url) { showToast('Paste a URL first.', 'error'); return; }
+                if (kind === 'aeo') { mariskaSendText('AEO/GEO check: ' + url); urlInp.value = ''; return; }
+                const mode = (document.getElementById('mariskaAnMode') || {}).value || 'analytics';
+                mariskaSendText((mode === 'aeo' ? 'AEO/GEO Search' : 'Website Analytics') + ': ' + url);
+                urlInp.value = '';
+            }
+            function openMariskaPanel() {
+                const old = document.getElementById('mariskaOverlay'); if (old) { old.remove(); return; }
+                const ov = document.createElement('div'); ov.id = 'mariskaOverlay';
+                ov.style.cssText = 'position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:10061;display:flex;align-items:flex-end;justify-content:flex-end;padding:0;';
+                ov.innerHTML = '<div style="background:#fff;border-radius:16px 0 0 0;width:min(440px,100vw);height:min(680px,94vh);display:flex;flex-direction:column;box-shadow:0 -10px 40px rgba(0,0,0,.3);">'
+                    + '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid #f1d9ec;">'
+                    + '<div style="display:flex;align-items:center;gap:10px;"><img src="https://taniad2169.github.io/webswan-dagigoia-task/team/img/mariska.jpg" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;"><div><h3 style="margin:0;color:#b5179e;font-size:1.05rem;">Mariska</h3><p style="margin:2px 0 0;font-size:.75rem;color:#64748b;">Conversation · deep research · legal check · lead research</p></div></div>'
+                    + '<div style="display:flex;align-items:center;gap:8px;"><select id="mariskaLangSel" title="Her speaking language" style="font-size:.78rem;border:1px solid #e3c6dd;border-radius:7px;padding:3px 5px;"><option value="en">EN</option><option value="fr">FR</option><option value="es">ES</option><option value="pt">PT-BR</option></select>'
+                    + '<button type="button" id="mariskaClose" style="border:none;background:none;font-size:1.4rem;cursor:pointer;color:#64748b;" aria-label="Close">×</button></div></div>'
+                    + '<div id="mariskaMsgs" style="flex:1;overflow:auto;padding:14px 16px;"><p style="color:#94a3b8;font-size:.85rem;">Talk to me about anything, ask me to research something, hand me Jonathan\'s legal check, a batch of leads to size up, or just say "open audit" if you can\'t remember a button\'s name.</p></div>'
+                    + '<div style="padding:6px 14px 0;">'
+                    + '<button type="button" id="mariskaToolsToggle" style="border:none;background:none;color:#b5179e;font-size:.78rem;cursor:pointer;padding:2px 0;">🧰 AEO/GEO &amp; analytics tools ▾</button>'
+                    + '<div id="mariskaTools" style="display:none;margin:6px 0 8px;gap:6px;flex-direction:column;">'
+                    + '<div style="display:flex;gap:6px;"><input id="mariskaAeoUrl" placeholder="URL for an AEO/GEO check" style="flex:1;min-width:0;border:1px solid #e3c6dd;border-radius:8px;padding:6px 8px;font-size:.82rem;"><button type="button" id="mariskaAeoGo" style="border:none;background:#b5179e;color:#fff;border-radius:8px;padding:0 10px;font-size:.8rem;cursor:pointer;">Check</button></div>'
+                    + '<div style="display:flex;gap:6px;"><select id="mariskaAnMode" style="border:1px solid #e3c6dd;border-radius:8px;font-size:.8rem;"><option value="analytics">Website Analytics</option><option value="aeo">AEO/GEO Search</option></select><input id="mariskaAnUrl" placeholder="URL" style="flex:1;min-width:0;border:1px solid #e3c6dd;border-radius:8px;padding:6px 8px;font-size:.82rem;"><button type="button" id="mariskaAnGo" style="border:none;background:#b5179e;color:#fff;border-radius:8px;padding:0 10px;font-size:.8rem;cursor:pointer;">Check</button></div>'
+                    + '</div></div>'
+                    + '<div id="mariskaFileChip" style="display:none;align-items:center;gap:8px;margin:0 14px;padding:4px 10px;background:#fbeef8;border-radius:8px;font-size:.78rem;color:#7a1763;"><span></span><button type="button" id="mariskaFileClearBtn" style="border:none;background:none;color:#7a1763;cursor:pointer;">✕</button></div>'
+                    + '<div style="display:flex;gap:8px;padding:12px 14px;border-top:1px solid #f1d9ec;align-items:flex-end;">'
+                    + '<input type="file" id="mariskaFileInput" style="display:none;">'
+                    + '<button type="button" id="mariskaFileBtn" title="Attach a file" style="border:1px solid #e3c6dd;background:#fff;color:#b5179e;border-radius:10px;width:40px;height:40px;cursor:pointer;">📎</button>'
+                    + '<button type="button" id="mariskaMicBtn" title="Talk to her" style="border:1px solid #e3c6dd;background:#fff;color:#b5179e;border-radius:10px;width:40px;height:40px;cursor:pointer;">🎤</button>'
+                    + '<textarea id="mariskaInput" placeholder="Ask Mariska…" style="flex:1;resize:none;min-height:40px;max-height:120px;border:1px solid #e3c6dd;border-radius:10px;padding:9px 11px;font:inherit;font-size:.88rem;"></textarea>'
+                    + '<button type="button" id="mariskaSendBtn" style="border:none;background:#b5179e;color:#fff;border-radius:10px;padding:0 16px;height:40px;font-weight:700;cursor:pointer;">Send</button></div></div>';
+                document.body.appendChild(ov);
+                ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
+                document.getElementById('mariskaClose').onclick = () => ov.remove();
+                document.getElementById('mariskaToolsToggle').onclick = () => { const t = document.getElementById('mariskaTools'); t.style.display = t.style.display === 'none' ? 'flex' : 'none'; };
+                document.getElementById('mariskaMsgs').addEventListener('click', (e) => { const b = e.target.closest('.mariskaPlay'); if (b) mariskaPlay(mariskaMsgTexts[+b.dataset.idx], b); });
+                const ta = document.getElementById('mariskaInput');
+                ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); mariskaSend(); } });
+                document.getElementById('mariskaSendBtn').onclick = mariskaSend;
+                document.getElementById('mariskaAeoGo').onclick = () => mariskaQuickTool('aeo');
+                document.getElementById('mariskaAnGo').onclick = () => mariskaQuickTool('an');
+                document.getElementById('mariskaFileClearBtn').onclick = mariskaClearFile;
+                document.getElementById('mariskaFileBtn').onclick = mariskaPickFile;
+                document.getElementById('mariskaMicBtn').onclick = mariskaToggleMic;
+                document.getElementById('mariskaFileInput').onchange = mariskaOnFile;
+                mariskaLoadHistory();
+                setTimeout(() => ta.focus(), 50);
+            }
+            window.openMariskaPanel = openMariskaPanel; // same inline-onclick scoping fix as Dispatch above
+            // Green-dot polling: light her button when she has something new and her panel isn't already open.
+            // Tania, Nov 24/25: "a green little light on her button so I can read or voice talk to her."
+            async function mariskaCheckNew() {
+                try {
+                    if (document.getElementById('mariskaOverlay')) return; // already open, she's being read right now
+                    const tok = window.wpGmail && await window.wpGmail.idToken(); if (!tok) return;
+                    const r = await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'history', agent: 'mariska' }) });
+                    const d = await r.json().catch(() => ({}));
+                    if (!r.ok) return;
+                    const msgs = (d.messages || []).filter((m) => m.role !== 'user');
+                    const lastAgent = msgs.slice(-1)[0]; if (!lastAgent) return;
+                    const seen = localStorage.getItem('mariskaLastSeenId') || '';
+                    const dot = document.getElementById('mariskaDot');
+                    if (dot) dot.style.display = (lastAgent.id && lastAgent.id !== seen) ? 'block' : 'none';
+                } catch (e) { /* a failed check just leaves the dot as it was */ }
+            }
+            setInterval(mariskaCheckNew, 120000);
+            setTimeout(mariskaCheckNew, 5000);
             function openWpSpotter() {
                 const old = document.getElementById('wpsOverlay'); if (old) old.remove();
                 const pros = wpsAllLeads();
@@ -10322,15 +10529,18 @@ body { min-height: 100dvh; }
   var ALIAS={dagigoia:'residual language',money:'budget billing residual stripe',email:'email webmail',calendar:'calendar book',call:'call voice rachel',ai:'ai agent rachel voice',video:'video swan bubble'};
   function items(){ return Array.prototype.filter.call(wrap.children,function(el){ return (el.tagName==='A'||el.tagName==='BUTTON') && !SKIP[el.id]; }); }
   function hay(el){ return ((el.textContent||'')+' '+(el.title||'')).toLowerCase(); }
+  function matches(q){
+    q=(q||'').trim().toLowerCase(); var words=q?q.split(/\s+/):[];
+    return items().filter(function(el){ var h=hay(el); return !q || words.every(function(w){ var alt=(ALIAS[w]||'').split(' ').filter(Boolean); return h.indexOf(w)>-1 || alt.some(function(a){return h.indexOf(a)>-1;}); }); });
+  }
   function run(){
-    var q=box.value.trim().toLowerCase(), list=items(), n=0;
-    var words=q?q.split(/\s+/):[];
+    var q=box.value, list=items(), hit=matches(q), set=new Set(hit), n=0;
     list.forEach(function(el){
-      var h=hay(el), ok=!q || words.every(function(w){ var alt=(ALIAS[w]||'').split(' ').filter(Boolean); return h.indexOf(w)>-1 || alt.some(function(a){return h.indexOf(a)>-1;}); });
-      el.style.display = ok?'':'none'; el.classList.toggle('wp-hit', !!q && ok); if(ok) n++;
+      var ok=set.has(el);
+      el.style.display = ok?'':'none'; el.classList.toggle('wp-hit', !!q.trim() && ok); if(ok) n++;
     });
-    var extra=wrap.querySelector('#firebaseSyncStatus'); if(extra) extra.style.display=q?'none':'';
-    count.textContent = q ? (n? n+' found · Enter opens':'No match') : '';
+    var extra=wrap.querySelector('#firebaseSyncStatus'); if(extra) extra.style.display=q.trim()?'none':'';
+    count.textContent = q.trim() ? (n? n+' found · Enter opens':'No match') : '';
   }
   box.addEventListener('input',run);
   box.addEventListener('keydown',function(e){
@@ -10338,6 +10548,11 @@ body { min-height: 100dvh; }
     if(e.key==='Enter'){ var f=items().filter(function(el){return el.style.display!=='none';})[0]; if(f && box.value.trim()){ e.preventDefault(); f.click(); } }
   });
   document.addEventListener('keydown',function(e){ if(e.key==='/' && document.activeElement && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && !document.activeElement.isContentEditable){ e.preventDefault(); box.focus(); } });
+  // Tania, Nov 25: exposed so Mariska's own WorkPilot panel can reuse this EXACT same button index and matching
+  // logic (never a second, drifting copy of it) -- "if I say audit, she needs to give me the options." Returns
+  // the real, currently-visible button/link elements that match a query, in the same order they appear in the
+  // header, so clicking one does exactly what clicking it by hand would do.
+  window.wpFindButtons = function(q){ return matches(q).map(function(el){ return { el: el, label: (el.textContent||'').trim().replace(/\s+/g,' '), title: el.title||'' }; }); };
 })();
 </script>
 
