@@ -9518,12 +9518,25 @@
             loadTmPushed();
             initSheetSync();
             importLeadFromLink();
-            pollSebastienQueue();
-            setInterval(pollSebastienQueue, 90000);
-            pollSentinelDiyQueue();
-            setInterval(pollSentinelDiyQueue, 90000);
-            pollPackageLeadsQueue();
-            setInterval(pollPackageLeadsQueue, 90000);
+            // Tania, Nov 24: these three used to poll the "team" Netlify function every 90 seconds each, all
+            // day, whether or not WorkPilot's tab was even the one on screen -- that was the single biggest
+            // driver of her Netlify usage. Now: skip the call entirely while the tab is in the background
+            // (no point checking a queue nobody is watching), poll every 4 minutes instead of every 90
+            // seconds while it IS active, and catch up right away the moment she switches back to the tab
+            // instead of making her wait out the rest of the interval.
+            const wpPollGate = (fn) => async () => { if (document.visibilityState !== 'visible') return; try { await fn(); } catch (e) { console.warn('wpPollGate', e); } };
+            const pollSebastienQueueGated = wpPollGate(pollSebastienQueue);
+            const pollSentinelDiyQueueGated = wpPollGate(pollSentinelDiyQueue);
+            const pollPackageLeadsQueueGated = wpPollGate(pollPackageLeadsQueue);
+            pollSebastienQueueGated();
+            setInterval(pollSebastienQueueGated, 240000);
+            pollSentinelDiyQueueGated();
+            setInterval(pollSentinelDiyQueueGated, 240000);
+            pollPackageLeadsQueueGated();
+            setInterval(pollPackageLeadsQueueGated, 240000);
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'visible') { pollSebastienQueueGated(); pollSentinelDiyQueueGated(); pollPackageLeadsQueueGated(); }
+            });
             fetchTelemarketingLeads(false);
             const tmPushToFormBtn = document.getElementById('tmPushToFormBtn');
             if (tmPushToFormBtn) tmPushToFormBtn.addEventListener('click', () => pushTmLeadToForm(tmCurrentLead));
