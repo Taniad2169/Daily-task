@@ -94,7 +94,23 @@ pre.email{white-space:pre-wrap;background:#f7f9fc;border:1px solid var(--line);b
   #report{display:block!important}
   .sec,.box,tr{break-inside:avoid}
 }
+body{-webkit-user-select:none;user-select:none}
+input,textarea,select,[contenteditable],[data-selectable]{-webkit-user-select:text;user-select:text}
 </style>
+<script>
+(function(){
+  document.addEventListener('contextmenu',function(e){e.preventDefault()});
+  document.addEventListener('dragstart',function(e){e.preventDefault()});
+  document.addEventListener('keydown',function(e){
+    var k=(e.key||'').toUpperCase();
+    if(k==='F12'||(e.ctrlKey&&e.shiftKey&&(k==='I'||k==='J'||k==='C'))||(e.ctrlKey&&k==='U')){e.preventDefault()}
+  });
+  console.log('%cThe WebSwan','font-size:20px;font-weight:800;color:#12233a','\nThis app and its code belong to The WebSwan. Please don\'t copy or reuse it without permission.');
+})();
+// Tania, Nov 25: "put the same lock on all our software so no one copies our page source."
+// Only the live tool page -- not the standalone report it generates further down, since
+// that one is meant to be sent to and opened by the client it's prepared for.
+</script>
 </head>
 <body>
 <!-- ===== WebSwan private gate: enter email, then tap 7 times. Soft lock (client-side). ===== -->
