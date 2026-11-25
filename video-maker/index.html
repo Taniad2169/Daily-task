@@ -43,7 +43,25 @@ canvas{width:100%;height:auto;max-height:70vh;object-fit:contain;background:#000
 .check{display:flex;gap:8px;align-items:center;font-size:13px;font-weight:600;margin:6px 0}
 .note{font-size:12px;color:var(--muted);line-height:1.5}
 .rec{animation:pulse 1s infinite}@keyframes pulse{50%{opacity:.6}}
+body{-webkit-user-select:none;user-select:none}
+input,textarea,select,[contenteditable],[data-selectable]{-webkit-user-select:text;user-select:text}
 </style>
+<script>
+(function(){
+  document.addEventListener('contextmenu',function(e){e.preventDefault()});
+  document.addEventListener('dragstart',function(e){e.preventDefault()});
+  document.addEventListener('keydown',function(e){
+    var k=(e.key||'').toUpperCase();
+    if(k==='F12'||(e.ctrlKey&&e.shiftKey&&(k==='I'||k==='J'||k==='C'))||(e.ctrlKey&&k==='U')){e.preventDefault()}
+  });
+  console.log('%cThe WebSwan','font-size:20px;font-weight:800;color:#12233a','\nThis app and its code belong to The WebSwan. Please don\'t copy or reuse it without permission.');
+})();
+// Tania, Nov 25: "put the same lock on all our software so no one copies our page source."
+// Honest note, same across Studio/Video Maker/WorkPilot/SwanDesk: this deters casual
+// right-click, drag-select and view-source copying. It can't stop someone who opens dev
+// tools before this script runs, reads the network tab, or saves the page another way --
+// no client-side script can fully block that for a page the browser must download to show it.
+</script>
 </head>
 <body>
 <header>
