@@ -2225,7 +2225,7 @@
                 <button class="btn btn-outline" id="fcOpenBtn" type="button" style="border-color:#c2185b;color:#c2185b;font-weight:700;"><i class="fas fa-calendar-alt"></i> Future Calls <span id="fcBadge" style="background:#c2185b;color:#fff;border-radius:10px;padding:1px 8px;font-size:12px;margin-left:4px;"></span></button>
                 <button class="btn btn-outline" id="tcOpenBtn" type="button" style="border-color:#b45309;color:#b45309;font-weight:700;">📒 Tania's Calls <span id="tcBadge" style="background:#b45309;color:#fff;border-radius:10px;padding:1px 8px;font-size:12px;margin-left:4px;display:none;"></span></button>
                 <button class="btn btn-outline" id="jcOpenBtn" type="button" style="border-color:#3a9e05;color:#3a9e05;font-weight:700;">🕵️‍♀️ Jenna's Calls <span id="jcBadge" style="background:#3a9e05;color:#fff;border-radius:10px;padding:1px 8px;font-size:12px;margin-left:4px;display:none;"></span></button>
-                <button class="btn btn-outline" id="acOpenBtn" type="button" style="border-color:#7c3aed;color:#7c3aed;font-weight:700;">🗣️ Alek's Calls <span id="acBadge" style="background:#7c3aed;color:#fff;border-radius:10px;padding:1px 8px;font-size:12px;margin-left:4px;display:none;"></span></button>
+                <button class="btn btn-outline" id="acOpenBtn" type="button" style="border-color:#7c3aed;color:#7c3aed;font-weight:700;">🗣️ Mariska's Calls <span id="acBadge" style="background:#7c3aed;color:#fff;border-radius:10px;padding:1px 8px;font-size:12px;margin-left:4px;display:none;"></span></button>
                 <button class="btn btn-outline" id="rcOpenBtn" type="button" style="border-color:#e0117a;color:#e0117a;font-weight:700;">📞 Rachel's Calls <span id="rcBadge" style="background:#e0117a;color:#fff;border-radius:10px;padding:1px 8px;font-size:12px;margin-left:4px;display:none;"></span></button>
             </div>
 
@@ -2263,16 +2263,16 @@
                 </div>
             </div>
 
-            <!-- ===== ALEK'S CALLS (leads earmarked for his floater batch -- same structure as Tania's/Jenna's Calls) ===== -->
+            <!-- ===== MARISKA'S CALLS (leads earmarked for her on-demand batch -- same structure as Tania's/Jenna's Calls; this used to be Alek's Calls, handed to Mariska and emptied Nov 25) ===== -->
             <div id="acModal" hidden style="position:fixed;inset:0;background:rgba(10,25,45,.55);z-index:9999;overflow:auto;padding:16px;">
                 <div style="background:#fff;max-width:980px;margin:24px auto;border-radius:16px;padding:18px;box-shadow:0 18px 50px rgba(0,0,0,.3);">
                     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
-                        <h3 style="margin:0;color:#7c3aed;">🗣️ Alek's Calls</h3>
+                        <h3 style="margin:0;color:#7c3aed;">🗣️ Mariska's Calls</h3>
                         <button class="btn btn-outline" id="acCloseBtn" type="button"><i class="fas fa-times"></i> Close</button>
                     </div>
-                    <p style="margin:6px 0 12px;color:#555;font-size:14px;">His batch, pushed here from any lead in WorkPilot. Click a lead to write your comment in the yellow box, color it, mark it done, or send it to him now. When you have enough, send them to the auto-dialer for the next campaign yourself.</p>
+                    <p style="margin:6px 0 12px;color:#555;font-size:14px;">Her batch, pushed here from any lead in WorkPilot. Click a lead to write your comment in the yellow box, color it, mark it done, or send it to her now. When you have enough, tap Go to have her dial them.</p>
                     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
-                        <input id="acSearch" placeholder="Search his calls…" style="flex:1;min-width:200px;padding:9px;border:1px solid #ccd;border-radius:8px;">
+                        <input id="acSearch" placeholder="Search her calls…" style="flex:1;min-width:200px;padding:9px;border:1px solid #ccd;border-radius:8px;">
                         <label style="font-size:13px;color:#555;"><input type="checkbox" id="acShowDone"> Show done</label>
                     </div>
                     <div id="acList"></div>
@@ -5232,10 +5232,13 @@
             }
             setupRachelCalls();
 
-            // ===== ALEK'S CALLS — his floater batch, pushed here manually from any lead, mirrors Tania's Calls =====
+            // ===== MARISKA'S CALLS — her on-demand batch, pushed here manually from any lead, mirrors Tania's Calls =====
+            // Tania, Nov 25: this used to be Alek's Calls. Alek keeps calling (phone app/e-card, Spanish, floater
+            // work) -- only this particular staging queue moved to Mariska, and it starts empty on a fresh storage
+            // key (webswan_mariska_calls) rather than carrying over Alek's old backlog, so there's room for new leads.
             const acOpenRows = new Set();
-            function acLoad() { try { const a = JSON.parse(localStorage.getItem('webswan_alek_calls') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
-            function acSave(list) { localStorage.setItem('webswan_alek_calls', JSON.stringify(list)); scheduleFirebaseAutoSave(); renderAlekCalls(); }
+            function acLoad() { try { const a = JSON.parse(localStorage.getItem('webswan_mariska_calls') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+            function acSave(list) { localStorage.setItem('webswan_mariska_calls', JSON.stringify(list)); scheduleFirebaseAutoSave(); renderAlekCalls(); }
             function acLive(x) { if (x.src === 'lead') { return (leads || []).find(k => String(k.id) === String(x.refId)) || null; } const base = (telemarketingLeads || []).find(k => String(k.id) === String(x.refId)); return base ? applyTmEdits(base) : null; }
             function acView(x) {
                 const l = acLive(x), s = x.snap || {};
@@ -5257,10 +5260,10 @@
                 const snap = src === 'lead'
                     ? { name: obj.name, contact: obj.contact, phone: obj.phone, email: obj.email, url: obj.url, comment: obj.comment, myNotes: obj.myNotes || '', snapColor }
                     : { name: obj.name, companyName: obj.companyName, decisionMakerName: obj.decisionMakerName, phone: obj.phone, email: obj.email, website: obj.website, comment: obj.comment, category: obj.category, status: obj.status, telemarketerId: obj.telemarketerId, source: obj.source, snapColor };
-                if (had && !had.removedAt) { showToast("🗣️ Already in Alek's Calls.", 'success'); return; }
+                if (had && !had.removedAt) { showToast("🗣️ Already in Mariska's Calls.", 'success'); return; }
                 if (had) { delete had.removedAt; had.snap = snap; had.addedAt = new Date().toISOString(); } else list.push({ id, src, refId: String(obj.id), snap, addedAt: new Date().toISOString() });
                 acSave(list);
-                showToast("🗣️ " + (tcClean(obj.companyName || obj.name) || 'Lead') + " moved to Alek's Calls. It stays on its own list too.", 'success');
+                showToast("🗣️ " + (tcClean(obj.companyName || obj.name) || 'Lead') + " moved to Mariska's Calls. It stays on its own list too.", 'success');
             }
             function acSetColor(x, color) {
                 if (x.src === 'lead') {
@@ -5289,7 +5292,9 @@
             async function acToVoice(x) {
                 const v = acView(x);
                 if (!v.live) { showToast('That lead is no longer in its list.', 'error'); return; }
-                await doWorkpilotCall(Object.assign({}, v.live, { myNotes: v.my }), 'alek', x.doc || null);
+                // 'rebecca' is Mariska Lightborn's internal Voice Studio/Cartesia agent key (same phone instrument,
+                // new identity since Nov 25) -- never 'alek', even though this queue used to carry his name.
+                await doWorkpilotCall(Object.assign({}, v.live, { myNotes: v.my }), 'rebecca', x.doc || null);
             }
             function renderAlekCalls() {
                 const all = acLoad().filter(x => !x.removedAt);
@@ -5302,7 +5307,7 @@
                 const showDone = !!(document.getElementById('acShowDone') || {}).checked;
                 let rows = (showDone ? views : open).filter(r => !q || [r.v.name, r.v.contact, r.v.phone, r.v.email, r.v.my, r.v.theirs, r.v.color].join(' ').toLowerCase().includes(q));
                 rows.sort((a, b) => (a.v.done - b.v.done) || String(b.x.addedAt).localeCompare(String(a.x.addedAt)));
-                if (!rows.length) { box.innerHTML = '<p style="color:#777;">' + (all.length ? 'Nothing matches.' : "No leads here yet. On any lead, open the ✈️ send menu and choose “Move to Alek's Calls”, or click 🗣️ on an AI-call lead.") + '</p>'; return; }
+                if (!rows.length) { box.innerHTML = '<p style="color:#777;">' + (all.length ? 'Nothing matches.' : "No leads here yet. On any lead, open the ✈️ send menu and choose “Move to Mariska's Calls”, or click 🗣️ on an AI-call lead.") + '</p>'; return; }
                 box.innerHTML = rows.map(({ x, v }) => {
                     const isOpen = acOpenRows.has(x.id), tel = v.phone.replace(/[^\d+]/g, '');
                     const href = v.url ? (/^https?:/i.test(v.url) ? v.url : 'https://' + v.url) : '';
@@ -5326,14 +5331,14 @@
                                 ${v.outcome ? `<div><b>AI call outcome:</b> ${fcEsc(v.outcome)}${v.agent ? ' (' + fcEsc(v.agent) + ')' : ''}</div>` : ''}
                                 ${v.theirs ? `<div style="margin-top:6px;"><b>${x.src === 'tm' ? 'Call notes' : 'Lead comments'}:</b><div style="white-space:pre-wrap;background:#f6f8fb;border-radius:8px;padding:8px;margin-top:2px;max-height:180px;overflow:auto;">${fcEsc(v.theirs)}</div></div>` : ''}
                             </div>
-                            <label style="display:block;font-weight:700;color:#8a6d00;margin:10px 0 4px;">Your comment for Alek</label>
-                            <textarea class="acNotes" data-id="${fcEsc(x.id)}" maxlength="2500" placeholder="What he should say, who you already spoke with…" style="width:100%;min-height:80px;padding:9px;border:2px solid #f2d24b;background:#fffbe0;border-radius:8px;box-sizing:border-box;">${fcEsc(v.my)}</textarea>
+                            <label style="display:block;font-weight:700;color:#8a6d00;margin:10px 0 4px;">Your comment for Mariska</label>
+                            <textarea class="acNotes" data-id="${fcEsc(x.id)}" maxlength="2500" placeholder="What she should say, who you already spoke with…" style="width:100%;min-height:80px;padding:9px;border:2px solid #f2d24b;background:#fffbe0;border-radius:8px;box-sizing:border-box;">${fcEsc(v.my)}</textarea>
                             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;">
                                 <button type="button" class="btn btn-primary acAct" data-act="save" data-id="${fcEsc(x.id)}">💾 Save comment</button>
                                 <span style="display:inline-flex;gap:5px;align-items:center;">${swatches}</span>
                                 <button type="button" class="btn btn-outline acAct" data-act="done" data-id="${fcEsc(x.id)}">${v.done ? '↩️ Not done' : '☐ Done'}</button>
-                                <button type="button" class="btn btn-outline acAct" data-act="voice" data-id="${fcEsc(x.id)}" style="color:#7c3aed;border-color:#7c3aed;">📞 Send to Alek</button>
-                                <button type="button" class="btn btn-outline acAct" data-act="remove" data-id="${fcEsc(x.id)}" style="color:#b42318;border-color:#b42318;">Remove from his calls</button>
+                                <button type="button" class="btn btn-outline acAct" data-act="voice" data-id="${fcEsc(x.id)}" style="color:#7c3aed;border-color:#7c3aed;">📞 Send to Mariska</button>
+                                <button type="button" class="btn btn-outline acAct" data-act="remove" data-id="${fcEsc(x.id)}" style="color:#b42318;border-color:#b42318;">Remove from her calls</button>
                             </div>
                         </div>` : ''}
                     </div>`;
@@ -5357,7 +5362,7 @@
                     else if (act === 'color') { acSetColor(x, el.dataset.color || ''); }
                     else if (act === 'done') { toggleTmDone(x.refId); try { renderCompleted(); } catch (err) {} try { renderTelemarketingLeads(); } catch (err) {} renderAlekCalls(); }
                     else if (act === 'voice') { const ta = [...document.querySelectorAll('#acList .acNotes')].find(t => t.dataset.id === x.id); if (ta && ta.value.trim() !== acView(x).my.trim()) acSaveNotes(x, ta.value.trim()); await acToVoice(x); }
-                    else if (act === 'remove') { x.removedAt = new Date().toISOString(); acOpenRows.delete(x.id); acSave(list); showToast("Removed from Alek's Calls. The lead itself is still on its list.", 'success'); }
+                    else if (act === 'remove') { x.removedAt = new Date().toISOString(); acOpenRows.delete(x.id); acSave(list); showToast("Removed from Mariska's Calls. The lead itself is still on its list.", 'success'); }
                 });
                 renderAlekCalls();
             }
@@ -6284,7 +6289,7 @@
                     <button class="send-option" data-action="voice" ${extraAttr} style="color:#1d4ed8;font-weight:700;"><i class="fas fa-phone-volume"></i> 📞 Send to Voice Studio</button>
                     <button class="send-option" data-action="tania" ${extraAttr} style="color:#b45309;font-weight:700;">📒 Move to Tania's Calls</button>
                     <button class="send-option" data-action="jenna" ${extraAttr} style="color:#2d7a03;font-weight:700;">🕵️‍♀️ Move to Jenna's Calls</button>
-                    <button class="send-option" data-action="alek" ${extraAttr}><i class="fas fa-headset"></i> Move to Alek's Calls</button>
+                    <button class="send-option" data-action="alek" ${extraAttr}><i class="fas fa-headset"></i> Move to Mariska's Calls</button>
                     <button class="send-option" data-action="rachel" ${extraAttr} style="color:#a30d58;font-weight:700;">📞 Move to Rachel's Calls</button>
                     <button class="send-option" data-action="crm" ${extraAttr}><i class="fas fa-database"></i> Open in CRM</button>
                     <button class="send-option" data-action="studio" ${extraAttr}><i class="fas fa-swatchbook"></i> WebSwan Studio (hot lead)</button>`;
@@ -7877,7 +7882,7 @@
                             <button class="tm-done-btn tm-done-pill${done ? ' is-done' : ''}" data-tm-id="${lead.id}" title="${done ? 'Clear the check — mark not done' : 'Click after you call or make an audit for this lead, so you know you already did it'}" aria-label="Mark done">${done ? '✓ Done' : '☐ Done'}</button>
                             <button class="tm-tania-btn" data-tm-id="${lead.id}" title="Move to Tania's Calls (it stays here too)" aria-label="Move to Tania's Calls" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 4px;">📒</button>
                             <button class="tm-jenna-btn" data-tm-id="${lead.id}" title="Move to Jenna's Calls (it stays here too)" aria-label="Move to Jenna's Calls" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 4px;">🕵️‍♀️</button>
-                            <button class="tm-alek-btn" data-tm-id="${lead.id}" title="Move to Alek's Calls (it stays here too)" aria-label="Move to Alek's Calls" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 4px;">🗣️</button>
+                            <button class="tm-alek-btn" data-tm-id="${lead.id}" title="Move to Mariska's Calls (it stays here too)" aria-label="Move to Mariska's Calls" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 4px;">🗣️</button>
                             <button class="tm-rachel-btn" data-tm-id="${lead.id}" title="Move to Rachel's Calls (it stays here too)" aria-label="Move to Rachel's Calls" style="background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 4px;">📞</button>
                             <button class="tm-voice-btn tm-push-btn" data-tm-id="${lead.id}" title="Send or move this lead to a Voice Studio agent (Monica, George, Rebecca, Alek or Jenna)" aria-label="Send to a Voice Studio agent" style="color:#1d4ed8;"><i class="fas fa-phone-volume"></i></button>
                             <button class="tm-push-btn tm-edit-btn" data-tm-id="${lead.id}" title="Edit (name, email, comments), then push to the Lead Form" style="color:#ad1457;"><i class="fas fa-pen"></i></button>
