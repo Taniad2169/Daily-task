@@ -360,8 +360,18 @@ input,textarea,select,[contenteditable],[data-selectable]{-webkit-user-select:te
     <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:800">💡 Idea to video (it writes the whole script)</summary>
       <label for="idea">Your idea</label>
       <textarea id="idea" style="min-height:70px" placeholder="A 30-second Reel for dentists: why their website needs an ADA check, and how to book a free audit"></textarea>
-      <label for="ideaUrl" style="margin-top:8px">🌐 Or one of your websites (it reads the real page and writes the script from that — leave your idea blank, or fill both)</label>
-      <input id="ideaUrl" type="text" placeholder="thewebswan.com, webswandigitalsolutions.com, or your Media Network site">
+      <label for="ideaUrlPick" style="margin-top:8px">🌐 Or one of your websites (it reads the real page and writes the script from that — leave your idea blank, or fill both)</label>
+      <!-- Tania, Nov 25 ("i don't see the drop down menu for that option"): this was a plain type-it-yourself text
+           box -- the placeholder just listed your three sites as examples, there was never an actual dropdown.
+           Now there is: pick one of your three sites, or "Another website..." to type any other URL. -->
+      <select id="ideaUrlPick">
+        <option value="">— pick a site —</option>
+        <option value="https://thewebswan.com">The WebSwan (thewebswan.com)</option>
+        <option value="https://webswandigitalsolutions.com">WebSwan Digital Solutions (webswandigitalsolutions.com)</option>
+        <option value="https://webswanmedianetwork.com">WebSwan Media Network (webswanmedianetwork.com)</option>
+        <option value="__other__">Another website…</option>
+      </select>
+      <input id="ideaUrl" type="text" style="margin-top:6px;display:none" placeholder="Paste the website link">
       <div class="row">
         <div><label for="ideaLen">Length</label><select id="ideaLen"><option value="15">15 seconds</option><option value="30" selected>30 seconds</option><option value="45">45 seconds</option><option value="60">1 minute</option><option value="90">90 seconds</option></select></div>
         <div><label for="ideaLang">Language</label><select id="ideaLang"><option value="en">English</option><option value="pt">Português (Brasil)</option><option value="fr">Français</option><option value="es">Español (Latino)</option><option value="ht">Kreyòl ayisyen</option></select></div>
@@ -919,7 +929,7 @@ function renderLibrary(keep){
 async function loadLibrary(){ try { library = (await api({ action: "library" })).library || []; renderLibrary(); } catch (e) { $("ttsVoice").innerHTML = '<option value="">' + e.message + '</option>'; } }
 function langUi(){ const ht = $("ttsLang").value === "ht"; $("htBox").style.display = ht ? "block" : "none"; $("ttsBtn").disabled = ht; }
 window.vmOnSignIn = async () => {
-  loadLibrary();
+  loadLibrary(); loadGallery(); // re-run now that we actually have a token -- the page-load call ran signed out and could only see this device's local videos
   try { const s = await api({ action: "status_check" });
     $("toolsInfo").textContent = `Connected: voices ${s.cartesia ? "✅" : "❌"} · lip sync ${s.fal ? "✅" : "❌ (add FAL_KEY)"} · Hedra ${s.hedra ? "✅" : "➖"} · spent today $${s.spentToday} of $${s.dailyCap}`;
   } catch (e) { $("toolsInfo").textContent = e.message; }
@@ -1240,19 +1250,41 @@ const _info = info; info = function(){ _info(); talkInfo(); };
 loadAlbum(); loadMusicLib();
 // ----- My videos: keep, watch, download or delete -----
 let gallery = [];
-async function loadGallery(){ try { gallery = ((await idb.videos.all()) || []).sort((a, b) => b.at - a.at); } catch { gallery = []; } renderGallery(); }
+// Tania, Nov 25 ("i can't view any of my videos from video maker were they saved boo?"): these used to live ONLY
+// in this one browser's IndexedDB -- a different device, a different browser, or Safari clearing storage for a
+// site you haven't opened in a while, and they really were gone from where you were looking, even though nothing
+// was ever deleted. Finished videos now also get a real backup in the cloud (same fal upload already used for
+// Make me talk), so "My videos" can show up wherever you sign in, not just on the one device that rendered them.
+// A video made before this change, in a browser that no longer has it, can't be recovered -- there was never a
+// copy anywhere else for it. Everything made from now on gets one automatically.
+async function loadGallery(){
+  let local = []; try { local = (await idb.videos.all()) || []; } catch {}
+  let cloud = []; try { cloud = (await api({ action: "gallery_list" })).gallery || []; } catch {} // not signed in yet, or cloud list unavailable -- local still shows
+  const byId = new Map(local.map((v) => [v.id, v]));
+  cloud.forEach((c) => { const have = byId.get(c.id); if (have) have.url = c.url; else byId.set(c.id, { ...c, blob: null }); });
+  gallery = [...byId.values()].sort((a, b) => b.at - a.at);
+  renderGallery();
+}
 async function saveVideo(v){
   try { await idb.videos.put(v); } catch {}
   gallery.unshift(v); renderGallery();
   status("✅ Saved to 🎞️ My videos below. Watch it, then press ⬇ Download when you're happy (or 🗑️ delete it).");
   $("gallery").scrollIntoView({ behavior: "smooth", block: "center" });
+  // Back it up to the cloud in the background -- doesn't block or interrupt what she's doing.
+  (async () => {
+    try {
+      const url = await upload(v.blob, v.name);
+      await api({ action: "gallery_save", id: v.id, name: v.name, ext: v.ext, size: v.size, secs: v.secs, at: v.at, file_url: url });
+      v.url = url; renderGallery();
+    } catch (e) { /* local save already succeeded; cloud backup is a bonus, not a requirement -- stay quiet */ }
+  })();
 }
 function renderGallery(){
   const box = $("gallery");
   if (!gallery.length) { box.innerHTML = '<div class="note">Videos you make show here. Watch them, then download the one you like or delete your tests.</div>'; return; }
   box.innerHTML = "";
   gallery.forEach((v) => {
-    const url = URL.createObjectURL(v.blob), d = document.createElement("div"); d.className = "scene";
+    const url = v.blob ? URL.createObjectURL(v.blob) : v.url, d = document.createElement("div"); d.className = "scene";
     d.innerHTML = `<video controls playsinline preload="metadata" style="width:100%;max-height:300px;border-radius:8px;background:#000"></video>
       <div class="row" style="margin-top:6px;align-items:center">
         <input type="text" aria-label="Video name" style="flex:2">
@@ -1264,11 +1296,12 @@ function renderGallery(){
     nm.value = v.name.replace(/\.(mp4|webm)$/, "");
     const fname = () => (nm.value.trim() || "WebSwan-video").replace(/[^\w\- ]+/g, "").replace(/\s+/g, "-") + "." + v.ext;
     dl.href = url; dl.download = fname();
-    nm.oninput = () => { dl.download = fname(); v.name = fname(); try { idb.videos.put(v); } catch {} };
-    mini.textContent = `${new Date(v.at).toLocaleString()} · ${v.secs || "?"} s · ${(v.size / 1048576).toFixed(1)} MB · ${v.ext.toUpperCase()}`;
+    nm.oninput = () => { dl.download = fname(); v.name = fname(); if (v.blob) try { idb.videos.put(v); } catch {} };
+    mini.textContent = `${new Date(v.at).toLocaleString()} · ${v.secs || "?"} s · ${v.size ? (v.size / 1048576).toFixed(1) + " MB · " : ""}${v.ext.toUpperCase()} · ${v.url ? "☁️ backed up" : "📱 this device only"}`;
     del.onclick = async () => {
       if (!del.dataset.ok) { del.dataset.ok = "1"; del.textContent = "Press again to delete"; setTimeout(() => { delete del.dataset.ok; del.textContent = "🗑️ Delete"; }, 5000); return; }
-      try { await idb.videos.del(v.id); } catch {} URL.revokeObjectURL(url); gallery = gallery.filter(x => x !== v); renderGallery();
+      try { await idb.videos.del(v.id); } catch {} if (v.url) try { await api({ action: "gallery_delete", id: v.id }); } catch {}
+      if (v.blob) URL.revokeObjectURL(url); gallery = gallery.filter(x => x !== v); renderGallery();
     };
     box.appendChild(d);
   });
@@ -1360,6 +1393,11 @@ async function loadClaudeList(){
     });
   } catch { box.textContent = "Couldn't load the list right now."; }
 }
+$("ideaUrlPick").onchange = () => {
+  const v = $("ideaUrlPick").value, box = $("ideaUrl");
+  if (v === "__other__") { box.style.display = ""; box.value = ""; box.focus(); }
+  else { box.style.display = "none"; box.value = v; }
+};
 // idea to video (DeepSeek on the server)
 $("ideaBtn").onclick = async () => {
   const idea = $("idea").value.trim(), url = $("ideaUrl").value.trim(), st = (m) => { $("ideaStatus").textContent = m; };
