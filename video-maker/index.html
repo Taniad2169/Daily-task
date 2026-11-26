@@ -184,8 +184,22 @@ input,textarea,select,[contenteditable],[data-selectable]{-webkit-user-select:te
       <div style="flex:2"><label for="musicLib">Music for this video</label><select id="musicLib"><option value="">No music</option></select></div>
       <div><label for="musicVol">Volume</label><input id="musicVol" type="range" min="0" max="100" value="25" style="width:100%"></div>
     </div>
+    <!-- Tania, Nov 25 ("as far as music i selected pixabay instead of opening their library it opens my computer
+         file i have no music saved there"): there's no button here that can open Pixabay's own catalog inside
+         this page -- Pixabay doesn't offer that as an embeddable picker, only a website to browse and a plain
+         MP3 download. So this is always a 2-step, manual process: 1) open Pixabay (or YouTube Audio Library /
+         Mixkit) in its own tab and download a track you like, 2) come back here and add THAT downloaded file
+         with the button below. The dropdown under it is just a label for your license records -- picking
+         "Pixabay Music" there does not fetch anything from Pixabay, it only tags the track you upload as having
+         come from there. Reordered so step 1 (go get a track) reads before step 2 (add the file), and reworded
+         so the button can't be mistaken for a Pixabay browser. -->
+    <p class="note">Step 1 -- get a free, legal track (opens in a new tab), download the MP3:
+      <a href="https://pixabay.com/music/" target="_blank" rel="noopener">Pixabay Music</a> ·
+      <a href="https://studio.youtube.com/" target="_blank" rel="noopener">YouTube Audio Library</a> (YouTube Studio → Audio Library) ·
+      <a href="https://mixkit.co/free-stock-music/" target="_blank" rel="noopener">Mixkit</a>.
+      Never use songs from the radio or Spotify: Facebook and Instagram mute or remove them.</p>
     <div class="row" style="margin-top:8px">
-      <div><label for="musicSrc">Where it's from (your license proof)</label>
+      <div><label for="musicSrc">Step 2 -- where that download came from (your license proof)</label>
         <select id="musicSrc">
           <option>Pixabay Music (free for business, no credit needed)</option>
           <option>YouTube Audio Library (check if credit is required)</option>
@@ -194,18 +208,13 @@ input,textarea,select,[contenteditable],[data-selectable]{-webkit-user-select:te
           <option>Bought / licensed by me</option>
           <option>Made by me</option>
         </select></div>
-      <div><label>&nbsp;</label><label class="btn ghost" style="margin:0;justify-content:center;color:var(--brand);border:1px solid var(--brand);background:transparent">➕ Add music to my library<input id="musicFile" type="file" accept="audio/*" multiple hidden></label></div>
+      <div><label>&nbsp;</label><label class="btn ghost" style="margin:0;justify-content:center;color:var(--brand);border:1px solid var(--brand);background:transparent">➕ Add that downloaded file<input id="musicFile" type="file" accept="audio/*" multiple hidden></label></div>
     </div>
     <div class="row" style="margin-top:8px">
       <button id="musicHear" class="ghost">▶ Hear</button>
       <button id="musicClear" class="icon">Remove from library</button>
     </div>
     <div id="musicInfo" class="note"></div>
-    <p class="note">Get free, legal music here, download the MP3, then ➕ add it:
-      <a href="https://pixabay.com/music/" target="_blank" rel="noopener">Pixabay Music</a> ·
-      <a href="https://studio.youtube.com/" target="_blank" rel="noopener">YouTube Audio Library</a> (YouTube Studio → Audio Library) ·
-      <a href="https://mixkit.co/free-stock-music/" target="_blank" rel="noopener">Mixkit</a>.
-      Never use songs from the radio or Spotify: Facebook and Instagram mute or remove them.</p>
     <div class="row" style="margin-top:10px"><button id="signInBtn" class="ghost">Sign in with Google (for voices and lip sync)</button></div>
     <div id="toolsInfo" class="note"></div>
 
@@ -345,7 +354,7 @@ input,textarea,select,[contenteditable],[data-selectable]{-webkit-user-select:te
   </div>
   <div class="card" id="s-start" style="border:2px solid var(--brand)">
     <h2>⭐ Start here</h2>
-    <details open><summary style="cursor:pointer;font-weight:800">📥 Videos Claude made for you</summary>
+    <details open><summary style="cursor:pointer;font-weight:800">📥 Starter scripts Claude made for you</summary>
       <div id="claudeList" class="note" style="margin-top:6px">Loading…</div>
     </details>
     <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:800">💡 Idea to video (it writes the whole script)</summary>
@@ -1340,9 +1349,13 @@ async function loadClaudeList(){
     box.innerHTML = "";
     list.forEach(x => {
       const d = document.createElement("div"); d.className = "scene"; d.style.padding = "8px";
-      d.innerHTML = `<div style="font-weight:800;font-size:13px"></div><div class="mini"></div><div class="row" style="margin-top:6px"><button class="icon">📂 Open this video</button></div>`;
+      // Tania, Nov 25: this button used to say "Open this video" -- but it only opens the SCRIPT (scenes, no
+      // media yet), which is why it looked "broken" (a blue background with the caption text, not a playing
+      // video): there's nothing to play until she adds her voice + avatar and presses Make my video. Renamed so
+      // it's clear up front this is a starting script to build from, not a finished video.
+      d.innerHTML = `<div style="font-weight:800;font-size:13px"></div><div class="mini"></div><div class="row" style="margin-top:6px"><button class="icon">📝 Use this script</button></div>`;
       d.children[0].textContent = (x.template ? "🧩 " : "🎬 ") + x.title; d.children[1].textContent = x.desc || "";
-      d.querySelector("button").onclick = async () => { try { loadProject(await (await fetch("projects/" + x.file + "?ts=" + Date.now())).json()); } catch { status("That video couldn't be opened."); } };
+      d.querySelector("button").onclick = async () => { try { loadProject(await (await fetch("projects/" + x.file + "?ts=" + Date.now())).json()); } catch { status("That script couldn't be opened."); } };
       box.appendChild(d);
     });
   } catch { box.textContent = "Couldn't load the list right now."; }

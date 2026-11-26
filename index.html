@@ -7416,19 +7416,69 @@
                 box.querySelectorAll('.mariskaOpenHit').forEach((b) => b.onclick = () => { hits[+b.dataset.i].el.click(); });
                 return true;
             }
-            function mariskaToggleMic() {
+            // Tania, Nov 25 ("it is not like me talking to eva or kobe etc on voice"): the mic used to do one-shot
+            // voice-TO-TEXT only -- it dropped the transcript in the textbox and stopped, so she had to press
+            // Send herself, read the reply, then press a separate 🔊 on that one message to hear it. Eva/Kobe's
+            // real voice mode (team/index.html: voiceStart/listen/voiceTurn/speak) is a loop: listen, send the
+            // moment she stops talking, speak the reply out loud, then listen again automatically. This rebuilds
+            // that same loop for Mariska's WorkPilot mic (without their barge-in/interrupt-while-speaking layer,
+            // which is a bigger, separate feature tied to their own page's audio/recognition state -- this is
+            // strict turn-taking: the mic is off while she's thinking or talking, and reopens once she's done).
+            let mariskaVoiceOn = false, mariskaVoiceAudio = null;
+            function mariskaVoiceStatus(msg) {
+                const el = document.getElementById('mariskaVoiceStatus'); if (!el) return;
+                el.textContent = msg || ''; el.style.display = msg ? 'block' : 'none';
+            }
+            function mariskaVoiceStop(msg) {
+                mariskaVoiceOn = false; mariskaListening = false;
+                try { mariskaRecog && mariskaRecog.abort(); } catch (e) {}
+                try { mariskaVoiceAudio && mariskaVoiceAudio.pause(); } catch (e) {}
+                const micBtn = document.getElementById('mariskaMicBtn'); if (micBtn) { micBtn.style.color = '#b5179e'; micBtn.title = 'Talk to her'; }
+                mariskaVoiceStatus(msg || '');
+            }
+            function mariskaSpeak(text) {
+                return new Promise(async (resolve) => {
+                    try {
+                        const tok = await window.wpGmail.idToken(); if (!tok) { resolve(); return; }
+                        const r = await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'tts', agent: 'mariska', text, lang: mariskaLangCode() }) });
+                        const d = await r.json().catch(() => ({}));
+                        if (!r.ok) { showToast(d.error || 'Could not get her voice just now.', 'error'); resolve(); return; }
+                        const a = new Audio('data:' + (d.mime || 'audio/mpeg') + ';base64,' + d.audio);
+                        mariskaVoiceAudio = a; a.onended = resolve; a.onerror = resolve;
+                        mariskaVoiceStatus('🔊 Speaking…'); a.play().catch(resolve);
+                    } catch (e) { resolve(); }
+                });
+            }
+            function mariskaVoiceListen() {
+                if (!mariskaVoiceOn) return;
                 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
                 const micBtn = document.getElementById('mariskaMicBtn');
-                if (!SR) { showToast('Voice input isn\'t supported in this browser.', 'error'); return; }
-                if (mariskaListening) { try { mariskaRecog && mariskaRecog.stop(); } catch (e) {} return; }
+                try { mariskaRecog && mariskaRecog.abort(); } catch (e) {}
                 mariskaRecog = new SR();
                 mariskaRecog.lang = mariskaSpeechLocale(mariskaLangCode());
-                mariskaRecog.interimResults = false;
-                mariskaRecog.onstart = () => { mariskaListening = true; if (micBtn) { micBtn.style.color = '#dc2626'; micBtn.title = 'Listening… click to stop'; } };
-                mariskaRecog.onend = () => { mariskaListening = false; if (micBtn) { micBtn.style.color = '#b5179e'; micBtn.title = 'Talk to her'; } };
-                mariskaRecog.onerror = () => { mariskaListening = false; if (micBtn) { micBtn.style.color = '#b5179e'; } };
-                mariskaRecog.onresult = (e) => { const t = Array.prototype.map.call(e.results, (r) => r[0].transcript).join(' '); const ta = document.getElementById('mariskaInput'); if (ta) { ta.value = (ta.value ? ta.value + ' ' : '') + t; ta.focus(); } };
+                mariskaRecog.interimResults = true; mariskaRecog.continuous = false;
+                let finalText = '';
+                mariskaRecog.onstart = () => { mariskaListening = true; if (micBtn) { micBtn.style.color = '#dc2626'; micBtn.title = 'Listening… click to stop talking to her'; } mariskaVoiceStatus('Listening…'); };
+                mariskaRecog.onresult = (e) => { let t = ''; for (const x of e.results) { t += x[0].transcript; if (x.isFinal) finalText = t; } mariskaVoiceStatus('You: ' + t); };
+                mariskaRecog.onerror = (e) => { mariskaListening = false; if (e.error === 'not-allowed') { showToast('Allow the microphone for this page, then press her mic again.', 'error'); mariskaVoiceStop(); } };
+                mariskaRecog.onend = async () => {
+                    mariskaListening = false;
+                    if (!mariskaVoiceOn) return;
+                    const f = finalText.trim();
+                    if (!f) { mariskaVoiceStop('Didn\'t catch that -- press her mic to try again.'); return; }
+                    const micBtn2 = document.getElementById('mariskaMicBtn'); if (micBtn2) { micBtn2.style.color = '#b5179e'; micBtn2.title = 'Talk to her'; }
+                    mariskaVoiceStatus('💭 Thinking…');
+                    await mariskaSendText(f, { autoSpeak: true, voice: true });
+                    if (mariskaVoiceOn) mariskaVoiceListen(); // her turn's done -- open the mic again for the next thing Tania says
+                };
                 mariskaRecog.start();
+            }
+            function mariskaToggleMic() {
+                const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SR) { showToast('Voice input isn\'t supported in this browser.', 'error'); return; }
+                if (mariskaVoiceOn) { mariskaVoiceStop(); return; }
+                mariskaVoiceOn = true;
+                mariskaVoiceListen();
             }
             function mariskaPickFile() { const inp = document.getElementById('mariskaFileInput'); if (inp) inp.click(); }
             function mariskaOnFile(e) {
@@ -7445,33 +7495,38 @@
                 e.target.value = '';
             }
             function mariskaClearFile() { mariskaPendingFile = null; const chip = document.getElementById('mariskaFileChip'); if (chip) chip.style.display = 'none'; }
-            async function mariskaSendText(text) {
-                if (mariskaBusy || !text.trim()) return;
-                if (!mariskaPendingFile && mariskaTryFindButton(text)) { const ta = document.getElementById('mariskaInput'); if (ta) ta.value = ''; return; }
+            async function mariskaSendText(text, opts) {
+                opts = opts || {};
+                if (mariskaBusy || !text.trim()) return '';
+                if (!mariskaPendingFile && mariskaTryFindButton(text)) { const ta = document.getElementById('mariskaInput'); if (ta) ta.value = ''; return ''; }
                 const box = document.getElementById('mariskaMsgs');
                 const att = mariskaPendingFile;
                 box.insertAdjacentHTML('beforeend', mariskaBubble(text + (att ? '\n📎 ' + att.name : ''), true));
                 box.scrollTop = box.scrollHeight + 9999;
-                const ta = document.getElementById('mariskaInput'); if (ta) ta.value = '';
+                const ta = document.getElementById('mariskaInput'); if (ta && !opts.voice) ta.value = '';
                 mariskaClearFile();
                 const sendBtn = document.getElementById('mariskaSendBtn'); if (sendBtn) sendBtn.disabled = true;
                 mariskaBusy = true;
                 box.insertAdjacentHTML('beforeend', '<div id="mariskaThinking" style="margin:8px 0;color:#64748b;font-size:.82rem;">💭 Mariska is thinking…</div>');
                 box.scrollTop = box.scrollHeight + 9999;
+                let replyText = '';
                 try {
                     const tok = await window.wpGmail.idToken();
-                    if (!tok) { showToast('Sign in with Google first (top of WorkPilot) to talk to Mariska.', 'error'); return; }
+                    if (!tok) { showToast('Sign in with Google first (top of WorkPilot) to talk to Mariska.', 'error'); return ''; }
                     const body = { action: 'chat', agent: 'mariska', text };
+                    if (opts.voice) body.voice = true;
                     if (att) body.file = att;
                     const r = await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify(body) });
                     const d = await r.json().catch(() => ({}));
                     const think = document.getElementById('mariskaThinking'); if (think) think.remove();
-                    if (!r.ok) { showToast(d.error || 'Mariska could not answer just now.', 'error'); return; }
+                    if (!r.ok) { showToast(d.error || 'Mariska could not answer just now.', 'error'); return ''; }
                     const reply = (d.messages || []).slice(-1)[0];
-                    if (reply && reply.text) { box.insertAdjacentHTML('beforeend', mariskaBubble(reply.text, false)); localStorage.setItem('mariskaLastSeenId', reply.id || ''); }
+                    if (reply && reply.text) { box.insertAdjacentHTML('beforeend', mariskaBubble(reply.text, false)); localStorage.setItem('mariskaLastSeenId', reply.id || ''); replyText = reply.text; }
                     box.scrollTop = box.scrollHeight + 9999;
                 } catch (e) { const think = document.getElementById('mariskaThinking'); if (think) think.remove(); showToast('Mariska: ' + e.message, 'error'); }
-                finally { mariskaBusy = false; if (sendBtn) sendBtn.disabled = false; if (ta) ta.focus(); }
+                finally { mariskaBusy = false; if (sendBtn) sendBtn.disabled = false; if (ta && !opts.voice) ta.focus(); }
+                if (opts.autoSpeak && replyText) await mariskaSpeak(replyText);
+                return replyText;
             }
             function mariskaSend() { const ta = document.getElementById('mariskaInput'); if (ta) mariskaSendText(ta.value || ''); }
             function mariskaQuickTool(kind) {
@@ -7499,6 +7554,7 @@
                     + '<div style="display:flex;gap:6px;"><input id="mariskaAeoUrl" placeholder="URL for an AEO/GEO check" style="flex:1;min-width:0;border:1px solid #e3c6dd;border-radius:8px;padding:6px 8px;font-size:.82rem;"><button type="button" id="mariskaAeoGo" style="border:none;background:#b5179e;color:#fff;border-radius:8px;padding:0 10px;font-size:.8rem;cursor:pointer;">Check</button></div>'
                     + '<div style="display:flex;gap:6px;"><select id="mariskaAnMode" style="border:1px solid #e3c6dd;border-radius:8px;font-size:.8rem;"><option value="analytics">Website Analytics</option><option value="aeo">AEO/GEO Search</option></select><input id="mariskaAnUrl" placeholder="URL" style="flex:1;min-width:0;border:1px solid #e3c6dd;border-radius:8px;padding:6px 8px;font-size:.82rem;"><button type="button" id="mariskaAnGo" style="border:none;background:#b5179e;color:#fff;border-radius:8px;padding:0 10px;font-size:.8rem;cursor:pointer;">Check</button></div>'
                     + '</div></div>'
+                    + '<div id="mariskaVoiceStatus" style="display:none;margin:0 14px 6px;font-size:.78rem;color:#b5179e;font-style:italic;"></div>'
                     + '<div id="mariskaFileChip" style="display:none;align-items:center;gap:8px;margin:0 14px;padding:4px 10px;background:#fbeef8;border-radius:8px;font-size:.78rem;color:#7a1763;"><span></span><button type="button" id="mariskaFileClearBtn" style="border:none;background:none;color:#7a1763;cursor:pointer;">✕</button></div>'
                     + '<div style="display:flex;gap:8px;padding:12px 14px;border-top:1px solid #f1d9ec;align-items:flex-end;">'
                     + '<input type="file" id="mariskaFileInput" style="display:none;">'
@@ -7507,8 +7563,8 @@
                     + '<textarea id="mariskaInput" placeholder="Ask Mariska…" style="flex:1;resize:none;min-height:40px;max-height:120px;border:1px solid #e3c6dd;border-radius:10px;padding:9px 11px;font:inherit;font-size:.88rem;"></textarea>'
                     + '<button type="button" id="mariskaSendBtn" style="border:none;background:#b5179e;color:#fff;border-radius:10px;padding:0 16px;height:40px;font-weight:700;cursor:pointer;">Send</button></div></div>';
                 document.body.appendChild(ov);
-                ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
-                document.getElementById('mariskaClose').onclick = () => ov.remove();
+                ov.addEventListener('click', (e) => { if (e.target === ov) { mariskaVoiceStop(); ov.remove(); } });
+                document.getElementById('mariskaClose').onclick = () => { mariskaVoiceStop(); ov.remove(); };
                 document.getElementById('mariskaToolsToggle').onclick = () => { const t = document.getElementById('mariskaTools'); t.style.display = t.style.display === 'none' ? 'flex' : 'none'; };
                 document.getElementById('mariskaMsgs').addEventListener('click', (e) => { const b = e.target.closest('.mariskaPlay'); if (b) mariskaPlay(mariskaMsgTexts[+b.dataset.idx], b); });
                 const ta = document.getElementById('mariskaInput');
