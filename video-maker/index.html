@@ -350,7 +350,11 @@ input,textarea,select,[contenteditable],[data-selectable]{-webkit-user-select:te
       <button id="newVideoBtn" class="icon">🧹 Clear and start a new video</button>
     </div>
     <div id="status" class="status"></div>
-    <p class="note">Making the video plays it once in real time, so keep this tab in front until it finishes. It goes into 🎞️ My videos below. Nothing downloads until you press ⬇ Download.</p>
+    <!-- Tania, Nov 25 ("i need a button to download video as soon as we make them so i save them to my computer"):
+         a download link already existed, but only down in the 🎞️ My videos list below -- this one shows right
+         here, right next to Make my video, the moment it finishes, so there's no scrolling to find it. -->
+    <a id="freshDownload" class="btn" style="display:none;margin-top:8px" download>⬇ Download this video now</a>
+    <p class="note">Making the video plays it once in real time, so keep this tab in front until it finishes. It also goes into 🎞️ My videos below (and backs up to the cloud) if you want it later.</p>
   </div>
   <div class="card" id="s-start" style="border:2px solid var(--brand)">
     <h2>⭐ Start here</h2>
@@ -761,8 +765,9 @@ function exportVideo(){
       $("exportBtn").disabled = false;
       if (!chunks.length) { status("⚠️ Nothing was recorded. Keep this tab in front while it records, then try again."); return; }
       const blob = new Blob(chunks, { type: mime.split(";")[0] }), ext = mime.includes("mp4") ? "mp4" : "webm";
-      const name = (brand().name + " " + new Date().toISOString().slice(0,10)).replace(/\s+/g, "-") + "." + ext, url = URL.createObjectURL(blob);
-      URL.revokeObjectURL(url);
+      const name = (brand().name + " " + new Date().toISOString().slice(0,10)).replace(/\s+/g, "-") + "." + ext;
+      const freshUrl = URL.createObjectURL(blob), fresh = $("freshDownload");
+      fresh.href = freshUrl; fresh.download = name; fresh.style.display = "inline-flex";
       saveVideo({ id: "vid-" + Date.now(), name, ext, blob, size: blob.size, at: Date.now(), secs: Math.round(total()) });
       drawAt(0);
     };
@@ -871,6 +876,7 @@ $("newVideoBtn").onclick = () => {
   if (!b.dataset.ok) { b.dataset.ok = "1"; b.textContent = "Press again: clears the preview, script, scenes and voice (My videos stay)"; setTimeout(() => { delete b.dataset.ok; b.textContent = "🧹 Clear and start a new video"; }, 6000); return; }
   delete b.dataset.ok; b.textContent = "🧹 Clear and start a new video";
   stop(); scenes = []; voice = null; $("script").value = ""; $("talkResult").innerHTML = ""; tStatus(""); info(); renderScenes(); save(); drawAt(0);
+  const fresh = $("freshDownload"); fresh.style.display = "none"; fresh.removeAttribute("href");
   status("Cleared. Write a new script to start your next video.");
 };
 $("format").onchange = () => { setSize(); save(); };
