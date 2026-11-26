@@ -7584,6 +7584,11 @@
             // Tania, Nov 24/25: "a green little light on her button so I can read or voice talk to her."
             async function mariskaCheckNew() {
                 try {
+                    // Tania, Nov 25 (Netlify credit leak): this is just an unread-message dot, not a live alert --
+                    // it doesn't need to poll the team function while the tab isn't even the one she's looking at
+                    // (background tab, minimized window). Every 2 minutes, all day, with WorkPilot just left open,
+                    // was real function-invocation volume for a dot nobody could see anyway.
+                    if (document.visibilityState !== 'visible') return;
                     if (document.getElementById('mariskaOverlay')) return; // already open, she's being read right now
                     const tok = window.wpGmail && await window.wpGmail.idToken(); if (!tok) return;
                     const r = await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'history', agent: 'mariska' }) });
