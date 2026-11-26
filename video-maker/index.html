@@ -358,10 +358,13 @@ input,textarea,select,[contenteditable],[data-selectable]{-webkit-user-select:te
   </div>
   <div class="card" id="s-start" style="border:2px solid var(--brand)">
     <h2>⭐ Start here</h2>
-    <details open><summary style="cursor:pointer;font-weight:800">📥 Starter scripts Claude made for you</summary>
-      <div id="claudeList" class="note" style="margin-top:6px">Loading…</div>
-    </details>
-    <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:800">💡 Idea to video (it writes the whole script)</summary>
+    <!-- Tania, Nov 25 ("i still can't locate making my video from url"): found it -- this whole section was a
+         small, collapsed, plain-text disclosure buried BELOW the starter-script list and the templates section,
+         with no visual weight at all, so it read like one more line of text rather than the main thing to click.
+         Moved to the top of Start here, opened by default, and given its own colored, boxed-in header so it
+         can't be missed. -->
+    <div style="border:2px solid var(--brand);border-radius:12px;padding:10px 12px;margin-bottom:14px;background:color-mix(in srgb, var(--brand) 6%, transparent)">
+      <div style="font-weight:800;color:var(--brand);font-size:1.05rem;margin-bottom:8px">🌐 Make a video from your website or an idea</div>
       <label for="idea">Your idea</label>
       <textarea id="idea" style="min-height:70px" placeholder="A 30-second Reel for dentists: why their website needs an ADA check, and how to book a free audit"></textarea>
       <label for="ideaUrlPick" style="margin-top:8px">🌐 Or one of your websites (it reads the real page and writes the script from that — leave your idea blank, or fill both)</label>
@@ -382,6 +385,9 @@ input,textarea,select,[contenteditable],[data-selectable]{-webkit-user-select:te
       </div>
       <div class="row" style="margin-top:8px"><button id="ideaBtn">✍️ Write my video</button></div>
       <div id="ideaStatus" class="status"></div>
+    </div>
+    <details><summary style="cursor:pointer;font-weight:800">📥 Starter scripts Claude made for you</summary>
+      <div id="claudeList" class="note" style="margin-top:6px">Loading…</div>
     </details>
     <details style="margin-top:10px"><summary style="cursor:pointer;font-weight:800">📁 My projects &amp; templates</summary>
       <div class="row" style="margin-top:6px">
@@ -422,10 +428,14 @@ input,textarea,select,[contenteditable],[data-selectable]{-webkit-user-select:te
 (() => {
 const $ = (id) => document.getElementById(id);
 const cv = $("cv"), ctx = cv.getContext("2d");
+// Tania, Nov 25 ("ending contact in the video that is not my phone number boo (415)877-0687"): these three
+// contact lines were each defaulting to one of Rachel's AI-receptionist numbers for that brand's phone line
+// (510-535-4763 for The WebSwan, 316-248-6839 for Media Network) -- real numbers, just not hers. Videos end on
+// her own cell now across all three brands.
 const BRANDS = {
-  ws: { name: "The WebSwan", c1: "#1182f0", c2: "#339cde", c3: "#93e5fa", cta: "Websites, phone apps and software", contact: "thewebswan.com · (510) 535-4763" },
-  ds: { name: "WebSwan Digital Solutions", c1: "#0d5fb8", c2: "#1182f0", c3: "#6ca1d4", cta: "Book your complimentary website audit", contact: "webswandigitalsolutions.com" },
-  mn: { name: "WebSwan Media Network", c1: "#0b2f5c", c2: "#339cde", c3: "#93e5fa", cta: "Get found by patients and clients", contact: "ads.webswanmedianetwork.com · (316) 248-6839" }
+  ws: { name: "The WebSwan", c1: "#1182f0", c2: "#339cde", c3: "#93e5fa", cta: "Websites, phone apps and software", contact: "thewebswan.com · (415) 877-0687" },
+  ds: { name: "WebSwan Digital Solutions", c1: "#0d5fb8", c2: "#1182f0", c3: "#6ca1d4", cta: "Book your complimentary website audit", contact: "webswandigitalsolutions.com · (415) 877-0687" },
+  mn: { name: "WebSwan Media Network", c1: "#0b2f5c", c2: "#339cde", c3: "#93e5fa", cta: "Get found by patients and clients", contact: "ads.webswanmedianetwork.com · (415) 877-0687" }
 };
 const SIZES = { "9:16": [1080, 1920], "1:1": [1080, 1080], "16:9": [1920, 1080] };
 const END_LEN = 3.5, FADE = 0.4;
