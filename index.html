@@ -10739,9 +10739,24 @@ body { min-height: 100dvh; }
   var ALIAS={dagigoia:'residual language',money:'budget billing residual stripe',email:'email webmail',calendar:'calendar book',call:'call voice rachel',ai:'ai agent rachel voice',video:'video swan bubble'};
   function items(){ return Array.prototype.filter.call(wrap.children,function(el){ return (el.tagName==='A'||el.tagName==='BUTTON') && !SKIP[el.id]; }); }
   function hay(el){ return ((el.textContent||'')+' '+(el.title||'')).toLowerCase(); }
+  // Tania, Nov 27: Dispatch (and Mariska) were missing real buttons on ordinary chatty phrasing --
+  // "can you open Voice studio for me" / "can you go on the prospector" -- because this matcher required
+  // EVERY word in the query to appear on a button somewhere, and filler words like "can", "you", "go", "on"
+  // never appear on any button label, so the whole search came back empty even though the real button (Voice
+  // Studio, Lead Prospector) was right there. Fix: ignore common filler/stop words when they're mixed in with
+  // real content words, so only the words that could plausibly be part of a button's name have to match. If a
+  // query is nothing BUT filler words, fall back to the old strict behavior (safe no-match) instead of
+  // matching everything.
+  var STOP={a:1,an:1,the:1,is:1,are:1,was:1,were:1,be:1,been:1,am:1,i:1,you:1,your:1,yours:1,he:1,she:1,it:1,we:1,they:1,
+    me:1,my:1,mine:1,us:1,our:1,can:1,could:1,would:1,should:1,will:1,shall:1,do:1,does:1,did:1,go:1,going:1,on:1,to:1,
+    for:1,of:1,in:1,at:1,by:1,with:1,and:1,or:1,so:1,if:1,that:1,this:1,these:1,those:1,up:1,out:1,over:1,here:1,there:1,
+    just:1,now:1,please:1,ok:1,okay:1,yeah:1,yes:1,thanks:1,hey:1,hi:1,want:1,need:1,like:1,got:1,get:1,how:1,what:1,
+    when:1,why:1,where:1,"where's":1,pull:1,bring:1,find:1,locate:1,open:1,show:1,see:1,screen:1,page:1,app:1,application:1,button:1};
   function matches(q){
     q=(q||'').trim().toLowerCase(); var words=q?q.split(/\s+/):[];
-    return items().filter(function(el){ var h=hay(el); return !q || words.every(function(w){ var alt=(ALIAS[w]||'').split(' ').filter(Boolean); return h.indexOf(w)>-1 || alt.some(function(a){return h.indexOf(a)>-1;}); }); });
+    var content=words.filter(function(w){ return !STOP[w]; });
+    var useWords=content.length?content:words;
+    return items().filter(function(el){ var h=hay(el); return !q || useWords.every(function(w){ var alt=(ALIAS[w]||'').split(' ').filter(Boolean); return h.indexOf(w)>-1 || alt.some(function(a){return h.indexOf(a)>-1;}); }); });
   }
   function run(){
     var q=box.value, list=items(), hit=matches(q), set=new Set(hit), n=0;
