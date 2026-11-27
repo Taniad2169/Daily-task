@@ -300,8 +300,8 @@ input,textarea,select,[contenteditable],[data-selectable]{-webkit-user-select:te
     <label for="engine">Pick the style</label>
     <select id="engine">
       <option value="omnihuman">⭐ Best with my voice: OmniHuman 1.5 (photo, gestures and expressions, ~16¢/second)</option>
-      <option value="veo_myvoice">🎥 Jimmy style + MY voice: Veo moves me (walk, sit, gestures), then my lips sync (voice up to 8 s, ~$0.83)</option>
-      <option value="veo">🎥 Jimmy style: Veo 3.1 (photo, walk, sit, gestures, Veo speaks my line, 8 s, ~$1.20)</option>
+      <option value="veo_myvoice">🎥 Jimmy style + MY voice (safer): Veo moves me, my own recorded voice is lip-synced -- exact words, no grammar risk (8 s, ~$0.83)</option>
+      <option value="veo">🎥 Jimmy style, Jimmy talks (riskier): Veo 3.1 makes up his own reading of your line -- can drop or garble words, check every clip (8 s, ~$1.20)</option>
       <option value="hedra">Hedra Character-3 (photo + my voice, ~5¢/second, needs Hedra API key)</option>
       <option value="kling_photo">Kling Avatar (photo + my voice, ~6¢/second)</option>
       <option value="kling_clip">💰 Cheapest: Kling Lip Sync (my 2–10 s video clip + my voice, ~3¢)</option>
@@ -317,7 +317,12 @@ input,textarea,select,[contenteditable],[data-selectable]{-webkit-user-select:te
     <div id="actionBox"><label for="actionPrompt">What I'm doing (tell it exactly, it listens)</label>
       <input id="actionPrompt" type="text" placeholder="Walking through a bright modern office, smiling, then sitting at my desk and using hand gestures"></div>
     <div id="lineBox" style="display:none"><label for="talkLine">What I say (Veo speaks it, keep it under 8 seconds)</label>
-      <input id="talkLine" type="text" placeholder="Is your website ADA compliant? Book your free audit today."></div>
+      <div class="row" style="align-items:center">
+        <input id="talkLine" type="text" style="flex:1" placeholder="Is your website ADA compliant? Book your free audit today.">
+        <button id="cleanLine" class="icon" type="button" style="flex:0 0 auto">🧹 Clean up</button>
+      </div>
+      <p class="note" style="margin:4px 0 0">⚠️ Jimmy reads this line himself -- long run-on sentences and symbols like "&amp;" are the most common reason he drops or garbles words. Keep it short and simple, or press 🧹 to tidy it up.</p>
+    </div>
     <div id="talkInfo" class="note" style="margin-top:6px"></div>
     <div class="row" style="margin-top:8px"><button id="talkBtn">🗣️ Make me talk (one video)</button><button id="allTalkBtn" class="red">🎬 Make all my scenes talk</button></div>
     <p class="note">"Make all my scenes talk" uses each scene's avatar photo, its own voice (🔊 or 🎙️ in the scene) and "what I'm doing", then puts the talking clips in order as one video.</p>
@@ -454,6 +459,21 @@ function audioCtx(){ if (!ac) ac = new (window.AudioContext || window.webkitAudi
 const words = (t) => t.trim().split(/\s+/).filter(Boolean);
 const autoDur = (t) => Math.max(2.5, Math.round((words(t).length / 2.6 + 1) * 10) / 10);
 
+// Tania, Nov 26 ("jimmy making grammar error on script cutting words sentences"): when the plain Veo 3.1 style
+// ("Jimmy style", no voice) is told to speak a line itself, it's reading your words out loud with its own
+// made-up voice, not playing back audio you recorded -- long run-on sentences and symbols like "&" or "%"
+// are exactly what trips it into dropping or mangling words. This cleans the common troublemakers before
+// Jimmy ever sees the line, and flags sentences still long enough to risk it.
+function cleanForJimmy(t){
+  let out = (t || "").replace(/\s+/g, " ").trim()
+    .replace(/\s*&\s*/g, " and ").replace(/\bw\//gi, "with").replace(/\b(\d+)\s*%/g, "$1 percent")
+    .replace(/\s*\/\s*/g, " or ").replace(/\s+/g, " ").trim();
+  const warnings = [];
+  const sentences = (out.match(/[^.!?]+[.!?]*/g) || [out]).map(s => s.trim()).filter(Boolean);
+  sentences.forEach(s => { if (words(s).length > 22) warnings.push(`This sentence is long and more likely to get cut off: "${s.slice(0, 60)}${s.length > 60 ? "…" : ""}"`); });
+  return { text: out, warnings };
+}
+
 function setSize(){ const [w,h] = SIZES[$("format").value]; cv.width = w; cv.height = h; drawAt(0); }
 function setBrandDefaults(force){
   const b = brand();
@@ -493,12 +513,14 @@ function renderScenes(){
       <div class="row" style="margin-top:6px">
         <button class="icon" data-a="svoice">🔊 Voice (read this scene)</button>
         <button class="icon" data-a="srec">🎙️ Record this scene</button>
+        <button class="icon" data-a="clean">🧹 Clean wording for Jimmy</button>
         <button class="icon" data-a="stalk" style="border-color:var(--brand);color:var(--brand)">🗣️ Make this scene talk</button>
       </div>
       <div class="row jimmy" style="margin-top:6px;display:none;align-items:end">
         <div><label>🔈 This video's own sound</label><select class="vsnd"><option value="off">Off (use my new voice)</option><option value="on">On (keep its sound)</option></select></div>
         <div><label>&nbsp;</label><button class="icon" data-a="fixlips" style="border-color:var(--brand);color:var(--brand)">👄 Fix the lips to my new words (~3¢)</button></div>
       </div>
+      <div class="mini jimmywarn" style="display:none;color:#b45309;font-weight:700"></div>
       <div class="mini"></div><div class="mini svinfo"></div>`;
     const ta = d.querySelector("textarea"), num = d.querySelector("input[type=number]"), fi = d.querySelector("input[type=file]"), mini = d.querySelector(".mini");
     ta.value = s.text; num.value = s.dur;
@@ -509,13 +531,19 @@ function renderScenes(){
     const showTh = () => { const x = avatars.find(y => y.id === av.value); th.style.display = x ? "block" : "none"; if (x) th.src = x.url; };
     showTh(); av.onchange = () => { s.avatarId = av.value; showTh(); save(); };
     act.value = s.action || ""; act.oninput = () => { s.action = act.value; save(); };
-    const jm = d.querySelector(".jimmy"), vsnd = d.querySelector(".vsnd");
-    if (s.media && s.media.type === "video" && !s.ownAudio) {
+    const jm = d.querySelector(".jimmy"), vsnd = d.querySelector(".vsnd"), jwarn = d.querySelector(".jimmywarn");
+    // Tania, Nov 26: this used to hide as soon as Jimmy's clip landed (ownAudio becomes true the moment his
+    // talking video is in place), which is exactly when you need 👄 Fix the lips -- right after hearing he
+    // mangled the words. Now it stays open whenever this scene's video came from Jimmy speaking for himself
+    // (s.jimmySpoke), even once that audio is "his own", and only closes once you've actually fixed it.
+    if (s.media && s.media.type === "video" && (!s.ownAudio || s.jimmySpoke)) {
       jm.style.display = "flex"; vsnd.value = s.vidSound ? "on" : "off";
       vsnd.onchange = () => { s.vidSound = vsnd.value === "on"; const v = s.media.el;
         if (s.vidSound && !v._wired) { audioCtx().createMediaElementSource(v).connect(vidBus()); v._wired = true; }
         v.muted = !s.vidSound; };
     }
+    if (s.jimmySpoke) { jwarn.style.display = "block"; jwarn.textContent = "⚠️ Jimmy spoke this line himself -- watch it back. If he dropped or garbled words, fix your text above, press 🔊 Voice, then 👄 Fix the lips."; }
+    else jwarn.style.display = "none";
     const trn = d.querySelector(".trn"); trn.innerHTML = '<option value="">Main setting</option>' + TRANS_OPTS;
     trn.value = s.trans || ""; trn.onchange = () => { s.trans = trn.value; save(); drawAt(sceneStart(i) + 0.3); };
     const cap = d.querySelector(".cap"); cap.value = s.cap || ""; cap.onchange = () => { s.cap = cap.value; save(); drawAt(sceneStart(i) + 0.8); };
@@ -533,6 +561,12 @@ function renderScenes(){
       if (a === "srec") return sceneRecord(s, b, svinfo);
       if (a === "stalk") return sceneTalk(s, i, svinfo);
       if (a === "fixlips") return fixLips(s, i, svinfo);
+      if (a === "clean") {
+        const { text, warnings } = cleanForJimmy(ta.value);
+        ta.value = s.text = text; save();
+        svinfo.textContent = warnings.length ? "🧹 Cleaned up. " + warnings[0] : "🧹 Cleaned up -- looked fine for Jimmy already.";
+        return;
+      }
       renderScenes(); save(); drawAt(0);
     });
     box.appendChild(d);
@@ -1193,7 +1227,7 @@ async function fixLips(s, i, el){
   s._fixOk = false;
   try {
     const url = await runTalk({ engine: "kling_clip", file: s.mediaFile, voiceBuf: s.voiceBuf, clipSecs: len, say: (m) => { el.textContent = m; } });
-    await putTalkingVideo(s, url); renderScenes(); drawAt(sceneStart(i) + 0.5); status(`Scene ${i + 1}: the lips now match your new words.`);
+    await putTalkingVideo(s, url); s.jimmySpoke = false; renderScenes(); drawAt(sceneStart(i) + 0.5); status(`Scene ${i + 1}: the lips now match your new words.`);
   } catch (err) { el.textContent = "⚠️ " + err.message; }
 }
 async function sceneTalk(s, i, el){
@@ -1205,7 +1239,9 @@ async function sceneTalk(s, i, el){
     const x = avatars.find(y => y.id === s.avatarId);
     const url = await runTalk({ engine, file: new File([x.blob], "avatar.jpg", { type: "image/jpeg" }), voiceBuf: s.voiceBuf,
       action: s.action || $("actionPrompt").value, line: s.text, say: (m) => { el.textContent = m; } });
-    await putTalkingVideo(s, url); renderScenes(); drawAt(sceneStart(i) + 0.5); status(`Scene ${i + 1} is talking now.`);
+    await putTalkingVideo(s, url); s.jimmySpoke = engine === "veo";
+    renderScenes(); drawAt(sceneStart(i) + 0.5);
+    status(engine === "veo" ? `Scene ${i + 1} is talking now -- Jimmy spoke it himself, so check the words before trusting it.` : `Scene ${i + 1} is talking now.`);
   } catch (err) { el.textContent = "⚠️ " + err.message; }
 }
 $("allTalkBtn").onclick = async () => {
@@ -1227,11 +1263,13 @@ $("allTalkBtn").onclick = async () => {
       const x = avatars.find(y => y.id === s.avatarId);
       const url = await runTalk({ engine, file: new File([x.blob], "avatar.jpg", { type: "image/jpeg" }), voiceBuf: s.voiceBuf,
         action: s.action || $("actionPrompt").value, line: s.text, say: (m) => tStatus(`Scene ${i + 1} of ${scenes.length}: ${m}`) });
-      await putTalkingVideo(s, url); done++; renderScenes();
+      await putTalkingVideo(s, url); s.jimmySpoke = engine === "veo"; done++; renderScenes();
     } catch (err) { tStatus(`⚠️ Scene ${i + 1}: ${err.message}`); break; }
   }
   $("allTalkBtn").disabled = false; $("allTalkBtn").textContent = "🎬 Make all my scenes talk";
-  if (done === todo.length) tStatus(`✅ All ${done} scenes are talking. Press ▶ Play, then ⬇ Make my video for the full video.`);
+  if (done === todo.length) tStatus(engine === "veo"
+    ? `✅ All ${done} scenes are talking -- Jimmy spoke them himself, so watch each one back and use 👄 Fix the lips on any he got wrong.`
+    : `✅ All ${done} scenes are talking. Press ▶ Play, then ⬇ Make my video for the full video.`);
 };
 $("talkBtn").onclick = async () => {
   const engine = $("engine").value, e = ENG[engine];
@@ -1245,18 +1283,25 @@ $("talkBtn").onclick = async () => {
   talkConfirm = false; $("talkBtn").disabled = true; $("talkResult").innerHTML = "";
   try {
     const url = await runTalk({ engine, file: talkFile, voiceBuf: voice && voice.buffer, action: $("actionPrompt").value, line: $("talkLine").value, clipSecs: talkClipSecs, say: tStatus });
-    showTalk(url);
+    showTalk(url, engine === "veo", $("talkLine").value);
   } catch (err) { tStatus("⚠️ " + err.message); }
   finally { $("talkBtn").disabled = false; $("talkBtn").textContent = "🗣️ Make me talk (one video)"; }
 };
-function showTalk(url){
-  tStatus("✅ Your talking video is ready!");
+if ($("cleanLine")) $("cleanLine").onclick = () => {
+  const { text, warnings } = cleanForJimmy($("talkLine").value);
+  $("talkLine").value = text;
+  tStatus(warnings.length ? "🧹 Cleaned up. " + warnings[0] : "🧹 Cleaned up -- looked fine for Jimmy already.");
+};
+function showTalk(url, jimmySpoke, line){
+  tStatus(jimmySpoke ? "✅ Your talking video is ready -- Jimmy spoke this himself, so watch it back before trusting the words." : "✅ Your talking video is ready!");
   const box = $("talkResult");
   box.innerHTML = `<video controls playsinline style="width:100%;max-height:360px;border-radius:10px;background:#000;margin-top:8px"></video>
-    <div class="row" style="margin-top:8px"><a class="btn" download="talking-video.mp4" target="_blank" rel="noopener">⬇ Download</a><button id="talkScene" class="ghost">➕ Use as Scene 1</button></div>`;
+    <div class="row" style="margin-top:8px"><a class="btn" download="talking-video.mp4" target="_blank" rel="noopener">⬇ Download</a><button id="talkScene" class="ghost">➕ Use as Scene 1</button></div>
+    ${jimmySpoke ? '<p class="note" style="margin-top:6px">⚠️ If he dropped or garbled a word, add this as a scene (➕ above), fix the text, press 🔊 Voice, then 👄 Fix the lips -- no need to pay for a whole new take.</p>' : ""}`;
   box.querySelector("video").src = url; box.querySelector("a").href = url;
   $("talkScene").onclick = async () => {
-    try { const sc = { text: "", dur: 5, media: null }; await putTalkingVideo(sc, url); scenes.unshift(sc); voice = null; info(); renderScenes(); drawAt(1);
+    try { const sc = { text: jimmySpoke ? (line || "") : "", dur: 5, media: null };
+      await putTalkingVideo(sc, url); sc.jimmySpoke = !!jimmySpoke; scenes.unshift(sc); voice = null; info(); renderScenes(); drawAt(1);
       status("Talking video added as Scene 1, with its own sound."); }
     catch { tStatus("Couldn't add it here. Download it, then add it to a scene with 🖼️ Photo or video."); }
   };
