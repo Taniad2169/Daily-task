@@ -7283,15 +7283,30 @@
             // to Eva or anyone on the team, all without leaving WorkPilot to open the AI Office or Voice Studio.
             // Same team.mjs chat agent used by the AI Office (agent: 'dispatch'), same sign-in token WorkPilot
             // already uses for Eva's queue -- this panel is just a second, embedded front door onto it.
-            let dispatchBusy = false;
+            let dispatchBusy = false, dispatchMsgTexts = [], dispatchRecog = null, dispatchListening = false;
             function dispatchEsc(s) { const d = document.createElement('div'); d.textContent = String(s == null ? '' : s); return d.innerHTML; }
+            // Claude, Nov 27 (Tania: "if i can click something to hear what he types without costing anything
+            // fine... otherwise i won't pay extra"): this is the free option -- the browser's own built-in
+            // speechSynthesis, not Cartesia's TTS. Zero network calls, zero characters billed anywhere, works
+            // offline even. Voice quality is the plainer built-in robotic voice, not Cartesia's natural one --
+            // that trade is the whole point here, never call this from Mariska's paid 🔊, which stays exactly
+            // as it was.
+            function dispatchSpeakFree(text) {
+                try {
+                    if (!('speechSynthesis' in window)) { showToast('This browser can\'t read text aloud.', 'error'); return; }
+                    window.speechSynthesis.cancel();
+                    window.speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+                } catch (e) { showToast('Could not read that aloud: ' + e.message, 'error'); }
+            }
+            function dispatchBubble(text, mine) {
+                return '<div style="margin:8px 0;display:flex;' + (mine ? 'justify-content:flex-end;' : 'justify-content:flex-start;') + '">'
+                    + '<div style="max-width:82%;padding:8px 12px;border-radius:12px;font-size:.88rem;line-height:1.4;white-space:pre-wrap;' + (mine ? 'background:#0f6fd1;color:#fff;border-bottom-right-radius:3px;' : 'background:#eef4fb;color:#0f1b2d;border-bottom-left-radius:3px;') + '">' + dispatchEsc(text)
+                    + (mine ? '' : ' <button type="button" class="dispatchPlay" data-idx="' + (dispatchMsgTexts.push(text) - 1) + '" title="Hear this out loud (free, using this browser\'s own voice)" style="border:none;background:none;cursor:pointer;color:#0f6fd1;vertical-align:-2px;">🔊</button>') + '</div></div>';
+            }
             function dispatchRenderMsgs(list) {
                 const box = document.getElementById('dispatchMsgs'); if (!box) return;
-                box.innerHTML = (list || []).filter(m => m.text).map(m => {
-                    const mine = m.role === 'user';
-                    return '<div style="margin:8px 0;display:flex;' + (mine ? 'justify-content:flex-end;' : 'justify-content:flex-start;') + '">'
-                        + '<div style="max-width:82%;padding:8px 12px;border-radius:12px;font-size:.88rem;line-height:1.4;white-space:pre-wrap;' + (mine ? 'background:#0f6fd1;color:#fff;border-bottom-right-radius:3px;' : 'background:#eef4fb;color:#0f1b2d;border-bottom-left-radius:3px;') + '">' + dispatchEsc(m.text) + '</div></div>';
-                }).join('');
+                dispatchMsgTexts = [];
+                box.innerHTML = (list || []).filter(m => m.text).map(m => dispatchBubble(m.text, m.role === 'user')).join('');
                 box.scrollTop = box.scrollHeight + 9999;
             }
             async function dispatchLoadHistory() {
@@ -7331,7 +7346,7 @@
                 if (!text) return;
                 if (dispatchTryFindButton(text)) { ta.value = ''; ta.focus(); return; }
                 const box = document.getElementById('dispatchMsgs');
-                box.insertAdjacentHTML('beforeend', '<div style="margin:8px 0;display:flex;justify-content:flex-end;"><div style="max-width:82%;padding:8px 12px;border-radius:12px;font-size:.88rem;line-height:1.4;white-space:pre-wrap;background:#0f6fd1;color:#fff;border-bottom-right-radius:3px;">' + dispatchEsc(text) + '</div></div>');
+                box.insertAdjacentHTML('beforeend', dispatchBubble(text, true));
                 box.scrollTop = box.scrollHeight + 9999;
                 ta.value = ''; ta.disabled = true; dispatchBusy = true;
                 const btn = document.getElementById('dispatchSendBtn'); if (btn) btn.disabled = true;
@@ -7345,10 +7360,90 @@
                     const think = document.getElementById('dispatchThinking'); if (think) think.remove();
                     if (!r.ok) { showToast(d.error || 'Dispatch could not answer just now.', 'error'); return; }
                     const reply = (d.messages || []).slice(-1)[0];
-                    if (reply && reply.text) box.insertAdjacentHTML('beforeend', '<div style="margin:8px 0;display:flex;justify-content:flex-start;"><div style="max-width:82%;padding:8px 12px;border-radius:12px;font-size:.88rem;line-height:1.4;white-space:pre-wrap;background:#eef4fb;color:#0f1b2d;border-bottom-left-radius:3px;">' + dispatchEsc(reply.text) + '</div></div>');
+                    if (reply && reply.text) box.insertAdjacentHTML('beforeend', dispatchBubble(reply.text, false));
                     box.scrollTop = box.scrollHeight + 9999;
                 } catch (e) { const think = document.getElementById('dispatchThinking'); if (think) think.remove(); showToast('Dispatch: ' + e.message, 'error'); }
                 finally { ta.disabled = false; dispatchBusy = false; if (btn) btn.disabled = false; ta.focus(); }
+            }
+            // Claude, Nov 27 (Tania: "mic for me to talk he doesn't need to talk out loud back"): one-shot
+            // voice-to-text only, same free browser SpeechRecognition Mariska's mic uses -- no Cartesia, no
+            // cost. Drops the transcript in his textbox and stops (never auto-sends, never loops back into a
+            // conversation), since she doesn't want a spoken back-and-forth with him, just a faster way to type.
+            function dispatchToggleMic() {
+                const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SR) { showToast('Voice input isn\'t supported in this browser.', 'error'); return; }
+                if (dispatchListening) { try { dispatchRecog && dispatchRecog.abort(); } catch (e) {} return; }
+                dispatchRecog = new SR();
+                dispatchRecog.lang = 'en-US'; dispatchRecog.interimResults = false; dispatchRecog.maxAlternatives = 1;
+                const micBtn = document.getElementById('dispatchMicBtn');
+                dispatchListening = true; if (micBtn) { micBtn.style.color = '#ef4444'; micBtn.title = 'Listening… click to stop'; }
+                dispatchRecog.onresult = (e) => {
+                    const t = (e.results[0] && e.results[0][0] && e.results[0][0].transcript) || '';
+                    const ta = document.getElementById('dispatchInput'); if (ta && t) { ta.value = (ta.value ? ta.value + ' ' : '') + t; ta.focus(); }
+                };
+                dispatchRecog.onerror = () => {};
+                dispatchRecog.onend = () => { dispatchListening = false; if (micBtn) { micBtn.style.color = '#0f6fd1'; micBtn.title = 'Talk to him'; } };
+                try { dispatchRecog.start(); } catch (e) { dispatchListening = false; }
+            }
+            // Claude, Nov 27 (Tania: "i believe they each should have a brain in workpilot... i want to be able
+            // to add that to their brain temporarily or permanently"): a small, shared Brain-notes mini-panel for
+            // any WorkPilot agent panel (Dispatch, Mariska, more later) -- same brain_list/brain_add/brain_remove
+            // actions AI Office's own Brain page already uses, so a note added here shows up there too and vice
+            // versa (one brain per agent, not a second copy). ttlHours on brain_add is the temporary/permanent
+            // switch: 0 (Permanent) never expires; 1/24/168 auto-expire that many hours from now and quietly drop
+            // out of his/her live brain on their own (see getNotes() in the team function) -- no need to come back
+            // and remove it by hand.
+            function wpBrainSectionHTML(agent, color) {
+                return '<div style="padding:6px 14px 0;border-bottom:1px solid #eef2f6;">'
+                    + '<button type="button" id="' + agent + 'BrainToggle" style="border:none;background:none;color:' + color + ';font-size:.78rem;cursor:pointer;padding:2px 0;">🧠 Brain notes ▾</button>'
+                    + '<div id="' + agent + 'BrainPanel" style="display:none;margin:6px 0 10px;">'
+                    + '<div id="' + agent + 'BrainList" style="max-height:150px;overflow:auto;font-size:.8rem;color:#334155;margin-bottom:6px;"></div>'
+                    + '<div style="display:flex;gap:6px;align-items:flex-end;flex-wrap:wrap;">'
+                    + '<textarea id="' + agent + 'BrainNew" placeholder="A new rule or reminder…" style="flex:1 1 160px;min-height:34px;max-height:90px;resize:vertical;border:1px solid #d7e2ef;border-radius:8px;padding:6px 8px;font-size:.8rem;font:inherit;"></textarea>'
+                    + '<select id="' + agent + 'BrainTtl" style="border:1px solid #d7e2ef;border-radius:8px;font-size:.78rem;padding:6px 4px;"><option value="0">Permanent</option><option value="1">1 hour</option><option value="24">1 day</option><option value="168">1 week</option></select>'
+                    + '<button type="button" id="' + agent + 'BrainAdd" style="border:none;background:' + color + ';color:#fff;border-radius:8px;padding:0 10px;height:34px;font-size:.78rem;font-weight:700;cursor:pointer;">Add</button>'
+                    + '</div></div></div>';
+            }
+            function wpBrainNoteRow(agent, n) {
+                const when = n.expiresAt ? 'Temporary · expires ' + new Date(n.expiresAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'Permanent';
+                return '<div style="display:flex;gap:6px;align-items:flex-start;padding:5px 0;border-bottom:1px solid #f1f5f9;"><div style="flex:1;">' + dispatchEsc(n.note) + '<div style="font-size:.7rem;color:#94a3b8;">' + when + '</div></div>'
+                    + '<button type="button" class="wpBrainRemove" data-agent="' + agent + '" data-id="' + n.id + '" style="border:none;background:none;color:#b91c1c;cursor:pointer;font-size:.75rem;">Remove</button></div>';
+            }
+            async function wpBrainLoad(agent) {
+                const listEl = document.getElementById(agent + 'BrainList'); if (!listEl) return;
+                listEl.innerHTML = '<span style="color:#94a3b8;">Loading…</span>';
+                try {
+                    const tok = await window.wpGmail.idToken(); if (!tok) { listEl.innerHTML = '<span style="color:#94a3b8;">Sign in to see notes.</span>'; return; }
+                    const r = await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'brain_list', agent }) });
+                    const d = await r.json().catch(() => ({}));
+                    const notes = d.notes || [];
+                    listEl.innerHTML = notes.length ? notes.map((n) => wpBrainNoteRow(agent, n)).join('') : '<span style="color:#94a3b8;">No notes yet.</span>';
+                    listEl.querySelectorAll('.wpBrainRemove').forEach((b) => b.onclick = () => wpBrainRemove(b.dataset.agent, b.dataset.id));
+                } catch (e) { listEl.innerHTML = '<span style="color:#b91c1c;">Could not load notes.</span>'; }
+            }
+            async function wpBrainAdd(agent) {
+                const ta = document.getElementById(agent + 'BrainNew'); const note = (ta.value || '').trim(); if (!note) return;
+                const ttlHours = Number(document.getElementById(agent + 'BrainTtl').value) || 0;
+                const btn = document.getElementById(agent + 'BrainAdd'); if (btn) btn.disabled = true;
+                try {
+                    const tok = await window.wpGmail.idToken(); if (!tok) { showToast('Sign in with Google first.', 'error'); return; }
+                    const r = await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'brain_add', agent, note, ttlHours }) });
+                    const d = await r.json().catch(() => ({}));
+                    if (!r.ok) { showToast(d.error || 'Could not add that note.', 'error'); return; }
+                    ta.value = ''; wpBrainLoad(agent); showToast('Added to brain.', 'success');
+                } catch (e) { showToast('Brain: ' + e.message, 'error'); } finally { if (btn) btn.disabled = false; }
+            }
+            async function wpBrainRemove(agent, id) {
+                try {
+                    const tok = await window.wpGmail.idToken(); if (!tok) return;
+                    await fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'brain_remove', agent, id }) });
+                    wpBrainLoad(agent);
+                } catch (e) { showToast('Could not remove that note.', 'error'); }
+            }
+            function wpBrainWire(agent) {
+                const toggle = document.getElementById(agent + 'BrainToggle'); if (!toggle) return;
+                toggle.onclick = () => { const p = document.getElementById(agent + 'BrainPanel'); const show = p.style.display === 'none'; p.style.display = show ? 'block' : 'none'; if (show) wpBrainLoad(agent); };
+                const add = document.getElementById(agent + 'BrainAdd'); if (add) add.onclick = () => wpBrainAdd(agent);
             }
             function openDispatchPanel() {
                 const old = document.getElementById('dispatchOverlay'); if (old) { old.remove(); return; }
@@ -7358,13 +7453,18 @@
                     + '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid #e6edf5;">'
                     + '<div><h3 style="margin:0;color:#0f6fd1;font-size:1.05rem;"><i class="fas fa-satellite-dish"></i> Dispatch</h3><p style="margin:2px 0 0;font-size:.75rem;color:#64748b;">WorkPilot concierge — leads, scripts, relay</p></div>'
                     + '<button type="button" id="dispatchClose" style="border:none;background:none;font-size:1.4rem;cursor:pointer;color:#64748b;" aria-label="Close">×</button></div>'
+                    + wpBrainSectionHTML('dispatch', '#0f6fd1')
                     + '<div id="dispatchMsgs" style="flex:1;overflow:auto;padding:14px 16px;"><p style="color:#94a3b8;font-size:.85rem;">Ask about a client or lead, say "send this one to Sebastien", paste a website or social link to check, ask for a quick script, or ask him to check with Eva or anyone else on the team.</p></div>'
                     + '<div style="display:flex;gap:8px;padding:12px 14px;border-top:1px solid #e6edf5;">'
+                    + '<button type="button" id="dispatchMicBtn" title="Talk to him" style="border:1px solid #d7e2ef;background:#fff;color:#0f6fd1;border-radius:10px;width:40px;height:40px;cursor:pointer;">🎤</button>'
                     + '<textarea id="dispatchInput" placeholder="Ask Dispatch…" style="flex:1;resize:none;min-height:40px;max-height:120px;border:1px solid #d7e2ef;border-radius:10px;padding:9px 11px;font:inherit;font-size:.88rem;"></textarea>'
                     + '<button type="button" id="dispatchSendBtn" style="border:none;background:#0f6fd1;color:#fff;border-radius:10px;padding:0 16px;font-weight:700;cursor:pointer;">Send</button></div></div>';
                 document.body.appendChild(ov);
                 ov.addEventListener('click', (e) => { if (e.target === ov) ov.remove(); });
                 document.getElementById('dispatchClose').onclick = () => ov.remove();
+                document.getElementById('dispatchMsgs').addEventListener('click', (e) => { const b = e.target.closest('.dispatchPlay'); if (b) dispatchSpeakFree(dispatchMsgTexts[+b.dataset.idx]); });
+                document.getElementById('dispatchMicBtn').onclick = dispatchToggleMic;
+                wpBrainWire('dispatch');
                 const ta = document.getElementById('dispatchInput');
                 ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); dispatchSend(); } });
                 document.getElementById('dispatchSendBtn').onclick = dispatchSend;
@@ -7576,6 +7676,7 @@
                     + '<div style="display:flex;align-items:center;gap:10px;"><img src="https://taniad2169.github.io/webswan-dagigoia-task/team/img/mariska.jpg" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;"><div><h3 style="margin:0;color:#b5179e;font-size:1.05rem;">Mariska</h3><p style="margin:2px 0 0;font-size:.75rem;color:#64748b;">Conversation · deep research · legal check · lead research</p></div></div>'
                     + '<div style="display:flex;align-items:center;gap:8px;"><select id="mariskaLangSel" title="Her speaking language" style="font-size:.78rem;border:1px solid #e3c6dd;border-radius:7px;padding:3px 5px;"><option value="en">EN</option><option value="fr">FR</option><option value="es">ES</option><option value="pt">PT-BR</option></select>'
                     + '<button type="button" id="mariskaClose" style="border:none;background:none;font-size:1.4rem;cursor:pointer;color:#64748b;" aria-label="Close">×</button></div></div>'
+                    + wpBrainSectionHTML('mariska', '#b5179e')
                     + '<div id="mariskaMsgs" style="flex:1;overflow:auto;padding:14px 16px;"><p style="color:#94a3b8;font-size:.85rem;">Talk to me about anything, ask me to research something, hand me Jonathan\'s legal check, a batch of leads to size up, or just say "open audit" if you can\'t remember a button\'s name.</p></div>'
                     + '<div style="padding:6px 14px 0;">'
                     + '<button type="button" id="mariskaToolsToggle" style="border:none;background:none;color:#b5179e;font-size:.78rem;cursor:pointer;padding:2px 0;">🧰 AEO/GEO &amp; analytics tools ▾</button>'
@@ -7594,6 +7695,7 @@
                 document.body.appendChild(ov);
                 ov.addEventListener('click', (e) => { if (e.target === ov) { mariskaVoiceStop(); ov.remove(); } });
                 document.getElementById('mariskaClose').onclick = () => { mariskaVoiceStop(); ov.remove(); };
+                wpBrainWire('mariska');
                 document.getElementById('mariskaToolsToggle').onclick = () => { const t = document.getElementById('mariskaTools'); t.style.display = t.style.display === 'none' ? 'flex' : 'none'; };
                 document.getElementById('mariskaMsgs').addEventListener('click', (e) => { const b = e.target.closest('.mariskaPlay'); if (b) mariskaPlay(mariskaMsgTexts[+b.dataset.idx], b); });
                 const ta = document.getElementById('mariskaInput');
