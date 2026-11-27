@@ -7302,10 +7302,34 @@
                     if (r.ok) dispatchRenderMsgs(d.messages || []);
                 } catch (e) { /* history is a nice-to-have on open; a failed load just starts blank */ }
             }
+            // Claude, Nov 27 (Tania: "he is supposed to have control over workpilot too... he is suppose to be
+            // able to open any application on workpilot i ask him to"): the exact same local, no-AI-call button
+            // finder Mariska already has (mariskaTryFindButton below) -- reads window.wpFindButtons, the SAME
+            // index her panel and the page's own top search box use, so Dispatch can only ever surface or open a
+            // button that is really, currently on this page. Runs before the message ever reaches his AI brain --
+            // his own chat answer ("I can't open it, only chat") was true before this existed; this is the real
+            // fix for that, not a prompt change, since no system prompt can actually click a DOM element.
+            function dispatchTryFindButton(text) {
+                if (typeof window.wpFindButtons !== 'function') return false;
+                const asksOpen = /\b(open|find|locate|pull up|bring up|where(?:'s| is))\b/i.test(text);
+                const short = text.trim().split(/\s+/).length <= 4;
+                if (!asksOpen && !short) return false;
+                const stripped = text.replace(/\b(open|find|locate|pull up|bring up|where(?:'s| is)|the|button|for me|please)\b/gi, ' ').replace(/\s+/g, ' ').trim();
+                const hits = window.wpFindButtons(stripped || text).slice(0, 8);
+                if (!hits.length) return false;
+                const box = document.getElementById('dispatchMsgs'); if (!box) return false;
+                box.insertAdjacentHTML('beforeend', '<div style="margin:8px 0;display:flex;justify-content:flex-end;"><div style="max-width:82%;padding:8px 12px;border-radius:12px;font-size:.88rem;line-height:1.4;white-space:pre-wrap;background:#0f6fd1;color:#fff;border-bottom-right-radius:3px;">' + dispatchEsc(text) + '</div></div>');
+                const opts = hits.map((h, i) => '<button type="button" class="dispatchOpenHit" data-i="' + i + '" style="display:block;width:100%;text-align:left;margin:4px 0;border:1px solid #bcd7f5;background:#fff;color:#0f6fd1;border-radius:8px;padding:7px 10px;cursor:pointer;font-size:.85rem;">' + dispatchEsc(h.label || h.title || 'Open') + '</button>').join('');
+                box.insertAdjacentHTML('beforeend', '<div style="margin:8px 0;display:flex;justify-content:flex-start;"><div style="max-width:88%;padding:8px 12px;border-radius:12px;font-size:.88rem;background:#eef4fb;color:#0f1b2d;border-bottom-left-radius:3px;">Here\'s what I found in WorkPilot -- tap one to open it:' + '<div style="margin-top:6px;">' + opts + '</div></div></div>');
+                box.scrollTop = box.scrollHeight + 9999;
+                box.querySelectorAll('.dispatchOpenHit').forEach((b) => b.onclick = () => { hits[+b.dataset.i].el.click(); });
+                return true;
+            }
             async function dispatchSend() {
                 if (dispatchBusy) return;
                 const ta = document.getElementById('dispatchInput'); const text = (ta.value || '').trim();
                 if (!text) return;
+                if (dispatchTryFindButton(text)) { ta.value = ''; ta.focus(); return; }
                 const box = document.getElementById('dispatchMsgs');
                 box.insertAdjacentHTML('beforeend', '<div style="margin:8px 0;display:flex;justify-content:flex-end;"><div style="max-width:82%;padding:8px 12px;border-radius:12px;font-size:.88rem;line-height:1.4;white-space:pre-wrap;background:#0f6fd1;color:#fff;border-bottom-right-radius:3px;">' + dispatchEsc(text) + '</div></div>');
                 box.scrollTop = box.scrollHeight + 9999;
