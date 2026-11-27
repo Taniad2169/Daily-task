@@ -7519,11 +7519,17 @@
                     const d = await r.json().catch(() => ({}));
                     if (r.ok) {
                         mariskaRenderMsgs(d.messages || []);
-                        const last = (d.messages || []).slice(-1)[0];
-                        if (last) localStorage.setItem('mariskaLastSeenId', last.id || '');
+                        mariskaMarkSeen(tok);
                         const dot = document.getElementById('mariskaDot'); if (dot) dot.style.display = 'none';
                     }
                 } catch (e) { /* a failed history load just starts blank, same as Dispatch */ }
+            }
+            // Tania, Nov 27 ("it seems like it just goes on for no reason after i read the notification"): "seen"
+            // used to live only in this browser's localStorage, so reading her on one device/browser never told
+            // any OTHER device or browser it had been read -- the dot would come back lit elsewhere with nothing
+            // actually new. This tells the shared backend she's read it (one value, same account everywhere).
+            function mariskaMarkSeen(tok) {
+                try { fetch('https://webswan-billing.netlify.app/.netlify/functions/team', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tok }, body: JSON.stringify({ action: 'mark_seen', agent: 'mariska' }) }).catch(() => {}); } catch (e) {}
             }
             // Local WorkPilot button finder: runs entirely in the browser, no AI call, and can only ever surface or
             // open a button that is really, currently on this page (window.wpFindButtons reads the live DOM). If
@@ -7650,7 +7656,7 @@
                     const think = document.getElementById('mariskaThinking'); if (think) think.remove();
                     if (!r.ok) { showToast(d.error || 'Mariska could not answer just now.', 'error'); return ''; }
                     const reply = (d.messages || []).slice(-1)[0];
-                    if (reply && reply.text) { box.insertAdjacentHTML('beforeend', mariskaBubble(reply.text, false)); localStorage.setItem('mariskaLastSeenId', reply.id || ''); replyText = reply.text; }
+                    if (reply && reply.text) { box.insertAdjacentHTML('beforeend', mariskaBubble(reply.text, false)); mariskaMarkSeen(tok); replyText = reply.text; }
                     box.scrollTop = box.scrollHeight + 9999;
                 } catch (e) { const think = document.getElementById('mariskaThinking'); if (think) think.remove(); showToast('Mariska: ' + e.message, 'error'); }
                 finally { mariskaBusy = false; if (sendBtn) sendBtn.disabled = false; if (ta && !opts.voice) ta.focus(); }
@@ -7727,7 +7733,7 @@
                     if (!r.ok) return;
                     const msgs = (d.messages || []).filter((m) => m.role !== 'user');
                     const lastAgent = msgs.slice(-1)[0]; if (!lastAgent) return;
-                    const seen = localStorage.getItem('mariskaLastSeenId') || '';
+                    const seen = d.seenId || ''; // shared/server-side now, not per-browser -- see mariskaMarkSeen
                     const dot = document.getElementById('mariskaDot');
                     if (dot) dot.style.display = (lastAgent.id && lastAgent.id !== seen) ? 'block' : 'none';
                 } catch (e) { /* a failed check just leaves the dot as it was */ }
