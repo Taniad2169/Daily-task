@@ -1569,6 +1569,7 @@
         [data-highlight="lightgreen"] { background: #bfe3c4 !important; box-shadow: inset 0 0 0 2px #7cc08a; color: #15381d !important; }
         [data-highlight="jennagreen"] { background: #3a9e05 !important; box-shadow: inset 0 0 0 2px #2d7a03; color: #ffffff !important; }
         [data-highlight="rachelpink"] { background: #e0117a !important; box-shadow: inset 0 0 0 2px #a30d58; color: #ffffff !important; }
+        [data-highlight="investor"] { background: #92400e !important; box-shadow: inset 0 0 0 2px #6b2f0a; color: #ffffff !important; } /* Tania, Nov 27: Tania's Investors field in Tania's Calls -- amber-brown, distinct from Mariska's purple */
         .tm-lead-done { border-left: 4px solid #1b8f3a; opacity: 0.78; }
         .tm-lead-done .item-text { text-decoration: line-through; text-decoration-color: rgba(27,143,58,0.6); }
         .tm-done-mark { margin-left: 2px; }
@@ -4457,8 +4458,8 @@
             // ----- TANIA'S CALLS (Tania, Nov 12): her own call list. Any lead (her own, or an agent's AI-call lead) can be moved here. -----
             // Saved in 'webswan_tania_calls' (synced like Future Calls). Colors, Done and notes are SHARED with the lead's own row:
             // change them here and they change on the Completed / telemarketing list too. Removing sets removedAt so it syncs.
-            const TC_COLORS = [['yellow', '#ffd600', 'Yellow: spoke to a person, call back'], ['green', '#2e7d32', 'Green: they asked for an email / email not sent yet'], ['orange', '#f57c00', 'Orange: hot lead'], ['lightgrey', '#cbd0d8', "Light grey: send to Eva's queue to edit from my notes and push to Gmail drafts"], ['lightgreen', '#bfe3c4', 'Light green: the draft is in Gmail'], ['blue', '#1565c0', 'Blue: no answer / voicemail'], ['lavender', '#c4a8f5', 'Lavender: I owe them the audit'], ['sky', '#50b9fa', 'Sky: I have an appointment'], ['jennagreen', '#3a9e05', "Jenna's green: hers to call"], ['rachelgreen', '#16a34a', "Rachel's green: Sebastien profiled her, script's ready -- hers to call this morning"]];
-            const TC_RANK = { orange: 6, sky: 5, green: 4, yellow: 3, lavender: 2, lightgrey: 1, lightgreen: 1, blue: 0 };
+            const TC_COLORS = [['yellow', '#ffd600', 'Yellow: spoke to a person, call back'], ['green', '#2e7d32', 'Green: they asked for an email / email not sent yet'], ['orange', '#f57c00', 'Orange: hot lead'], ['lightgrey', '#cbd0d8', "Light grey: send to Eva's queue to edit from my notes and push to Gmail drafts"], ['lightgreen', '#bfe3c4', 'Light green: the draft is in Gmail'], ['blue', '#1565c0', 'Blue: no answer / voicemail'], ['lavender', '#c4a8f5', 'Lavender: I owe them the audit'], ['sky', '#50b9fa', 'Sky: I have an appointment'], ['jennagreen', '#3a9e05', "Jenna's green: hers to call"], ['rachelgreen', '#16a34a', "Rachel's green: Sebastien profiled her, script's ready -- hers to call this morning"], ['investor', '#92400e', "Tania's Investors: PR / funding / economic-development contact"]];
+            const TC_RANK = { orange: 6, sky: 5, green: 4, yellow: 3, lavender: 2, lightgrey: 1, lightgreen: 1, blue: 0, investor: 5 };
             const tcOpenRows = new Set();
             const tcClean = (v) => { v = String(v == null ? '' : v).trim(); return /^no (name|phone|email|url|comment)$/i.test(v) ? '' : v; };
             function tcLoad() { try { const a = JSON.parse(localStorage.getItem('webswan_tania_calls') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
