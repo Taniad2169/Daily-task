@@ -168,6 +168,19 @@ input,textarea,select,[contenteditable],[data-selectable]{-webkit-user-select:te
     <div id="scenes"><div class="note">Your scenes will show here.</div></div>
   </div>
 
+  <!-- Tania, Nov 27: "Claude creator's director brain" -- turns the script + scenes above into a real shot list
+       (shot type, camera move, mood/lighting) plus a ready-to-paste cinematic generation prompt per scene, for
+       Higgsfield or Filmora's AI video tools. HyperFrames works differently (it renders HTML/CSS/JS code, not a
+       pasted prompt), so it gets its own note instead of a prompt box. Same director brain Sentinel can run too. -->
+  <div class="card" id="s-director">
+    <h2>🎬 Director's Shot List (Claude)</h2>
+    <div class="note">Make your scenes first (above), then press this. Claude plays director: a shot type, camera move and mood for every scene, plus one ready-to-paste prompt per scene for Higgsfield or Filmora's AI video generator.</div>
+    <div class="row" style="margin-top:10px"><button id="shotlistBtn">🎬 Build my shot list</button></div>
+    <div id="shotlistStatus" class="status"></div>
+    <div id="shotlistBox" style="margin-top:10px"></div>
+    <div class="note" style="margin-top:10px">🧩 Using HyperFrames instead? It builds videos from HTML/CSS/JS code, not a pasted prompt -- ask Claude Code directly to build the HyperFrames composition from this same script and shot list, and it can render the file for you.</div>
+  </div>
+
   <div class="card" id="s-voice">
     <h2>4. Voice and music</h2>
     <label>Voiceover (your own voice, any language: English, Kreyòl, Português, Français, Español)</label>
@@ -492,6 +505,47 @@ function makeScenes(){
   scenes = parts.map(t => ({ text: t, dur: autoDur(t), media: null, avatarId: (typeof selectedAvatar !== "undefined" && selectedAvatar) || "" }));
   renderScenes(); save(); drawAt(durations()[0] * 0.9); status(scenes.length + " scenes ready. Press Play to preview.");
 }
+
+// ---------- Director's shot list (Claude), Nov 27 ----------
+const TEAM_API = "https://webswan-billing.netlify.app/.netlify/functions/team";
+async function buildShotList(){
+  const script = $("script").value.trim();
+  if (!scenes.length && !script) { $("shotlistStatus").textContent = "Write your script and press ✨ Make scenes first."; return; }
+  const token = window.vmToken ? await window.vmToken() : null;
+  if (!token) { $("shotlistStatus").textContent = "Sign in with Google first (above) so Claude can direct your scenes."; return; }
+  const btn = $("shotlistBtn"); btn.disabled = true;
+  $("shotlistStatus").textContent = "🎬 Claude is directing your scenes…";
+  $("shotlistBox").innerHTML = "";
+  try {
+    const b = (typeof brand === "function") ? brand() : null;
+    const r = await fetch(TEAM_API, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+      body: JSON.stringify({ action: "director_shotlist", script, scenes: scenes.map(s => ({ text: s.text })), brand: (b && b.name) || "WebSwan" }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { $("shotlistStatus").textContent = d.error || "The director brain couldn't answer just now."; return; }
+    renderShotlist(d.shots || []);
+    $("shotlistStatus").textContent = (d.shots || []).length + " shots ready.";
+  } catch (e) { $("shotlistStatus").textContent = "Director brain: " + e.message; }
+  finally { btn.disabled = false; }
+}
+function renderShotlist(shots){
+  const box = $("shotlistBox");
+  if (!shots.length) { box.innerHTML = '<div class="note">No shots came back -- try again.</div>'; return; }
+  box.innerHTML = shots.map((s, i) => `<div class="scene" style="margin-bottom:10px">
+    <div class="top"><span>Scene ${s.scene || (i + 1)}</span></div>
+    <div class="mini"><b>Shot:</b> ${esc(s.shot)} &nbsp;&middot;&nbsp; <b>Camera:</b> ${esc(s.camera)} &nbsp;&middot;&nbsp; <b>Mood:</b> ${esc(s.mood)}</div>
+    <textarea class="shotPrompt" readonly style="margin-top:6px;min-height:64px">${esc(s.prompt)}</textarea>
+    <div class="row" style="margin-top:6px">
+      <button class="icon" data-i="${i}" data-a="copyprompt">📋 Copy prompt</button>
+      <a class="btn ghost" href="https://higgsfield.ai/create/video" target="_blank" rel="noopener">Open Higgsfield</a>
+      <a class="btn ghost" href="https://filmora.wondershare.com/" target="_blank" rel="noopener">Open Filmora</a>
+    </div>
+  </div>`).join("");
+  box.querySelectorAll('[data-a="copyprompt"]').forEach(btn => btn.onclick = () => {
+    const ta = btn.closest(".scene").querySelector(".shotPrompt");
+    try { navigator.clipboard.writeText(ta.value); status("Prompt copied. Paste it into Higgsfield or Filmora."); } catch { ta.select(); }
+  });
+}
+function esc(s){ const d = document.createElement("div"); d.textContent = s == null ? "" : String(s); return d.innerHTML; }
 function renderScenes(){
   const box = $("scenes"); box.innerHTML = "";
   if (!scenes.length) { box.innerHTML = '<div class="note">Your scenes will show here.</div>'; return; }
@@ -876,6 +930,7 @@ $("recBtn").onclick = async () => {
 
 // ---------- wiring ----------
 $("makeScenes").onclick = makeScenes;
+$("shotlistBtn").onclick = buildShotList;
 $("clipFiles").onchange = async (e) => {
   const files = [...e.target.files]; e.target.value = "";
   for (const f of files) {
